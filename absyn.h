@@ -1,4 +1,7 @@
 /* Coding: ANSI */
+#ifndef ABSYN_H
+#define ABSYN_H
+
 #include "tiger_type.h"
 
 namespace tiger{
@@ -774,3 +777,6 @@ private:
 
 
 }// namespace tiger 
+
+
+#endif

@@ -23,6 +23,7 @@ char * kTokenString[]={
 "kToken_ASSIGN",
 "kToken_COMMA",
 "kToken_COLON",
+"kToken_SEMICOLON",
 "kToken_DOT",
 
 "kToken_EQUAL",
@@ -52,6 +53,7 @@ char * kTokenString[]={
 "end",
 "let",
 "in",
+"nil",
 
 "kToken_EOT",/* the end of token stream */
 "kToken_Unknown",

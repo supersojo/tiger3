@@ -368,6 +368,9 @@ s32 Scanner::Next(Token* t)
             return kToken_COLON;
         }
     }
+    /* ; */
+    if((char)v==';')
+        return kToken_SEMICOLON;
     
     /* = */
     if((char)v=='=')

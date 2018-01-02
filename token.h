@@ -41,6 +41,7 @@ typedef enum {
     kToken_ASSIGN,/* := */
     kToken_COMMA,/* , */
     kToken_COLON,/* : */
+    kToken_SEMICOLON,/* ; */
     kToken_DOT,/* . */
     
     kToken_EQUAL,/* = */
@@ -70,7 +71,7 @@ typedef enum {
     kToken_END,/* end */
     kToken_LET,/* let */
     kToken_IN,/* in */
-    
+    kToken_NIL,/* nil */
     
     
     kToken_EOT,/* the end of token stream */
