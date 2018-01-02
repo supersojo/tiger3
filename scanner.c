@@ -13,7 +13,7 @@ StringSourceCodeStream::StringSourceCodeStream(char* source)
     m_string = source;
     m_pos = 0;
     m_len = strlen(source);
-    m_off = 0;
+    m_off = 0;/* always start from 1 */
     m_lineno = 1;/* always start from 1 */
     m_line_info = 0;
 }
@@ -30,12 +30,20 @@ s32 StringSourceCodeStream::Next()
 }
 void StringSourceCodeStream::Back(s32 n)
 {
+    LineInfo* lineinfo;
     assert(n<=m_pos &&n>=(m_pos-m_len+1));
     m_pos = m_pos-n;
     m_off = m_off-n;
-    if(m_off<0){
+    while(m_off<0){
         m_lineno = m_lineno-1;
-        m_off = m_off_prev;
+        //m_off = m_off_prev;
+        assert(m_line_info);
+        m_off = + m_line_info->line_size;
+        lineinfo = m_line_info;
+        
+        m_line_info = m_line_info->next;
+        m_line_info->prev = 0;
+        delete lineinfo;
     }
 }
 s32 StringSourceCodeStream::Pos()
@@ -82,15 +90,22 @@ s32 FileSourceCodeStream::Next()
 void FileSourceCodeStream::Back(s32 n)
 {
     s32 pos = ftell(m_file);
-    
+    LineInfo* lineinfo;
     assert(n<=pos &&n>=(pos-m_len+1));
     
     pos = pos-n;
     m_off = m_off - n;
     
-    if(m_off<0){
+    while(m_off<0){
         m_lineno = m_lineno-1;
-        m_off = m_off_prev;
+        //m_off = m_off_prev;
+        assert(m_line_info);
+        m_off = + m_line_info->line_size;
+        lineinfo = m_line_info;
+        
+        m_line_info = m_line_info->next;
+        m_line_info->prev = 0;
+        delete lineinfo;
     }
     
     fseek(m_file,pos,SEEK_SET);
@@ -121,7 +136,8 @@ void Scanner::SkipSpace()
         m_stream->Back(1);
     }
 }
-void Scanner::SkipComment()
+
+bool Scanner::SkipComment()
 {
     enum{
         kComment_Begin,
@@ -151,16 +167,27 @@ void Scanner::SkipComment()
                 if((char)v=='/')
                     flag = kComment_End;
             }
+            /* new line? */
+            if((char)v=='\r'){
+                v = m_stream->Next();
+                off++;
+                if((char)v=='\n'){
+                    m_stream->NewLine();
+                }
+            }
+            
             /* not find end tag */
             if(v==kSourceCodeStream_EOS){
                 m_stream->Back(off);
-                return;
+                return false;
             }
         }while(flag==kComment_Begin);
         /* comment ok */
+        return true;
     }else{
         /* not find begin tag */
         m_stream->Back(off);
+        return false;
     }
     
 }
@@ -191,10 +218,7 @@ s32 Scanner::Next(Token* t)
     do{
         /* blank chars */
         SkipSpace();
-        
-        /* comment chars  */
-        SkipComment();
-        
+                
         /* new line chars */
         v = m_stream->Next();
         if((char)v=='\r'){
@@ -212,6 +236,7 @@ s32 Scanner::Next(Token* t)
                 m_stream->Back(1);
         }
         
+        /* blank space or new line */
         v = m_stream->Next();
         if((char)v==' '|| 
            (char)v=='\t'||
@@ -221,10 +246,20 @@ s32 Scanner::Next(Token* t)
             continue;
         }
         
+        if(v!=kSourceCodeStream_EOS)
+            m_stream->Back(1);
         
-            
+        /* comment ? */
+        if(SkipComment())
+            continue;
+        
+        /* ok */
+        break;    
         
     }while(1);
+    
+    /* lexical chars */
+    v = m_stream->Next();
         
     t->lineno = m_stream->Lineno();
     t->pos = m_stream->Pos();
@@ -249,7 +284,6 @@ s32 Scanner::Next(Token* t)
         
         if(v!=kSourceCodeStream_EOS)
             m_stream->Back(1);
-        
         if(token_is_keyword(sval))
             return keyword_type(sval);
         else{

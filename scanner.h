@@ -18,6 +18,16 @@ enum{
     kSourceCodeStream_EOS=-1,
 };
 
+/* internal usage */
+struct LineInfo{
+    s32 line_size;
+    
+    LineInfo(){line_size = 0;prev=0;next=0;}
+    
+    struct LineInfo* prev;
+    struct LineInfo* next;
+};
+
 /* base class for source stream */    
 class SourceCodeStreamBase{
 public:
@@ -36,14 +46,7 @@ public:
         return 0;
     }
 };
-struct LineInfo{
-    s32 line_size;
-    
-    LineInfo(){line_size = 0;prev=0;next=0;}
-    
-    struct LineInfo* prev;
-    struct LineInfo* next;
-};
+
 class StringSourceCodeStream: public SourceCodeStreamBase{
 public:
     StringSourceCodeStream(char* source);
@@ -55,9 +58,19 @@ public:
     }
     void NewLine(){
         m_lineno++;
-        m_off_prev = m_off;
-        m_off=0;
+        //m_off_prev = m_off;
+        //m_off=0;
+        /* record the last line info, line size etc. */
+        LineInfo* lineinfo = new LineInfo;
+        lineinfo->line_size = m_off;
+        std::cout<<"new line with size "<<m_off<<std::endl;
+        m_off = 0;/* for the next line */
         
+        lineinfo->prev = 0;
+        lineinfo->next = m_line_info;
+        if(m_line_info)
+            m_line_info->prev = lineinfo;
+        m_line_info = lineinfo;
         
     }
 private:
@@ -84,8 +97,20 @@ public:
     }
     void NewLine(){
         m_lineno++;
-        m_off_prev = m_off;
-        m_off=0;
+        //m_off_prev = m_off;
+        //m_off=0;
+        /* record the last line info, line size etc. */
+        LineInfo* lineinfo = new LineInfo;
+        lineinfo->line_size = m_off;
+        std::cout<<"new line with size "<<m_off<<std::endl;
+        m_off = 0;/* for the next line */
+        
+        lineinfo->prev = 0;
+        lineinfo->next = m_line_info;
+        if(m_line_info)
+            m_line_info->prev = lineinfo;
+        m_line_info = lineinfo;
+        
     }
 private:
     FILE* m_file;
@@ -94,6 +119,8 @@ private:
     s32   m_lineno;
     s32   m_off;
     s32   m_off_prev;// only support cross most one line back
+    
+    LineInfo* m_line_info;
 };
 
 class Scanner {
@@ -106,7 +133,7 @@ public:
     
 private:
     void SkipSpace();
-    void SkipComment();
+    bool SkipComment();
     s32 IsAlpha(s32 c);
     s32 IsDigit(s32 c);
 

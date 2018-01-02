@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "scanner.h"
-
+#include "absyn.h"
 
 void test_StringSourceCodeStream()
 {
@@ -25,16 +25,18 @@ void test_Next_With_StringSourceCodeStream()
 {
     s32 v;
     tiger::Token t;
-    tiger::scanner::StringSourceCodeStream stream("in !");
+    tiger::scanner::StringSourceCodeStream stream("then b");
     tiger::scanner::Scanner scanner(&stream);
     
     v = scanner.Next(&t);
-    assert(v==tiger::kToken_IN);
+    assert(v==tiger::kToken_THEN);
     std::cout<<t.lineno<<","<<t.pos<<std::endl;
     
     v = scanner.Next(&t);
-    assert(v==tiger::kToken_LE);
+    assert(v==tiger::kToken_ID);
     std::cout<<t.lineno<<","<<t.pos<<std::endl;
+    
+
 
 }
 void test_Next_With_FileSourceCodeStream()
@@ -51,9 +53,17 @@ void test_Next_With_FileSourceCodeStream()
     std::cout<<t.lineno<<","<<t.pos<<std::endl;
 
 }
-
+void test_sbsyn()
+{
+    tiger::Symbol *a,*b;
+    a = new tiger::Symbol("a");
+    b = new tiger::Symbol("b");
+    tiger::SimpleVar* var = new tiger::SimpleVar(a);
+    
+}
 int main()
 {
-    test_Next_With_StringSourceCodeStream();
+    //test_Next_With_StringSourceCodeStream();
+    test_sbsyn();
     return 0;
 }
