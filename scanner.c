@@ -54,6 +54,10 @@ s32 StringSourceCodeStream::Pos()
 {
     return m_off;
 }
+s32 StringSourceCodeStream::AbsPos()
+{
+    return m_pos;
+}
 /*
  Note: 
  open file with flag "rb", which will open file in binary mode.
@@ -79,6 +83,8 @@ FileSourceCodeStream::FileSourceCodeStream(char* file)
 FileSourceCodeStream::~FileSourceCodeStream()
 {
     fclose(m_file);
+	
+	FreeLineInfo();
 }
 s32 FileSourceCodeStream::Next()
 {
@@ -95,7 +101,12 @@ void FileSourceCodeStream::Back(s32 n)
 {
     s32 pos = ftell(m_file);
     LineInfo* lineinfo;
-    assert(n<=pos &&n>=(pos-m_len+1));
+	
+	/*
+    when we get end of stream, the m_pos == m_len
+    0<=(m_pos-n)<=m_len
+    */
+    assert(n<=pos &&n>=(pos-m_len+0));
     
     pos = pos-n;
     m_off = m_off - n;
@@ -117,6 +128,10 @@ void FileSourceCodeStream::Back(s32 n)
 s32 FileSourceCodeStream::Pos()
 {
     return m_off;
+}
+s32 FileSourceCodeStream::AbsPos()
+{
+    return ftell(m_file);
 }
 Scanner::Scanner(SourceCodeStreamBase* stream)
 {
@@ -152,7 +167,7 @@ bool Scanner::SkipComment()
     s32 v;
     s32 off = 0;
     v = m_stream->Next();
-    if(v!=kSourceCodeStream_EOS)
+    if(v!=kSourceCodeStream_EOS)/* if we occur the eof, it will back to normal char, so it's wrong action, just back only good chars */
         off++;
     if((char)v=='/'){
         v = m_stream->Next();
@@ -212,7 +227,12 @@ s32 Scanner::IsDigit(s32 c)
 }
 void Scanner::Back(Token* t)
 {
-    m_stream->Back(t->len);
+	/* it's ok when we only back one token.if we back more than one token, the tokens are not one by one char, we get wrong */
+	/* calc the real offset */
+	/* aaa bbb ccc */
+	/*     |   |   */
+	/* (m_stream->AbsPos()-t->abs_pos) */
+    m_stream->Back( (m_stream->AbsPos()-t->abs_pos) );
 }
 s32 Scanner::Next(Token* t)
 {
@@ -263,7 +283,7 @@ s32 Scanner::Next(Token* t)
         if(SkipComment())
             continue;
         
-        /* ok */
+        /* ok, we get a valid char */
         break;    
         
     }while(1);
@@ -272,8 +292,8 @@ s32 Scanner::Next(Token* t)
     v = m_stream->Next();
     t->lineno = m_stream->Lineno();
     t->pos = m_stream->Pos();
-    
-    t->len = 1;/* default length of string */
+    t->abs_pos = m_stream->AbsPos();
+    t->len = 1;/* default length of string. if the token string such as := <>, we need change it to 2 */
     
     /* id or keyword */
     if(IsAlpha(v)||

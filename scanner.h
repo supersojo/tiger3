@@ -37,7 +37,10 @@ public:
     }
     virtual void Back(s32 n){
     }
-    virtual s32 Pos(){
+    virtual s32 Pos(){/*offset in line */
+        return 0;
+    }
+	virtual s32 AbsPos(){/*offset in stream */
         return 0;
     }
     virtual void NewLine(){
@@ -53,6 +56,7 @@ public:
     s32 Next();
     void Back(s32 n);
     s32 Pos();
+	s32 AbsPos()；
     s32 Lineno(){
         return m_lineno;
     }
@@ -73,6 +77,7 @@ public:
         m_line_info = lineinfo;
         
     }
+	~StringSourceCodeStream(){ FreeLineInfo(); }
 private:
     char* m_string;
     s32   m_pos;
@@ -83,6 +88,15 @@ private:
     s32   m_off_prev;// only support cross most one line back
     
     LineInfo* m_line_info;
+	void FreeLineInfo(){
+		LineInfo* p;
+		p = m_line_info;
+		while(p){
+			m_line_info = m_line_info->next;
+			delete p;
+			p = m_line_info;
+		}
+	}
 };
 
 class FileSourceCodeStream: public SourceCodeStreamBase{
@@ -92,6 +106,7 @@ public:
     s32 Next();
     void Back(s32 n);
     s32 Pos();
+	s32 AbsPos()；
     s32 Lineno(){
         return m_lineno;
     }
@@ -121,6 +136,15 @@ private:
     s32   m_off_prev;// only support cross most one line back
     
     LineInfo* m_line_info;
+	void FreeLineInfo(){
+		LineInfo* p;
+		p = m_line_info;
+		while(p){
+			m_line_info = m_line_info->next;
+			delete p;
+			p = m_line_info;
+		}
+	}
 };
 
 class Scanner {

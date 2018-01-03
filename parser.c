@@ -57,7 +57,6 @@ void Parser::_ParseLvalueRest()
     Token t,t1;
     
     /* lvalue' -> . lvalue' */
-    
     v = m_scanner->Next(&t);
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
@@ -65,6 +64,7 @@ void Parser::_ParseLvalueRest()
         _ParseLvalueRest();
         return;
     }
+	
     /* lvalue' -> [ exp ] lvalue' */
     if(v==kToken_LSQB){
         _ParseExp();

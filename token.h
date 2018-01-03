@@ -127,7 +127,8 @@ struct Token{
         s32   ival;
     }u;
     s32 lineno;
-    s32 pos;
+    s32 pos;/* offset in line */
+	s32 abs_pos;/* offset in stream */
     s32 len;/* token's string length */
     
     Token(){
