@@ -45,6 +45,7 @@ typedef enum {
     kToken_DOT,/* . */
     
     kToken_EQUAL,/* = */
+    kToken_NOTEQUAL,/* <> */
     kToken_LT, /* < */
     kToken_GT, /* > */
     kToken_LE,/* <= */

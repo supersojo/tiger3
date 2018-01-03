@@ -31,7 +31,11 @@ s32 StringSourceCodeStream::Next()
 void StringSourceCodeStream::Back(s32 n)
 {
     LineInfo* lineinfo;
-    assert(n<=m_pos &&n>=(m_pos-m_len+1));
+    /*
+    when we get end of stream, the m_pos == m_len
+    0<=(m_pos-n)<=m_len
+    */
+    assert(n<=m_pos &&n>=(m_pos-m_len+0));
     m_pos = m_pos-n;
     m_off = m_off-n;
     while(m_off<0){
@@ -148,29 +152,35 @@ bool Scanner::SkipComment()
     s32 v;
     s32 off = 0;
     v = m_stream->Next();
-    off++;
+    if(v!=kSourceCodeStream_EOS)
+        off++;
     if((char)v=='/'){
         v = m_stream->Next();
-        off++;
+        if(v!=kSourceCodeStream_EOS)
+            off++;
         if((char)v=='*'){
             flag = kComment_Begin;
         }
+        
     }
     if(flag==kComment_Begin){
         
         do{
             v = m_stream->Next();
-            off++;
+            if(v!=kSourceCodeStream_EOS)
+                off++;
             if((char)v=='*'){
                 v = m_stream->Next();
-                off++;
+                if(v!=kSourceCodeStream_EOS)
+                    off++;
                 if((char)v=='/')
                     flag = kComment_End;
             }
             /* new line? */
             if((char)v=='\r'){
                 v = m_stream->Next();
-                off++;
+                if(v!=kSourceCodeStream_EOS)
+                    off++;
                 if((char)v=='\n'){
                     m_stream->NewLine();
                 }
@@ -260,7 +270,6 @@ s32 Scanner::Next(Token* t)
     
     /* lexical chars */
     v = m_stream->Next();
-        
     t->lineno = m_stream->Lineno();
     t->pos = m_stream->Pos();
     
@@ -340,8 +349,9 @@ s32 Scanner::Next(Token* t)
     
     
     /* + */
-    if((char)v=='+')
+    if((char)v=='+'){
         return kToken_ADD;
+    }
     /* - */
     if((char)v=='-')
         return kToken_SUB;
@@ -360,6 +370,7 @@ s32 Scanner::Next(Token* t)
     if((char)v==':'){
         v = m_stream->Next();
         if((char)v=='='){
+             t->len = 2;
             return kToken_ASSIGN;
         }else{
             if((char)v!=kSourceCodeStream_EOS)
@@ -372,14 +383,23 @@ s32 Scanner::Next(Token* t)
     if((char)v==';')
         return kToken_SEMICOLON;
     
+    /* . */
+    if((char)v=='.')
+        return kToken_DOT;
+    
     /* = */
     if((char)v=='=')
         return kToken_EQUAL;
-    /* < or <= */
+    /* < or <= or <> */
     if((char)v=='<'){
         v = m_stream->Next();
         if((char)v=='='){
+             t->len = 2;
             return kToken_LE;
+        }else if((char)v=='>'){
+             t->len = 2;
+            std::cout<<"<>"<<std::endl;
+            return kToken_NOTEQUAL;
         }else{
             if((char)v!=kSourceCodeStream_EOS)
                 m_stream->Back(1);
@@ -390,6 +410,7 @@ s32 Scanner::Next(Token* t)
     if((char)v=='>'){
         v = m_stream->Next();
         if((char)v=='='){
+             t->len = 2;
             return kToken_GE;
         }else{
             if((char)v!=kSourceCodeStream_EOS)

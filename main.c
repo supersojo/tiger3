@@ -2,6 +2,7 @@
 
 #include "scanner.h"
 #include "absyn.h"
+#include "parser.h"
 
 void test_StringSourceCodeStream()
 {
@@ -61,9 +62,17 @@ void test_sbsyn()
     tiger::SimpleVar* var = new tiger::SimpleVar(a);
     
 }
+void test_parser()
+{
+    tiger::scanner::StringSourceCodeStream stream("a<>3");
+    tiger::parser::Parser parser(&stream);
+    parser.Parse();
+    
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
-    test_sbsyn();
+    //test_sbsyn();
+    test_parser();
     return 0;
 }
