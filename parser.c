@@ -16,6 +16,7 @@ bool Parser::Parse()
     _ParseExp();
     
     v = m_scanner->Next(&t);
+    std::cout<<token_string((TokenType)v)<<std::endl;
     assert(v==kToken_EOT);
     
     
@@ -51,17 +52,16 @@ void Parser::_ParseLvalueTerm()
         return;
     }
 }
-void Parser::_ParseLvalueRest()
+void Parser::_ParseLvalueRest(s32 * flag)
 {
     s32 v,v1;
     Token t,t1;
-    
     /* lvalue' -> . lvalue' */
     v = m_scanner->Next(&t);
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_ID);
-        _ParseLvalueRest();
+        _ParseLvalueRest(flag);
         return;
     }
 	
@@ -70,8 +70,20 @@ void Parser::_ParseLvalueRest()
         _ParseExp();
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RSQB);
-        _ParseLvalueRest();
+        *flag = *flag + 1;
+        _ParseLvalueRest(flag);
         return;
+    }
+    
+    /* id [ exp ] of exp */
+    if(v==kToken_OF){
+        if(*flag==1){
+            /* ok */
+            _ParseExp();
+            return;
+        }else{
+            assert(1==0);
+        }
     }
     /* lvalue'-> empty */
     if(v!=kToken_EOT)
@@ -80,8 +92,9 @@ void Parser::_ParseLvalueRest()
 }
 void Parser::_ParseLvalue()
 {
+    s32 flag = 0;/* of expression */
     _ParseLvalueTerm();
-    _ParseLvalueRest();
+    _ParseLvalueRest(&flag);
 }
 
 void Parser::_ParseParms()
@@ -114,6 +127,22 @@ void Parser::_ParseIdList()
     idList.Parse(this);
     
 }
+void Parser::_ParseDecs()
+{
+    s32 v;
+    Token t;
+    do{
+        v = m_scanner->Next(&t);
+        if(v==kToken_IN){
+            m_scanner->Back(&t);
+            return;
+        }
+        if(v!=kToken_EOT)
+            m_scanner->Back(&t);
+        Dec dec;
+        dec.Parse(this);
+    }while(1);
+}
 void Parser::_ParseTerm()
 {
     s32 v,v1,v2;
@@ -130,6 +159,66 @@ void Parser::_ParseTerm()
     }
     /* exp -> nil */
     if(v==kToken_NIL){
+        return;
+    }
+    /* exp -> if exp then exp else exp or exp -> if exp then exp */
+    if(v==kToken_IF){
+        _ParseExp();
+        v = m_scanner->Next(&t);
+        assert(v==kToken_THEN);
+        _ParseExp();
+        v = m_scanner->Next(&t);
+        if(v==kToken_ELSE){
+            _ParseExp();
+            return;
+        }
+        if(v!=kToken_EOT)
+            m_scanner->Back(&t);
+        return;
+    }
+    
+    /* exp -> while exp do exp */
+    if(v==kToken_WHILE){
+        _ParseExp();
+        v = m_scanner->Next(&t);
+        assert(v==kToken_DO);
+        _ParseExp();
+        return;
+    }
+    /* exp -> for id := exp to exp do exp */
+    if(v==kToken_FOR){
+        v = m_scanner->Next(&t);
+        assert(v==kToken_ID);
+        v = m_scanner->Next(&t);
+        assert(v==kToken_ASSIGN);
+        _ParseExp();
+        v = m_scanner->Next(&t);
+        assert(v==kToken_TO);
+        _ParseExp();
+        v = m_scanner->Next(&t);
+        assert(v==kToken_DO);
+        _ParseExp();
+        return;
+    }
+    /* exp -> let decs in end or let decs in explist end */
+    if(v==kToken_LET){
+        std::cout<<"before decs "<<std::endl;
+        _ParseDecs();
+        std::cout<<"after decs "<<std::endl;
+        v = m_scanner->Next(&t);
+        assert(v==kToken_IN);
+        v = m_scanner->Next(&t);
+        if(v==kToken_END){
+            std::cout<<token_string((TokenType)v)<<std::endl;
+            return;
+        }
+        if(v!=kToken_EOT)
+            m_scanner->Back(&t);
+        return;
+    }
+    
+    /* exp -> break */
+    if(v==kToken_BREAK){
         return;
     }
     if(v==kToken_LPAR){

@@ -53,6 +53,7 @@ char * kTokenString[]={
 (char*)"function",
 (char*)"end",
 (char*)"let",
+(char*)"break",
 (char*)"in",
 (char*)"nil",
 

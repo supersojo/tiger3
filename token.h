@@ -71,6 +71,7 @@ typedef enum {
     kToken_FUNCTION, /* function */
     kToken_END,/* end */
     kToken_LET,/* let */
+    kToken_BREAK,/* break */
     kToken_IN,/* in */
     kToken_NIL,/* nil */
     
