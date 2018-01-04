@@ -133,12 +133,21 @@ struct Token{
     
     Token(){
         kind = kToken_Unknown;
+        u.name = 0;
+        u.sval = 0;
+        u.ival = 0;
     }
     void Clear(){
-        if(kind==kToken_ID)
-            free(u.name);
-        if(kind==kToken_STR)
-            free(u.sval);
+        if(kind==kToken_ID){
+            if(u.name)
+                free(u.name);
+            u.name = 0;
+        }
+        if(kind==kToken_STR){
+            if(u.sval)
+                free(u.sval);
+            u.sval = 0;
+        }
     }
     ~Token(){
         Clear();

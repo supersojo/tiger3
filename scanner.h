@@ -56,7 +56,7 @@ public:
     s32 Next();
     void Back(s32 n);
     s32 Pos();
-	s32 AbsPos()；
+	s32 AbsPos();
     s32 Lineno(){
         return m_lineno;
     }
@@ -106,7 +106,7 @@ public:
     s32 Next();
     void Back(s32 n);
     s32 Pos();
-	s32 AbsPos()；
+	s32 AbsPos();
     s32 Lineno(){
         return m_lineno;
     }

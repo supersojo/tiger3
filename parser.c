@@ -108,7 +108,12 @@ void Parser::_ParseParms()
             m_scanner->Back(&t1);
     }
 }
-
+void Parser::_ParseIdList()
+{
+    IdList idList;
+    idList.Parse(this);
+    
+}
 void Parser::_ParseTerm()
 {
     s32 v,v1,v2;
@@ -145,13 +150,21 @@ void Parser::_ParseTerm()
         _ParseExp();
         return;
     }
-    /*  or exp -> id (parms)*/
+    
     if(v==kToken_ID){
+        /*  exp -> id () or exp -> id (parms)*/
         v1 = m_scanner->Next(&t1);
         if(v1==kToken_LPAR){
             _ParseParms();
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RPAR);
+            return;
+        }
+        /*  exp -> id {} or exp -> id{id=exp{,id=exp}}*/
+        if(v1==kToken_LBRA){
+            _ParseIdList();
+            v2 = m_scanner->Next(&t2);
+            assert(v2==kToken_RBRA);
             return;
         }
         
@@ -161,6 +174,15 @@ void Parser::_ParseTerm()
         /* exp -> lvalue */
         m_scanner->Back(&t);
         _ParseLvalue();
+        v = m_scanner->Next(&t);
+        
+        /* exp -> lvalue := exp */
+        if(v==kToken_ASSIGN){
+            _ParseExp();
+            return;
+        }
+        if(v!=kToken_EOT)
+            m_scanner->Back(&t);
         return;
     }
     
@@ -168,8 +190,12 @@ void Parser::_ParseTerm()
 
 void Parser::_ParseExp()
 {
+    s32 v;
+    Token t;
+    
     ExpOr exp;
     exp.Parse(this);
+
 }
 Parser::~Parser(){
     delete m_scanner;

@@ -6,37 +6,43 @@
 
 void test_StringSourceCodeStream()
 {
-    char *string="just a test";
+    char *string=(char*)"just a test";
     s32 len=strlen(string);
-    tiger::scanner::StringSourceCodeStream stream("just a test");
+    tiger::scanner::StringSourceCodeStream stream((char*)"just a test");
     for(int i=0;i<len;i++)
         assert(*(string+i)==stream.Next());
     assert(tiger::scanner::kSourceCodeStream_EOS==stream.Next());
 }
 void test_FileSourceCodeStream()
 {
-    char *string="just b test";
+    char *string=(char*)"just b test";
     s32 len=strlen(string);
-    tiger::scanner::FileSourceCodeStream stream("a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     for(int i=0;i<len;i++)
         assert(*(string+i)==stream.Next());
     assert(tiger::scanner::kSourceCodeStream_EOS==stream.Next());
 }
 void test_Next_With_StringSourceCodeStream()
 {
-    s32 v;
-    tiger::Token t;
-    tiger::scanner::StringSourceCodeStream stream("then b");
+    s32 v,v1;
+    tiger::Token t,t1;
+    tiger::scanner::StringSourceCodeStream stream((char*)".=");
     tiger::scanner::Scanner scanner(&stream);
     
     v = scanner.Next(&t);
-    assert(v==tiger::kToken_THEN);
-    std::cout<<t.lineno<<","<<t.pos<<std::endl;
+    assert(v==tiger::kToken_DOT);
+    std::cout<<t.lineno<<","<<t.pos<<","<<t.abs_pos<<std::endl;
+    
+    v1 = scanner.Next(&t1);
+    assert(v1==tiger::kToken_EQUAL);
+    std::cout<<t1.lineno<<","<<t1.pos<<","<<t1.abs_pos<<std::endl;
+    
+    scanner.Back(&t1);
+    scanner.Back(&t);
     
     v = scanner.Next(&t);
-    assert(v==tiger::kToken_ID);
-    std::cout<<t.lineno<<","<<t.pos<<std::endl;
-    
+    assert(v==tiger::kToken_DOT);
+    std::cout<<t.lineno<<","<<t.pos<<","<<t.abs_pos<<std::endl;
 
 
 }
@@ -44,7 +50,7 @@ void test_Next_With_FileSourceCodeStream()
 {
     s32 v;
     tiger::Token t;
-    tiger::scanner::FileSourceCodeStream stream("a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     tiger::scanner::Scanner scanner(&stream);
     
     t.Clear();
@@ -57,14 +63,14 @@ void test_Next_With_FileSourceCodeStream()
 void test_sbsyn()
 {
     tiger::Symbol *a,*b;
-    a = new tiger::Symbol("a");
-    b = new tiger::Symbol("b");
+    a = new tiger::Symbol((char*)"a");
+    b = new tiger::Symbol((char*)"b");
     tiger::SimpleVar* var = new tiger::SimpleVar(a);
     
 }
 void test_parser()
 {
-    tiger::scanner::StringSourceCodeStream stream("a<>3");
+    tiger::scanner::StringSourceCodeStream stream((char*)"(a{a=int,b=string};a(a,b,c,4,5,6,1+2);c>5)");
     tiger::parser::Parser parser(&stream);
     parser.Parse();
     

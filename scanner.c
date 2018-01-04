@@ -231,8 +231,11 @@ void Scanner::Back(Token* t)
 	/* calc the real offset */
 	/* aaa bbb ccc */
 	/*     |   |   */
-	/* (m_stream->AbsPos()-t->abs_pos) */
-    m_stream->Back( (m_stream->AbsPos()-t->abs_pos) );
+	/* (m_stream->AbsPos() - t->abs_pos + 1) */
+    if( m_stream->AbsPos()==t->abs_pos )
+        m_stream->Back(t->len);
+    else
+        m_stream->Back( (m_stream->AbsPos() - t->abs_pos + 1) );
 }
 s32 Scanner::Next(Token* t)
 {
@@ -418,7 +421,6 @@ s32 Scanner::Next(Token* t)
             return kToken_LE;
         }else if((char)v=='>'){
              t->len = 2;
-            std::cout<<"<>"<<std::endl;
             return kToken_NOTEQUAL;
         }else{
             if((char)v!=kSourceCodeStream_EOS)
