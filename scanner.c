@@ -78,6 +78,7 @@ FileSourceCodeStream::FileSourceCodeStream(char* file)
     
     m_off = 0;
     m_lineno = 1;/* always start from 1 */
+    m_line_info = 0;
     
 }
 FileSourceCodeStream::~FileSourceCodeStream()
