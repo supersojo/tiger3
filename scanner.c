@@ -84,8 +84,8 @@ FileSourceCodeStream::FileSourceCodeStream(char* file)
 FileSourceCodeStream::~FileSourceCodeStream()
 {
     fclose(m_file);
-	
-	FreeLineInfo();
+    
+    FreeLineInfo();
 }
 s32 FileSourceCodeStream::Next()
 {
@@ -102,8 +102,8 @@ void FileSourceCodeStream::Back(s32 n)
 {
     s32 pos = ftell(m_file);
     LineInfo* lineinfo;
-	
-	/*
+    
+    /*
     when we get end of stream, the m_pos == m_len
     0<=(m_pos-n)<=m_len
     */
@@ -228,11 +228,11 @@ s32 Scanner::IsDigit(s32 c)
 }
 void Scanner::Back(Token* t)
 {
-	/* it's ok when we only back one token.if we back more than one token, the tokens are not one by one char, we get wrong */
-	/* calc the real offset */
-	/* aaa bbb ccc */
-	/*     |   |   */
-	/* (m_stream->AbsPos() - t->abs_pos + 1) */
+    /* it's ok when we only back one token.if we back more than one token, the tokens are not one by one char, we get wrong */
+    /* calc the real offset */
+    /* aaa bbb ccc */
+    /*     |   |   */
+    /* (m_stream->AbsPos() - t->abs_pos + 1) */
     if( m_stream->AbsPos()==t->abs_pos )
         m_stream->Back(t->len);
     else
@@ -298,7 +298,14 @@ s32 Scanner::Next(Token* t)
     t->pos = m_stream->Pos();
     t->abs_pos = m_stream->AbsPos();
     t->len = 1;/* default length of string. if the token string such as := <>, we need change it to 2 */
-    
+    /* string? */
+    if((char)v=='"'){
+        do{
+            v = m_stream->Next();
+        }while(v!='"' && v!=kSourceCodeStream_EOS);
+        assert(v=='"');
+        return kToken_STR;
+    } 
     /* id or keyword */
     if(IsAlpha(v)||
        (char)v=='_')

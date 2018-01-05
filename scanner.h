@@ -67,7 +67,7 @@ public:
         /* record the last line info, line size etc. */
         LineInfo* lineinfo = new LineInfo;
         lineinfo->line_size = m_off;
-        std::cout<<"new line with size "<<m_off<<std::endl;
+        //std::cout<<"new line with size "<<m_off<<std::endl;
         m_off = 0;/* for the next line */
         
         lineinfo->prev = 0;
@@ -117,7 +117,7 @@ public:
         /* record the last line info, line size etc. */
         LineInfo* lineinfo = new LineInfo;
         lineinfo->line_size = m_off;
-        std::cout<<"new line with size "<<m_off<<std::endl;
+        //std::cout<<"new line with size "<<m_off<<std::endl;
         m_off = 0;/* for the next line */
         
         lineinfo->prev = 0;

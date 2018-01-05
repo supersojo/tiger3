@@ -1,17 +1,16 @@
-all:main.exe
+all:main
 
 
-main.exe:main.c token.c scanner.c
-	cl /c /TP /EHsc main.c
-	cl /c /TP /EHsc scanner.c
-	cl /c /TP /EHsc token.c
-	cl /c /TP /EHsc parser.c
-
-	link /subsystem:console main.obj parser.obj scanner.obj token.obj /out:main.exe
+main:main.c token.c scanner.c
+	g++ -c main.c
+	g++ -c scanner.c
+	g++ -c token.c
+	g++ -c parser.c
+	g++ main.o parser.o scanner.o token.o -o main
 clean:
-	rm main.exe 
-	rm main.obj 
-	rm scanner.obj
-	rm token.obj
-	rm parser.obj
+	rm main 
+	rm main.o 
+	rm scanner.o
+	rm token.o
+	rm parser.o
 

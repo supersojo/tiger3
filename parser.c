@@ -27,11 +27,14 @@ void Parser::_ParseVar()
 {
     
 }
+void Parser::ParseExpSeq()
+{
+	_ParseExpSeq();
+}
 void Parser::_ParseExpSeq()
 {
     s32 v;
     Token t;
-    
     _ParseExp();
     
     v = m_scanner->Next(&t);
@@ -202,21 +205,24 @@ void Parser::_ParseTerm()
     }
     /* exp -> let decs in end or let decs in explist end */
     if(v==kToken_LET){
-        std::cout<<"before decs "<<std::endl;
         _ParseDecs();
-        std::cout<<"after decs "<<std::endl;
         v = m_scanner->Next(&t);
         assert(v==kToken_IN);
+	v1 = m_scanner->Next(&t1);
+	if(v1==kToken_END){
+		return;	
+	}
+	if(v1!=kToken_EOT)
+		m_scanner->Back(&t1);
+	_ParseExpSeq();
         v = m_scanner->Next(&t);
         if(v==kToken_END){
-            std::cout<<token_string((TokenType)v)<<std::endl;
             return;
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
         return;
-    }
-    
+    } 
     /* exp -> break */
     if(v==kToken_BREAK){
         return;

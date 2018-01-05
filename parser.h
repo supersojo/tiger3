@@ -17,6 +17,7 @@ public:
     scanner::Scanner* GetScanner(){return m_scanner;} 
     ~Parser();
     void ParseExp(){_ParseExp();}
+    void ParseExpSeq();
 private:
     void _ParseVar();
     void _ParseExp();
@@ -227,7 +228,6 @@ public:
             return;
         }
         if(v==kToken_ARRAY){
-            std::cout<<"array of"<<std::endl;
             v = parser->GetScanner()->Next(&t);
             assert(v==kToken_OF);
             v = parser->GetScanner()->Next(&t);
@@ -273,7 +273,6 @@ public:
             assert(v==kToken_ID);
             v = parser->GetScanner()->Next(&t);
             assert(v==kToken_EQUAL);
-            std::cout<<"parse ty"<<std::endl;
             Ty ty;
             ty.Parse(parser);
         }
@@ -286,7 +285,6 @@ public:
         Token t;
         v = parser->GetScanner()->Next(&t);
         if(v==kToken_VAR){
-            std::cout<<"var"<<std::endl;
             v = parser->GetScanner()->Next(&t);
             assert(v==kToken_ID);
             v = parser->GetScanner()->Next(&t);
@@ -318,7 +316,6 @@ public:
             assert(v==kToken_LPAR); 
             _ParseTyFields(parser);
             v = parser->GetScanner()->Next(&t);
-            std::cout<<token_string((TokenType)v)<<std::endl;
             assert(v==kToken_RPAR); 
             v = parser->GetScanner()->Next(&t);
             if(v==kToken_EQUAL){
