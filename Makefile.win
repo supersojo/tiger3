@@ -7,8 +7,8 @@ main.exe:main.c scanner.c parser.c token.c
 	cl /c /Tp  token.c /EHsc
 	link /subsystem:console main.obj scanner.obj parser.obj token.obj /out:main.exe
 clean:
-	del main.exe
-	del main.obj
-	del scanner.obj
-	del parser.obj
-	del token.obj	
+	rm main.exe
+	rm main.obj
+	rm scanner.obj
+	rm parser.obj
+	rm token.obj	
