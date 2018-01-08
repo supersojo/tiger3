@@ -71,7 +71,7 @@ void test_sbsyn()
 void test_parser()
 {
     tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    //tiger::scanner::StringSourceCodeStream stream((char*)"let\
+    /*tiger::scanner::StringSourceCodeStream stream((char*)"let\
     var N:= 8\
     type intArray = array of intArray\
     var row := intArray [N] of 0\
@@ -82,6 +82,7 @@ void test_parser()
     \
     in\
     end");
+    */
     tiger::parser::Parser parser(&stream);
     parser.Parse();
     

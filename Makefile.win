@@ -1,0 +1,14 @@
+all:main.exe
+
+main.exe:main.c scanner.c parser.c token.c
+	cl /c /Tp  main.c /EHsc
+	cl /c /Tp  scanner.c /EHsc
+	cl /c /Tp  parser.c /EHsc
+	cl /c /Tp  token.c /EHsc
+	link /subsystem:console main.obj scanner.obj parser.obj token.obj /out:main.exe
+clean:
+	del main.exe
+	del main.obj
+	del scanner.obj
+	del parser.obj
+	del token.obj	
