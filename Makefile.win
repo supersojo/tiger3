@@ -1,14 +1,16 @@
 all:main.exe
 
-main.exe:main.c scanner.c parser.c token.c
+main.exe:main.c scanner.c parser.c token.c tiger_log.c
 	cl /c /Tp  main.c /EHsc
 	cl /c /Tp  scanner.c /EHsc
 	cl /c /Tp  parser.c /EHsc
 	cl /c /Tp  token.c /EHsc
-	link /subsystem:console main.obj scanner.obj parser.obj token.obj /out:main.exe
+	cl /c /Tp  tiger_log.c /EHsc
+	link /subsystem:console main.obj scanner.obj parser.obj token.obj tiger_log.obj /out:main.exe
 clean:
 	rm main.exe
 	rm main.obj
 	rm scanner.obj
 	rm parser.obj
 	rm token.obj	
+	rm tiger_log.obj	

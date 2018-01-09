@@ -3,6 +3,7 @@
 #define PARSER_H
 
 #include "scanner.h"
+#include "absyn.h"
 
 namespace tiger{
 

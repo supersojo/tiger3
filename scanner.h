@@ -15,7 +15,7 @@ namespace tiger{
 namespace scanner{
 
 enum{
-    kSourceCodeStream_EOS=-1,
+    kSourceCodeStream_EOS=-1,/* another representation of EOF */
 };
 
 /* internal usage */

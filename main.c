@@ -3,6 +3,7 @@
 #include "scanner.h"
 #include "absyn.h"
 #include "parser.h"
+#include "tiger_log.h"
 
 void test_StringSourceCodeStream()
 {
@@ -87,10 +88,19 @@ void test_parser()
     parser.Parse();
     
 }
+void test_Logger(){
+    tiger::LoggerFile logger("main.log");
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    logger.D("debug info");
+    logger.I("info info");
+    logger.W("warn info");
+    logger.E("error info");
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
     //test_sbsyn();
-    test_parser();
+    //test_parser();
+    test_Logger();
     return 0;
 }

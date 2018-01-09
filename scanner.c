@@ -13,9 +13,9 @@ StringSourceCodeStream::StringSourceCodeStream(char* source)
     m_string = source;
     m_pos = 0;
     m_len = strlen(source);
-    m_off = 0;/* always start from 1 */
+    m_off = 0;/* always start from 0 */
     m_lineno = 1;/* always start from 1 */
-    m_line_info = 0;
+    m_line_info = 0;/* must initialize first */
 }
 s32 StringSourceCodeStream::Next()
 {
@@ -123,7 +123,7 @@ void FileSourceCodeStream::Back(s32 n)
         m_line_info->prev = 0;
         delete lineinfo;
     }
-    
+    /* update file position */
     fseek(m_file,pos,SEEK_SET);
 }
 s32 FileSourceCodeStream::Pos()
