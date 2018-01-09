@@ -64,17 +64,19 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
         return q;
     }
 }
-void Parser::_ParseLvalueTerm()
+Var* Parser::_ParseLvalueTerm()
 {
     s32 v;
     Token t;
     
     v = m_scanner->Next(&t);
     if(v==kToken_ID){
-        return;
+        return new SimpleVar(new Symbol(t.u.name));
     }
+    assert(1==0);
+    return 0;
 }
-void Parser::_ParseLvalueRest(s32 * flag)
+Var* Parser::_ParseLvalueRest(Var* var,s32 * flag)
 {
     s32 v,v1;
     Token t,t1;
@@ -83,26 +85,26 @@ void Parser::_ParseLvalueRest(s32 * flag)
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_ID);
-        _ParseLvalueRest(flag);
-        return;
+        return _ParseLvalueRest(new FieldVar(var,new Symbol(t1.u.name)),flag);
     }
 	
     /* lvalue' -> [ exp ] lvalue' */
     if(v==kToken_LSQB){
-        _ParseExp();
+        Exp* exp;
+        exp = _ParseExp();
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RSQB);
         *flag = *flag + 1;
-        _ParseLvalueRest(flag);
-        return;
+        return _ParseLvalueRest(new SubscriptVar(var,exp),flag);
     }
     
     /* id [ exp ] of exp */
     if(v==kToken_OF){
+        Exp* exp;
         if(*flag==1){
             /* ok */
-            _ParseExp();
-            return;
+            exp = _ParseExp();
+            return new SubscriptVar(var,exp);
         }else{
             assert(1==0);
         }
@@ -110,13 +112,15 @@ void Parser::_ParseLvalueRest(s32 * flag)
     /* lvalue'-> empty */
     if(v!=kToken_EOT)
         m_scanner->Back(&t);
-    
+   return var; 
 }
-void Parser::_ParseLvalue()
+Var* Parser::_ParseLvalue()
 {
     s32 flag = 0;/* of expression */
-    _ParseLvalueTerm();
-    _ParseLvalueRest(&flag);
+    Var * var;
+    var = _ParseLvalueTerm();
+    assert(var!=0);
+    return _ParseLvalueRest(var,&flag);
 }
 
 ExpNode* Parser::_ParseParms(ExpNode* head)
@@ -330,39 +334,42 @@ Exp* Parser::_ParseTerm()
         }
         /*  exp -> id {} or exp -> id{id=exp{,id=exp}}*/
         if(v1==kToken_LBRA){
-            _ParseIdList();
+            EFieldList* efields;
+            efields = _ParseIdList();
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RBRA);
-            return new EFieldList();
+            return new RecordExp(new Symbol(t.u.name),efields);
         }
         
         if(v1!=kToken_EOT)
             m_scanner->Back(&t1);
         
         /* exp -> lvalue */
+        Var* var;
         m_scanner->Back(&t);
-        _ParseLvalue();
+        var = _ParseLvalue();
         v = m_scanner->Next(&t);
         
         /* exp -> lvalue := exp */
         if(v==kToken_ASSIGN){
-            _ParseExp();
-            return;
+            Exp* exp;
+            exp = _ParseExp();
+            return new AssignExp(var,exp);
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
-        return;
+        return 0;
     }
     
 }
 
-void Parser::_ParseExp()
+Exp* Parser::_ParseExp()
 {
     s32 v;
     Token t;
     
     ExpOr exp;
-    exp.Parse(this);
+    return exp.Parse(this);
 
 }
 Parser::~Parser(){

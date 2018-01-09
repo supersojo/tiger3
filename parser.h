@@ -24,9 +24,9 @@ private:
     Exp* _ParseExp();
     ExpNode* _ParseExpSeq(ExpNode* head);
     Exp* _ParseTerm();
-    void _ParseLvalue();
-    void _ParseLvalueTerm();
-    void _ParseLvalueRest(s32* flag);
+    Var* _ParseLvalue();
+    Var* _ParseLvalueTerm();
+    Var* _ParseLvalueRest(Var* var,s32* flag);
     DecList* _ParseDecs();
     ExpNode* _ParseParms(ExpNode* head);
     EFieldList* _ParseIdList();
@@ -305,6 +305,13 @@ private:
         }
         if(v!=kToken_EOT)/* v should be kToken_RBRA*/
             parser->GetScanner()->Back(&t);
+        p = anode;
+        q = anode;
+        while(p){
+            q = p;
+            p = p->prev;
+        }
+        return q;
     }
 };
 class TyDeclaration{

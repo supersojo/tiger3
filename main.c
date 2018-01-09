@@ -89,7 +89,7 @@ void test_parser()
     
 }
 void test_Logger(){
-    tiger::LoggerFile logger("main.log");
+    tiger::LoggerFile logger;
     logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
     logger.D("debug info");
     logger.I("info info");

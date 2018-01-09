@@ -54,7 +54,7 @@ bool LoggerStdio::vlog(s32 level,char* fmt,va_list args){
 bool LoggerStdio::Log(s32 level,char* fmt,...){
     bool ret = false;
 
-    va_list args=0;
+    va_list args;
     ret=vlog(level,fmt,args);
     va_end(args);
     
@@ -62,7 +62,7 @@ bool LoggerStdio::Log(s32 level,char* fmt,...){
 }
 bool LoggerStdio::D(char* fmt,...){
     bool ret=false;
-    va_list args=0;
+    va_list args;
     va_start(args,fmt);
     ret=vlog(kLogger_Level_Debug,fmt,args);
     va_end(args);
@@ -70,7 +70,7 @@ bool LoggerStdio::D(char* fmt,...){
 }
 bool LoggerStdio::I(char* fmt,...){
     bool ret=false;
-    va_list args=0;
+    va_list args;
     va_start(args,fmt);
     ret=vlog(kLogger_Level_Info,fmt,args);
     va_end(args);
@@ -144,7 +144,7 @@ bool LoggerFile::vlog(s32 level,char* fmt,va_list args){
 bool LoggerFile::Log(s32 level,char* fmt,...){
     bool ret = false;
 
-    va_list args=0;
+    va_list args;
     ret=vlog(level,fmt,args);
     va_end(args);
     
@@ -152,7 +152,7 @@ bool LoggerFile::Log(s32 level,char* fmt,...){
 }
 bool LoggerFile::D(char* fmt,...){
     bool ret=false;
-    va_list args=0;
+    va_list args;
     va_start(args,fmt);
     ret=vlog(kLogger_Level_Debug,fmt,args);
     va_end(args);
@@ -160,7 +160,7 @@ bool LoggerFile::D(char* fmt,...){
 }
 bool LoggerFile::I(char* fmt,...){
     bool ret=false;
-    va_list args=0;
+    va_list args;
     va_start(args,fmt);
     ret=vlog(kLogger_Level_Info,fmt,args);
     va_end(args);
