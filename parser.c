@@ -27,22 +27,41 @@ void Parser::_ParseVar()
 {
     
 }
-void Parser::ParseExpSeq()
+Exp* Parser::ParseExpSeq()
 {
-	_ParseExpSeq();
+    ExpNode* head;
+	head=_ParseExpSeq(0);
+    if(head)
+        return new SeqExp(new ExpList(head));
+    else
+        return 0;
 }
-void Parser::_ParseExpSeq()
+ExpNode* Parser::_ParseExpSeq(ExpNode* head)
 {
     s32 v;
     Token t;
-    _ParseExp();
-    
+    Exp* exp;
+    ExpNode* anode,*p,*q;
+    exp = _ParseExp();
+    anode = new ExpNode;
+    anode->m_exp = exp;
+    if(head){
+        head->next=anode;
+        anode->prev=head;
+    }
     v = m_scanner->Next(&t);
     if(v==kToken_SEMICOLON){
         /* expseq -> exp; expseq */
-        _ParseExpSeq();
+        return _ParseExpSeq(anode);
     }else{
         m_scanner->Back(&t);
+        p = anode;
+        q = anode;
+        while(p){
+            q = p;
+            p = p->prev;
+        }
+        return q;
     }
 }
 void Parser::_ParseLvalueTerm()
@@ -100,53 +119,92 @@ void Parser::_ParseLvalue()
     _ParseLvalueRest(&flag);
 }
 
-void Parser::_ParseParms()
+ExpNode* Parser::_ParseParms(ExpNode* head)
 {
     s32 v,v1;
     Token t,t1;
+    Exp* exp;
+    ExpNode* anode,*p,*q;
     v = m_scanner->Next(&t);
     /* parms -> empty */
     if(v==kToken_RPAR){
         m_scanner->Back(&t);
-        return;
+        return 0;
     }
     /* parms -> exp */
     /* parms -> exp , parms */
     if(v!=kToken_EOT){
         m_scanner->Back(&t);
-        _ParseExp();
+        exp = _ParseExp();
+        anode = new ExpNode;
+        anode->m_exp = exp;
+        if(head){
+            head->next = anode;
+            anode->prev = head;
+        }
         v1 = m_scanner->Next(&t1);
         if(v1==kToken_COMMA){
-            _ParseParms();
-            return;
+            return _ParseParms(anode);
         }
         if(v1!=kToken_EOT)
             m_scanner->Back(&t1);
+        p = anode;
+        q = anode;
+        while(p){
+            q = p;
+            p = p->prev;
+        }
+        return q;
     }
+    assert(1==0);
+    return 0;
 }
-void Parser::_ParseIdList()
+EFieldList* Parser::_ParseIdList()
 {
     IdList idList;
-    idList.Parse(this);
+    return idList.Parse(this);
     
 }
-void Parser::_ParseDecs()
+DecList* Parser::_ParseDecs()
 {
     s32 v;
     Token t;
+    Dec* adec;
+    DecNode* anode,*head,*tail;
+    DecList* list=0;
+    head = 0;
     do{
         v = m_scanner->Next(&t);
         if(v==kToken_IN){
             m_scanner->Back(&t);
-            return;
+            if(head)
+                return new DecList(head);
+            else
+                return 0;
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
-        Dec dec;
-        dec.Parse(this);
+        Declaration dec;
+        adec = dec.Parse(this);
+        if(adec){
+            anode = new DecNode;
+            anode->m_dec = adec;
+            if(!head)
+                head = anode;
+            if(!tail)
+                tail = anode;
+            else{
+                tail->next = anode;
+                anode->prev = tail;
+                tail = anode;
+            }
+        }
     }while(1);
+    
+    assert(1==0);
+    return 0;
 }
-void Parser::_ParseTerm()
+Exp* Parser::_ParseTerm()
 {
     s32 v,v1,v2;
     Token t,t1,t2;
@@ -154,113 +212,128 @@ void Parser::_ParseTerm()
     v = m_scanner->Next(&t);
     /* exp -> num */
     if(v==kToken_NUM){
-        return;
+        return new IntExp(t.u.ival);
     }
     /* exp -> string */
     if(v==kToken_STR){
-        return;
+        return new StringExp(t.u.sval);
     }
     /* exp -> nil */
     if(v==kToken_NIL){
-        return;
+        return new NilExp();
     }
     /* exp -> if exp then exp else exp or exp -> if exp then exp */
     if(v==kToken_IF){
-        _ParseExp();
+        Exp* if_exp,*then_exp,*else_exp;
+        if_exp=_ParseExp();
         v = m_scanner->Next(&t);
         assert(v==kToken_THEN);
-        _ParseExp();
+        then_exp=_ParseExp();
         v = m_scanner->Next(&t);
         if(v==kToken_ELSE){
-            _ParseExp();
-            return;
+            else_exp=_ParseExp();
+            return new IfExp(if_exp,then_exp,else_exp);
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
-        return;
+        return new IfExp(if_exp,then_exp,0) ;
     }
     
     /* exp -> while exp do exp */
     if(v==kToken_WHILE){
-        _ParseExp();
+        Exp* test_exp;
+        Exp* body_exp;
+        test_exp=_ParseExp();
         v = m_scanner->Next(&t);
         assert(v==kToken_DO);
-        _ParseExp();
-        return;
+        body_exp=_ParseExp();
+        return new WhileExp(test_exp,body_exp);
     }
     /* exp -> for id := exp to exp do exp */
     if(v==kToken_FOR){
+        Symbol* id;
+        Exp* lo_exp;
+        Exp* hi_exp;
+        Exp* body_exp;
         v = m_scanner->Next(&t);
         assert(v==kToken_ID);
+        id = new Symbol(t.u.name);
         v = m_scanner->Next(&t);
         assert(v==kToken_ASSIGN);
-        _ParseExp();
+        lo_exp=_ParseExp();
         v = m_scanner->Next(&t);
         assert(v==kToken_TO);
-        _ParseExp();
+        hi_exp=_ParseExp();
         v = m_scanner->Next(&t);
         assert(v==kToken_DO);
-        _ParseExp();
-        return;
+        body_exp=_ParseExp();
+        return new ForExp(id,lo_exp,hi_exp,body_exp);
     }
     /* exp -> let decs in end or let decs in explist end */
     if(v==kToken_LET){
-        _ParseDecs();
+        DecList* declist;
+        ExpNode* head;
+        declist=_ParseDecs();
         v = m_scanner->Next(&t);
         assert(v==kToken_IN);
-	v1 = m_scanner->Next(&t1);
-	if(v1==kToken_END){
-		return;	
-	}
-	if(v1!=kToken_EOT)
-		m_scanner->Back(&t1);
-	_ParseExpSeq();
+        v1 = m_scanner->Next(&t1);
+        if(v1==kToken_END){
+            
+            return new LetExp(declist,0);	
+        }
+        if(v1!=kToken_EOT)
+            m_scanner->Back(&t1);
+        head = _ParseExpSeq(0);
         v = m_scanner->Next(&t);
         if(v==kToken_END){
-            return;
+            return new LetExp(declist,new SeqExp(new ExpList(head)));	
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
-        return;
+        assert(1==0);
+        return 0;
     } 
     /* exp -> break */
     if(v==kToken_BREAK){
-        return;
+        return new BreakExp();
     }
     if(v==kToken_LPAR){
+        ExpNode* head;
         v1 = m_scanner->Next(&t1);
         /* exp -> () */
         if(v1==kToken_RPAR){
-            return;
+            return 0;
         }
         /* exp -> ( expseq ) */
         m_scanner->Back(&t1);
-        _ParseExpSeq();
+        head=_ParseExpSeq(0);
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RPAR);
-        return;
+        return new SeqExp(new ExpList(head));
     }
     /* exp -> - exp */
     if(v==kToken_SUB){
-        _ParseExp();
-        return;
+        Exp* exp;
+        exp = _ParseExp();
+        return new OpExp(new Oper(Oper::kOper_Sub),0,exp);
     }
     
     if(v==kToken_ID){
+        ExpNode* head;
         /*  exp -> id () or exp -> id (parms)*/
         v1 = m_scanner->Next(&t1);
         if(v1==kToken_LPAR){
-            _ParseParms();
+            head=_ParseParms(0);
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RPAR);
-            return;
+            return new CallExp(new Symbol(t.u.name),new ExpList(head));
         }
         /*  exp -> id {} or exp -> id{id=exp{,id=exp}}*/
         if(v1==kToken_LBRA){
             _ParseIdList();
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RBRA);
-            return;
+            return new EFieldList();
         }
         
         if(v1!=kToken_EOT)
@@ -296,7 +369,7 @@ Parser::~Parser(){
     delete m_scanner;
 }
 
-void Term::Parse(Parser* parser)
+Exp* Term::Parse(Parser* parser)
 {
     parser->_ParseTerm();
 }

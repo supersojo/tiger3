@@ -129,15 +129,15 @@ private:
 };
 struct ExpNode{
     ExpNode(){
-        exp = 0;
+        m_exp = 0;
         prev = next = 0;
     }
     ~ExpNode(){
-        delete exp;
+        delete m_exp;
     }
     
     /* members */
-    Exp* exp;
+    Exp* m_exp;
     ExpNode* prev;
     ExpNode* next;
 };
@@ -229,10 +229,25 @@ private:
 class Oper{
 public:
     enum{
+        /* calc */
         kOper_Add,
         kOper_Sub,
         kOper_Mul,
         kOper_Div,
+        
+        /* compare */
+        kOper_Lt,
+        kOper_Gt,
+        kOper_Le,
+        kOper_Ge,
+        
+        kOper_Eq,
+        kOper_Neq,
+        
+        kOper_And,
+        kOper_Or,
+        
+        
         kOper_Invalid
     };
     Oper(){
@@ -549,6 +564,7 @@ private:
     FunDecList* m_fundeclist;
 };
 class VarDec:public Dec{
+public:
     VarDec():Dec(kDec_Var){
         m_var = 0;
         m_type = 0;
@@ -573,8 +589,8 @@ private:
 class NameTyPairList;
 class TypeDec:public Dec{
 public:
-    TypeDec(){m_nametylist = 0;}
-    TypeDec(NameTyPairList* nametylist){m_nametylist = nametylist;}
+    TypeDec():Dec(kDec_Type){m_nametylist = 0;}
+    TypeDec(NameTyPairList* nametylist):Dec(kDec_Type){m_nametylist = nametylist;}
     ~TypeDec(){delete m_nametylist;}
 private:
     NameTyPairList* m_nametylist;
