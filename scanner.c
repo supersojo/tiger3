@@ -300,10 +300,15 @@ s32 Scanner::Next(Token* t)
     t->len = 1;/* default length of string. if the token string such as := <>, we need change it to 2 */
     /* string? */
     if((char)v=='"'){
+        i = 0;
         do{
             v = m_stream->Next();
+            sval[i++]=(char)v;
         }while(v!='"' && v!=kSourceCodeStream_EOS);
         assert(v=='"');
+        sval[i-1]='\0';
+        t->len = i-1;
+        t->u.sval=strdup(sval);
         return kToken_STR;
     } 
     /* id or keyword */

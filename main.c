@@ -100,7 +100,7 @@ int main()
 {
     //test_Next_With_StringSourceCodeStream();
     //test_sbsyn();
-    //test_parser();
-    test_Logger();
+    test_parser();
+    //test_Logger();
     return 0;
 }

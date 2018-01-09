@@ -177,6 +177,7 @@ DecList* Parser::_ParseDecs()
     DecNode* anode,*head,*tail;
     DecList* list=0;
     head = 0;
+    tail = 0;
     do{
         v = m_scanner->Next(&t);
         if(v==kToken_IN){
