@@ -6,19 +6,23 @@ namespace parser{
 
 Parser::Parser(scanner::SourceCodeStreamBase* stream){
     m_scanner = new scanner::Scanner(stream);
+    m_logger = new LoggerStdio;
+    m_logger->SetLevel(LoggerBase::kLogger_Level_Error);
 }
 
 bool Parser::Parse()
 {
     s32 v;
     Token t;
+    Exp* exp;
     
-    _ParseExp();
-    
+    m_logger->D("Begin Parse()");
+    exp = _ParseExp();
+    m_logger->D("End Parse()");
     v = m_scanner->Next(&t);
-    std::cout<<token_string((TokenType)v)<<std::endl;
+    m_logger->D("%s",token_string((TokenType)v));
     assert(v==kToken_EOT);
-    
+    m_logger->D("parse ok");
     
     return true;
 }
@@ -30,7 +34,9 @@ void Parser::_ParseVar()
 Exp* Parser::ParseExpSeq()
 {
     ExpNode* head;
+    m_logger->D("Begin ParseExpSeq()");
 	head=_ParseExpSeq(0);
+    m_logger->D("End ParseExpSeq()");
     if(head)
         return new SeqExp(new ExpList(head));
     else
@@ -41,10 +47,12 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
     s32 v;
     Token t;
     Exp* exp;
+    m_logger->D("Begin _ParseExpSeq()");
     ExpNode* anode,*p,*q;
     exp = _ParseExp();
     anode = new ExpNode;
     anode->m_exp = exp;
+    m_logger->D("Get a new ExpNode");
     if(head){
         head->next=anode;
         anode->prev=head;
@@ -52,8 +60,10 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
     v = m_scanner->Next(&t);
     if(v==kToken_SEMICOLON){
         /* expseq -> exp; expseq */
+        m_logger->D("End _ParseExpSeq()");
         return _ParseExpSeq(anode);
     }else{
+        m_logger->D("retrieve the head node of ExpNode list");
         m_scanner->Back(&t);
         p = anode;
         q = anode;
@@ -61,6 +71,7 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
             q = p;
             p = p->prev;
         }
+        m_logger->D("End _ParseExpSeq()");
         return q;
     }
 }
@@ -71,12 +82,13 @@ Var* Parser::_ParseLvalueTerm()
     
     v = m_scanner->Next(&t);
     if(v==kToken_ID){
+        m_logger->D("Get a new SimpleVar with %s",t.u.name);
         return new SimpleVar(new Symbol(t.u.name));
     }
     assert(1==0);
     return 0;
 }
-Var* Parser::_ParseLvalueRest(Var* var,s32 * flag)
+Var* Parser::_ParseLvalueRest(Var* var)
 {
     s32 v,v1;
     Token t,t1;
@@ -85,7 +97,8 @@ Var* Parser::_ParseLvalueRest(Var* var,s32 * flag)
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_ID);
-        return _ParseLvalueRest(new FieldVar(var,new Symbol(t1.u.name)),flag);
+        m_logger->D("Get a new field var with t1.u.name");
+        return _ParseLvalueRest(new FieldVar(var,new Symbol(t1.u.name)));
     }
 	
     /* lvalue' -> [ exp ] lvalue' */
@@ -94,33 +107,26 @@ Var* Parser::_ParseLvalueRest(Var* var,s32 * flag)
         exp = _ParseExp();
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RSQB);
-        *flag = *flag + 1;
-        return _ParseLvalueRest(new SubscriptVar(var,exp),flag);
+        m_logger->D("Get a new subscript var");
+        return _ParseLvalueRest(new SubscriptVar(var,exp));
     }
     
-    /* id [ exp ] of exp */
-    if(v==kToken_OF){
-        Exp* exp;
-        if(*flag==1){
-            /* ok */
-            exp = _ParseExp();
-            return new SubscriptVar(var,exp);
-        }else{
-            assert(1==0);
-        }
-    }
     /* lvalue'-> empty */
     if(v!=kToken_EOT)
         m_scanner->Back(&t);
    return var; 
 }
-Var* Parser::_ParseLvalue()
+Var* Parser::_ParseLvalue(Var* head)
 {
-    s32 flag = 0;/* of expression */
     Var * var;
-    var = _ParseLvalueTerm();
-    assert(var!=0);
-    return _ParseLvalueRest(var,&flag);
+    if(head==0){
+        m_logger->D("_ParseLvalueTerm()");
+        var = _ParseLvalueTerm();
+        return _ParseLvalueRest(var);
+    }else{
+        m_logger->D("_ParseLvalueRest()");
+        return _ParseLvalueRest(head);
+    }
 }
 
 ExpNode* Parser::_ParseParms(ExpNode* head)
@@ -146,12 +152,14 @@ ExpNode* Parser::_ParseParms(ExpNode* head)
             head->next = anode;
             anode->prev = head;
         }
+        m_logger->D("Get a new ExpNode");
         v1 = m_scanner->Next(&t1);
         if(v1==kToken_COMMA){
             return _ParseParms(anode);
         }
         if(v1!=kToken_EOT)
             m_scanner->Back(&t1);
+        m_logger->D("retrieve the head node of the ExpNode list");
         p = anode;
         q = anode;
         while(p){
@@ -182,10 +190,13 @@ DecList* Parser::_ParseDecs()
         v = m_scanner->Next(&t);
         if(v==kToken_IN){
             m_scanner->Back(&t);
-            if(head)
+            if(head){
+                m_logger->D("Get a new DecList");
                 return new DecList(head);
-            else
+            }else{
+                m_logger->D("Get a empty DecList");
                 return 0;
+            }
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
@@ -194,6 +205,7 @@ DecList* Parser::_ParseDecs()
         if(adec){
             anode = new DecNode;
             anode->m_dec = adec;
+            m_logger->D("Get a new DecNode");
             if(!head)
                 head = anode;
             if(!tail)
@@ -217,18 +229,22 @@ Exp* Parser::_ParseTerm()
     v = m_scanner->Next(&t);
     /* exp -> num */
     if(v==kToken_NUM){
+        m_logger->D("Get a new IntExp with %d",t.u.ival);
         return new IntExp(t.u.ival);
     }
     /* exp -> string */
     if(v==kToken_STR){
+        m_logger->D("Get a new StringExp with %s",t.u.sval);
         return new StringExp(t.u.sval);
     }
     /* exp -> nil */
     if(v==kToken_NIL){
+        m_logger->D("Get a new NilExp");
         return new NilExp();
     }
     /* exp -> if exp then exp else exp or exp -> if exp then exp */
     if(v==kToken_IF){
+        m_logger->D("Get a new IfExp");
         Exp* if_exp,*then_exp,*else_exp;
         if_exp=_ParseExp();
         v = m_scanner->Next(&t);
@@ -246,6 +262,7 @@ Exp* Parser::_ParseTerm()
     
     /* exp -> while exp do exp */
     if(v==kToken_WHILE){
+        m_logger->D("Get a new WhileExp");
         Exp* test_exp;
         Exp* body_exp;
         test_exp=_ParseExp();
@@ -256,6 +273,7 @@ Exp* Parser::_ParseTerm()
     }
     /* exp -> for id := exp to exp do exp */
     if(v==kToken_FOR){
+        m_logger->D("Get a new ForExp");
         Symbol* id;
         Exp* lo_exp;
         Exp* hi_exp;
@@ -276,6 +294,7 @@ Exp* Parser::_ParseTerm()
     }
     /* exp -> let decs in end or let decs in explist end */
     if(v==kToken_LET){
+        m_logger->D("Get a new LetExp");
         DecList* declist;
         ExpNode* head;
         declist=_ParseDecs();
@@ -300,6 +319,7 @@ Exp* Parser::_ParseTerm()
     } 
     /* exp -> break */
     if(v==kToken_BREAK){
+        m_logger->D("Get a new BreakExp");
         return new BreakExp();
     }
     if(v==kToken_LPAR){
@@ -307,6 +327,7 @@ Exp* Parser::_ParseTerm()
         v1 = m_scanner->Next(&t1);
         /* exp -> () */
         if(v1==kToken_RPAR){
+            m_logger->D("Get a empty Exp");
             return 0;
         }
         /* exp -> ( expseq ) */
@@ -314,6 +335,7 @@ Exp* Parser::_ParseTerm()
         head=_ParseExpSeq(0);
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_RPAR);
+        m_logger->D("Get a new SeqExp");
         return new SeqExp(new ExpList(head));
     }
     /* exp -> - exp */
@@ -331,6 +353,7 @@ Exp* Parser::_ParseTerm()
             head=_ParseParms(0);
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RPAR);
+            m_logger->D("Get a new CallExp");
             return new CallExp(new Symbol(t.u.name),new ExpList(head));
         }
         /*  exp -> id {} or exp -> id{id=exp{,id=exp}}*/
@@ -339,47 +362,74 @@ Exp* Parser::_ParseTerm()
             efields = _ParseIdList();
             v2 = m_scanner->Next(&t2);
             assert(v2==kToken_RBRA);
+            m_logger->D("Get a new RecordExp");
             return new RecordExp(new Symbol(t.u.name),efields);
+        }
+        
+        Var* var1=0;
+        /* exp -> id [exp] of exp */
+        if(v1==kToken_LSQB){
+            Symbol* id;
+            Exp* exp1,*exp2;
+            
+            id = new Symbol(t.u.name);
+            exp1 = _ParseExp();
+            v1 = m_scanner->Next(&t1);
+            assert(v1==kToken_RSQB);
+            v1 = m_scanner->Next(&t1);
+            if(v1==kToken_OF){
+                exp2 = _ParseExp();
+                m_logger->D("Get a new ArrayExp");
+                return new ArrayExp(id,exp1,exp2);
+            }
+            m_logger->D("Get a new subscript var");
+            var1 = new SubscriptVar(new SimpleVar(id),exp1);
+            delete id;
         }
         
         if(v1!=kToken_EOT)
             m_scanner->Back(&t1);
         
-        /* exp -> lvalue */
+        /* exp -> lvalue or exp -> lvalue := exp */
         Var* var;
-        m_scanner->Back(&t);
-        var = _ParseLvalue();
+        if(var1==0)
+            m_scanner->Back(&t);
+        var = _ParseLvalue(var1);
         v = m_scanner->Next(&t);
         
         /* exp -> lvalue := exp */
         if(v==kToken_ASSIGN){
             Exp* exp;
             exp = _ParseExp();
+            m_logger->D("Get a new AssignExp");
             return new AssignExp(var,exp);
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
-        return 0;
+        
+        m_logger->D("Get a new VarExp");
+        /* exp -> lvalue */
+        return new VarExp(var);
     }
+    /* should not reach */
+    return 0;
     
 }
 
 Exp* Parser::_ParseExp()
 {
-    s32 v;
-    Token t;
-    
     ExpOr exp;
     return exp.Parse(this);
 
 }
 Parser::~Parser(){
     delete m_scanner;
+    delete m_logger;
 }
 
 Exp* Term::Parse(Parser* parser)
 {
-    parser->_ParseTerm();
+    return parser->_ParseTerm();
 }
 
 

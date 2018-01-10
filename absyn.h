@@ -463,6 +463,8 @@ private:
 struct DecNode{
     DecNode(){
         m_dec = 0;
+        prev = 0;
+        next = 0;
     }
     ~DecNode(){
         delete m_dec;
@@ -523,6 +525,8 @@ private:
 struct FunDecNode{
     FunDecNode(){
         m_fundec = 0;
+        prev = 0;
+        next = 0;
     }
     ~FunDecNode(){
         delete m_fundec;
@@ -671,6 +675,8 @@ private:
 struct NameTyPairNode{
     NameTyPairNode(){
         m_nametypair = 0;
+        prev = 0;
+        next = 0;
     }
     ~NameTyPairNode(){
         delete m_nametypair;

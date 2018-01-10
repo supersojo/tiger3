@@ -55,6 +55,7 @@ bool LoggerStdio::Log(s32 level,char* fmt,...){
     bool ret = false;
 
     va_list args;
+    va_start(args,fmt);
     ret=vlog(level,fmt,args);
     va_end(args);
     
@@ -145,6 +146,7 @@ bool LoggerFile::Log(s32 level,char* fmt,...){
     bool ret = false;
 
     va_list args;
+    va_start(args,fmt);
     ret=vlog(level,fmt,args);
     va_end(args);
     
