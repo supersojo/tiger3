@@ -93,10 +93,7 @@ public:
     }
     Var* GetVar(){return m_var;}
     Exp* GetExp(){return m_exp;}
-    ~SubscriptVar(){
-        delete m_var;
-        delete m_exp;
-    }
+    ~SubscriptVar();
 private:
     Var* m_var;
     Exp* m_exp;
@@ -292,10 +289,7 @@ public:
         m_type = type;
         m_fields = fields;
     }
-    ~RecordExp(){
-        delete m_type;
-        delete m_fields;
-    }
+    ~RecordExp();
 private:
     Symbol* m_type;
     EFieldList* m_fields;
@@ -414,10 +408,7 @@ public:
         m_decs = decs;
         m_body = body;
     }
-    ~LetExp(){
-        delete m_decs;
-        delete m_body;
-    }
+    ~LetExp();
 private:
     DecList* m_decs;
     Exp* m_body;
@@ -510,12 +501,7 @@ public:
         m_result = result;
         m_body = body;
     }
-    ~FunDec(){
-        delete m_name;
-        delete m_params;
-        delete m_result;
-        delete m_body;
-    }
+    ~FunDec();
 private:
     Symbol* m_name;
     FieldList* m_params;
@@ -595,7 +581,7 @@ class TypeDec:public Dec{
 public:
     TypeDec():Dec(kDec_Type){m_nametylist = 0;}
     TypeDec(NameTyPairList* nametylist):Dec(kDec_Type){m_nametylist = nametylist;}
-    ~TypeDec(){delete m_nametylist;}
+    ~TypeDec();
 private:
     NameTyPairList* m_nametylist;
 };
@@ -639,9 +625,7 @@ public:
     RecordTy(FieldList* list):Ty(kTy_Record){
         m_list = list;
     }
-    ~RecordTy(){
-        delete m_list;
-    }
+    ~RecordTy();
 private:
     FieldList* m_list;
 };
