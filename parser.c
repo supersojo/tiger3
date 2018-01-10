@@ -8,9 +8,10 @@ Parser::Parser(scanner::SourceCodeStreamBase* stream){
     m_scanner = new scanner::Scanner(stream);
     m_logger = new LoggerStdio;
     m_logger->SetLevel(LoggerBase::kLogger_Level_Error);
+    m_logger->SetModule("parser");
 }
 
-bool Parser::Parse()
+bool Parser::Parse(Exp** prog)
 {
     s32 v;
     Token t;
@@ -23,14 +24,13 @@ bool Parser::Parse()
     m_logger->D("%s",token_string((TokenType)v));
     assert(v==kToken_EOT);
     m_logger->D("parse ok");
-    
+    //print something about absyn
+    m_logger->D("Top exp: %s",Exp::KindString(exp->Kind()));
+    if(prog)
+        *prog = exp;
     return true;
 }
-
-void Parser::_ParseVar()
-{
-    
-}
+/*
 Exp* Parser::ParseExpSeq()
 {
     ExpNode* head;
@@ -42,6 +42,7 @@ Exp* Parser::ParseExpSeq()
     else
         return 0;
 }
+*/
 ExpNode* Parser::_ParseExpSeq(ExpNode* head)
 {
     s32 v;
@@ -97,7 +98,7 @@ Var* Parser::_ParseLvalueRest(Var* var)
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
         assert(v1==kToken_ID);
-        m_logger->D("Get a new field var with t1.u.name");
+        m_logger->D("Get a new field var with %s",t1.u.name);
         return _ParseLvalueRest(new FieldVar(var,new Symbol(t1.u.name)));
     }
 	
@@ -411,7 +412,7 @@ Exp* Parser::_ParseTerm()
         /* exp -> lvalue */
         return new VarExp(var);
     }
-    /* should not reach */
+    /* should not reach here */
     return 0;
     
 }
@@ -432,6 +433,612 @@ Exp* Term::Parse(Parser* parser)
     return parser->_ParseTerm();
 }
 
+Exp* ExpMulDiv::Parse(Parser* parser){
+    Exp* left;
+    Exp* rest;
+    
+    left = Term::Parse(parser);
+    rest = _ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpMulDiv::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp *right,*rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_MUL){
+        right = Term::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Mul");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Mul),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_DIV){
+        right = Term::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Div");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Div),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+Exp* ExpAddSub::Parse(Parser* parser){
+    Exp* left;
+    Exp* rest;
+    left=ExpMulDiv::Parse(parser);
+    rest=_ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpAddSub::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp* right,*rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_ADD){
+        right=ExpMulDiv::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Add");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Add),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_SUB){
+        right=ExpMulDiv::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Sub");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Sub),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+Exp* ExpCompare::Parse(Parser* parser){
+    Exp* left;
+    Exp* rest;
+    left = ExpAddSub::Parse(parser);
+    rest = _ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpCompare::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp* right,*rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_LT){
+        right = ExpAddSub::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Lt");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Lt),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_GT){
+        right = ExpAddSub::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Gt");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Gt),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_LE){
+        right = ExpAddSub::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Le");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Le),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_GE){
+        right = ExpAddSub::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Ge");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Ge),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+
+Exp* ExpEqualOrNot::Parse(Parser* parser){
+    Exp* left,*rest;
+    left=ExpCompare::Parse(parser);
+    rest=_ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpEqualOrNot::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp* right;
+    Exp* rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_EQUAL){
+        right=ExpCompare::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Eq");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Eq),left,right),parser);
+        return rest;
+    }
+    if(v==kToken_NOTEQUAL){
+        right=ExpCompare::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Neq");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Neq),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+Exp* ExpAnd::Parse(Parser* parser){
+    Exp* left,*rest;
+    left=ExpEqualOrNot::Parse(parser);
+    rest=_ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpAnd::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp* right,*rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_AND){
+        
+        right=ExpEqualOrNot::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_And");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_And),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+Exp* ExpOr::Parse(Parser* parser){
+    Exp* left,*rest;
+    left=ExpAnd::Parse(parser);
+    rest=_ParseExpRest(left,parser);
+    if(rest)
+        return rest;
+    else
+        return left;
+}
+Exp* ExpOr::_ParseExpRest(Exp* left,Parser* parser){
+    s32 v;
+    Token t;
+    Exp* right,*rest;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_OR){
+        
+        right=ExpAnd::Parse(parser);
+        parser->GetLogger()->D("Get a new OpExp with kOper_Or");
+        rest=_ParseExpRest(new OpExp(new Oper(Oper::kOper_Or),left,right),parser);
+        return rest;
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    /* empty exp */
+    return 0;
+}
+EFieldList* IdList::Parse(Parser* parser){
+    EFieldNode* head,*rest;
+    head = _ParseIdList(parser);
+    rest = _ParseIdListRest(head,parser);
+    if(rest)
+        return new EFieldList(rest);
+    else
+        return new EFieldList(head);
+}
+EFieldNode* IdList::_ParseIdList(Parser* parser){
+    s32 v,v1,v2;
+    Token t,t1,t2;
+    EFieldNode* n;
+    v = parser->GetScanner()->Next(&t);
+    /* idlist->empty */
+    if(v==kToken_RBRA){
+        parser->GetScanner()->Back(&t);
+        /* empty EFieldNode */
+        return 0;
+    }
+    assert(v==kToken_ID);
+    if(v==kToken_ID){
+        Exp* exp;
+        v1 = parser->GetScanner()->Next(&t1);
+        assert(v1==kToken_EQUAL);
+        if(v1==kToken_EQUAL){
+            exp = parser->ParseExp();
+        }
+        n = new EFieldNode;
+        n->m_efield=new EField(new Symbol(t.u.name),exp);
+        parser->GetLogger()->D("Get a new EFieldNode");
+        return n;
+    }
+    /* empty EFieldNode */
+    return 0;
+}
+EFieldNode* IdList::_ParseIdListRest(EFieldNode* head,Parser* parser){
+    s32 v;
+    Token t;
+    EFieldNode* anode,*p,*q;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_COMMA){
+        anode=_ParseIdList(parser);
+        if(head){
+            head->next=anode;
+            anode->prev=head;
+            
+        }
+        return _ParseIdListRest(anode,parser);
+    }
+    if(v!=kToken_EOT)/* v should be kToken_RBRA*/
+        parser->GetScanner()->Back(&t);
+    p = head;
+    q = head;
+    while(p){
+        q = p;
+        p = p->prev;
+    }
+    return q;
+}
+Ty* TyDeclaration::Parse(Parser* parser){
+    s32 v;
+    Token t;
+    FieldList* fields;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_ID){
+        parser->GetLogger()->D("Get a new NameTy");
+        return new NameTy(new Symbol(t.u.name));
+    }
+    if(v==kToken_LBRA){
+        fields = _ParseTyFields(0,parser);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_RBRA);
+        parser->GetLogger()->D("Get a new RecordTy");
+        return new RecordTy(fields);
+    }
+    if(v==kToken_ARRAY){
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_OF);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        parser->GetLogger()->D("Get a new ArrayTy");
+        return new ArrayTy(new Symbol(t.u.name));
+    }
+    if(v!=kToken_EOT)
+        parser->GetScanner()->Back(&t);
+    
+    return 0;
+}
+FieldList* TyDeclaration::_ParseTyFields(FieldNode* head,Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id,*type_id;
+    FieldNode* afield;
+    FieldNode* p,*q;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_RBRA){
+        parser->GetScanner()->Back(&t);
+        return 0;
+    }
+    if(v==kToken_ID){
+        id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_COLON);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        type_id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        
+        afield = new FieldNode;
+        afield->m_field = new Field(id,type_id);
+        
+        parser->GetLogger()->D("Get a new FieldNode");
+        
+        /* link it */
+        if(head){
+            head->next=afield;
+            afield->prev=head;
+        }
+        
+        if(v==kToken_COMMA){
+            return _ParseTyFields(afield,parser);
+        }
+        if(v!=kToken_EOT)// v should be kToken_RBRA
+            parser->GetScanner()->Back(&t);
+            
+        /* get field head */
+        p = afield;
+        q = afield;
+        while(p){
+            q = p;
+            p = p->prev;
+        }
+        parser->GetLogger()->D("Get a new FieldList");
+        return new FieldList(q);
+    }
+    return 0;
+}
+Dec* TyDec::Parse(Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id;
+    Ty* id_ty;
+    NameTyPairNode* head;
+    parser->GetLogger()->D("Begin TyDec::Parse()");
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_TYPE){
+        parser->GetScanner()->Back(&t);
+        head = _ParseTyDec(0,parser);
+        parser->GetLogger()->D("End TyDec::Parse()");
+        return new TypeDec(new NameTyPairList(head));
+    }
+    return 0;
+}
+NameTyPairNode* TyDec::_ParseTyDec(NameTyPairNode* head,Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id;
+    Ty* id_ty;
+    NameTyPairNode* n,*p,*q;
+    parser->GetLogger()->D("Begin TyDec::_ParseTyDec()");
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_TYPE){
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_EQUAL);
+        TyDeclaration ty;
+        id_ty=ty.Parse(parser);
+        
+        n = new NameTyPairNode;
+        n->m_nametypair = new NameTyPair(id,id_ty);
+        parser->GetLogger()->D("Get a new NameTyPair");
+        if(head){
+            head->next=n;
+            n->prev=head;
+        }
+        
+        v = parser->GetScanner()->Next(&t);
+        if(v==kToken_TYPE){
+            parser->GetScanner()->Back(&t);
+            parser->GetLogger()->D("End TyDec::_ParseTyDec()");
+            return _ParseTyDec(n,parser);
+        }else{
+            parser->GetLogger()->D("retrieve the head node of NameTyPairNode list");
+            if(v!=kToken_EOT)
+                parser->GetScanner()->Back(&t);
+            p = n;
+            q = n;
+            while(p){
+                q = p;
+                p = p->prev;
+            }
+            return q;
+        }
+        return 0;
+    }
+    return 0;
+}
+Dec* VarDeclaration::Parse(Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id,*type_id;
+    Exp* init_exp;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_VAR){
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        if(v==kToken_ASSIGN){
+            assert(v==kToken_ASSIGN);
+            init_exp=parser->ParseExp();
+            parser->GetLogger()->D("Get a new VarDec");
+            return new VarDec(id,0,init_exp);
+        }
+        if(v==kToken_COLON){
+            v = parser->GetScanner()->Next(&t);
+            assert(v==kToken_ID);
+            type_id = new Symbol(t.u.name);
+            v = parser->GetScanner()->Next(&t);
+            assert(v==kToken_ASSIGN);
+            init_exp=parser->ParseExp();
+            parser->GetLogger()->D("Get a new VarDec");
+            return new VarDec(id,type_id,init_exp);
+        }
+        /* error */
+        assert(1==0);
+        return 0;
+    }
+    /* error */
+    assert(1==0);
+    return 0;
+}
+Dec* FunDeclaration::Parse(Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id;
+    Symbol* type_id;
+    FieldList* fields;
+    Exp* body_exp;
+    FunDecNode* head;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_FUNCTION){
+        parser->GetScanner()->Back(&t);
+        head=_ParseFuncDec(0,parser);
+        return new FunctionDec(new FunDecList(head));
+    }
+    return 0;
+}
+
+FunDecNode* FunDeclaration::_ParseFuncDec(FunDecNode* head,Parser* parser){
+    s32 v;
+    Token t;
+    FunDecNode* n,*p,*q;
+    Symbol* id;
+    Symbol* type_id;
+    FieldList* fields;
+    Exp* body_exp;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_FUNCTION){
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_LPAR); 
+        fields = _ParseTyFields(0,parser);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_RPAR); 
+        v = parser->GetScanner()->Next(&t);
+        if(v==kToken_EQUAL){
+            body_exp = parser->ParseExp();
+            
+            n = new FunDecNode;
+            n->m_fundec = new FunDec(id,fields,0,body_exp);
+            parser->GetLogger()->D("Get a new FunDecNode");
+            if(head){
+                head->next=n;
+                n->prev=head;
+            }
+            
+            v = parser->GetScanner()->Next(&t);
+            if(v==kToken_FUNCTION){/* continue function declarations */
+                parser->GetScanner()->Back(&t);
+                return _ParseFuncDec(n,parser);
+            }else{
+                if(v!=kToken_EOT)
+                    parser->GetScanner()->Back(&t);
+                parser->GetLogger()->D("Retrieve the head node of the FunDecNode list");
+                p = n;
+                q = n;
+                while(p){
+                    q = p;
+                    p = p->prev;
+                }
+                return q;
+            }
+        }
+        if(v==kToken_COLON){
+            v = parser->GetScanner()->Next(&t);
+            assert(v==kToken_ID);
+            type_id = new Symbol(t.u.name);
+            v = parser->GetScanner()->Next(&t);
+            assert(v==kToken_EQUAL);
+            body_exp=parser->ParseExp();
+            
+            
+            n = new FunDecNode;
+            n->m_fundec = new FunDec(id,fields,type_id,body_exp);
+            parser->GetLogger()->D("Get a new FunDecNode");
+            if(head){
+                head->next=n;
+                n->prev=head;
+            }
+            v = parser->GetScanner()->Next(&t);
+            if(v==kToken_FUNCTION){/* continue function declarations */
+                parser->GetScanner()->Back(&t);
+                return _ParseFuncDec(n,parser);
+            }else{
+                if(v!=kToken_EOT)
+                    parser->GetScanner()->Back(&t);
+                parser->GetLogger()->D("Retrieve the head node of the FunDecNode list");
+                p = n;
+                q = n;
+                while(p){
+                    q = p;
+                    p = p->prev;
+                }
+                return q;
+            }
+        }
+    }
+    return 0;
+}
+FieldList* FunDeclaration::_ParseTyFields(FieldNode* head,Parser* parser){
+    s32 v;
+    Token t;
+    Symbol* id,*type_id;
+    FieldNode* afield;
+    FieldNode* p,*q;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_RPAR){
+        parser->GetScanner()->Back(&t);
+        return 0;
+    }
+    if(v==kToken_ID){
+        id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_COLON);
+        v = parser->GetScanner()->Next(&t);
+        assert(v==kToken_ID);
+        type_id = new Symbol(t.u.name);
+        v = parser->GetScanner()->Next(&t);
+        
+        afield = new FieldNode;
+        afield->m_field = new Field(id,type_id);
+        parser->GetLogger()->D("Get a new FieldNode");
+        /* link it */
+        if(head){
+            head->next=afield;
+            afield->prev=head;
+        }
+        
+        if(v==kToken_COMMA){
+            return _ParseTyFields(afield,parser);
+        }
+        if(v!=kToken_EOT)// v should be kToken_RBRA
+            parser->GetScanner()->Back(&t);
+            
+        parser->GetLogger()->D("Retrieve the head node of the FieldNode list");
+        /* get field head */
+        p = afield;
+        q = afield;
+        while(p){
+            q = p;
+            p = p->prev;
+        }
+        return new FieldList(q);
+    }
+    assert(1==0);
+    return 0;
+}
+
+Dec* Declaration::Parse(Parser* parser){
+    s32 v;
+    Token t;
+    v = parser->GetScanner()->Next(&t);
+    if(v==kToken_TYPE){
+        parser->GetLogger()->D("Begin  type declaration parsing");
+        TyDec dec;
+        parser->GetScanner()->Back(&t);
+        return dec.Parse(parser);
+    }
+    if(v==kToken_VAR){
+        parser->GetLogger()->D("Begin  var declaration parsing");
+        VarDeclaration dec;
+        parser->GetScanner()->Back(&t);
+        return dec.Parse(parser);
+    }
+    if(v==kToken_FUNCTION){
+        parser->GetLogger()->D("Begin  function declaration parsing");
+        FunDeclaration dec;
+        parser->GetScanner()->Back(&t);
+        return dec.Parse(parser);
+    }
+    //std::cout<<token_string((TokenType)v)<<std::endl;
+    if(v!=kToken_EOT)//it should be kToken_IN
+        parser->GetScanner()->Back(&t);
+        
+    return 0;
+}
 
 }//namespace parser
 

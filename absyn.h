@@ -3,6 +3,7 @@
 #define ABSYN_H
 
 #include "tiger_type.h"
+#include "tiger_log.h"
 
 namespace tiger{
     
@@ -16,6 +17,7 @@ private:
     s32 m_off;
 };
 
+
 class Symbol{
 public:
     Symbol(){
@@ -26,6 +28,10 @@ public:
     }
     char* Name(){return m_name;}
     ~Symbol(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absun");
+        logger.D("~SimpleVar");
         free(m_name);
     }
 private:
@@ -48,6 +54,7 @@ public:
 private:
     s32 m_kind;
 };
+
 class SimpleVar:public Var{
 public:
     SimpleVar():Var(kVar_Simple){
@@ -56,10 +63,17 @@ public:
     SimpleVar(Symbol* sym):Var(kVar_Simple){
         m_sym = sym;
     }
-    ~SimpleVar(){delete m_sym;}
+    ~SimpleVar(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~SimpleVar");
+        delete m_sym;
+    }
 public:
     Symbol* m_sym;
 };
+
 class FieldVar:public Var{
 public:
     FieldVar():Var(kVar_Field){
@@ -72,6 +86,10 @@ public:
     Var* GetVar(){return m_var;}
     Symbol* GetSym(){return m_sym;}
     ~FieldVar(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~FieldVar");
         delete m_var;
         delete m_sym;
     }
@@ -98,6 +116,7 @@ private:
     Var* m_var;
     Exp* m_exp;
 };
+
 class Exp{
 public:
     enum{
@@ -121,9 +140,15 @@ public:
     Exp(){m_kind = kExp_Invalid;}
     Exp(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    static char* KindString(s32 kind){
+        return ExpKindStrings[kind];
+    }
+    virtual ~Exp(){}
 private:
     s32 m_kind;
+    static char* ExpKindStrings[];
 };
+
 struct ExpNode{
     ExpNode(){
         m_exp = 0;
@@ -138,6 +163,7 @@ struct ExpNode{
     ExpNode* prev;
     ExpNode* next;
 };
+
 class ExpList{
 public:
     ExpList(){
@@ -147,16 +173,22 @@ public:
         m_head = exp_node;
     }
     ~ExpList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~ExpList");
         ExpNode* p = m_head;
         while(p){
-             m_head = m_head->next;
-             delete p;
-             p = m_head;
+            logger.D("~ExpList #");
+            m_head = m_head->next;
+            delete p;
+            p = m_head;
         }
     }
 private:
     ExpNode* m_head;
 };
+
 class VarExp:public Exp{
 public:
     VarExp():Exp(kExp_Var){
@@ -166,17 +198,23 @@ public:
         m_var = var;
     }
     Var* GetVar(){return m_var;}
-    ~VarExp(){
+    virtual ~VarExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~VarExp");
         delete m_var;
     }
 private:
     Var* m_var;
 };
+
 class NilExp:public Exp{
 public:
     NilExp():Exp(kExp_Nil){
     }
 };
+
 class IntExp:public Exp{
 public:
     IntExp():Exp(kExp_Int){
@@ -189,6 +227,7 @@ public:
 private:
     s32 m_ival;
 };
+
 class StringExp:public Exp{
 public:
     StringExp():Exp(kExp_String){
@@ -199,11 +238,16 @@ public:
     }
     char* GetString(){return m_sval;}
     ~StringExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~StringExp");
         free(m_sval);
     }
 private:
     char* m_sval;
 };
+
 class CallExp:public Exp{
 public:
     CallExp():Exp(kExp_Call){
@@ -215,6 +259,10 @@ public:
         m_explist = explist;
     }
     ~CallExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~CallExp");
         delete m_sym;
         delete m_explist;
     }
@@ -223,6 +271,7 @@ private:
     ExpList* m_explist;
     
 };
+
 class Oper{
 public:
     enum{
@@ -255,6 +304,7 @@ public:
 private:
     s32 m_kind;
 };
+
 class OpExp:public Exp{
 public:
     OpExp():Exp(kExp_Op){
@@ -268,6 +318,10 @@ public:
         m_right = right;
     }
     ~OpExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~OpExp");
         delete m_oper;
         delete m_left;
         delete m_right;
@@ -293,7 +347,8 @@ public:
 private:
     Symbol* m_type;
     EFieldList* m_fields;
-};    
+};   
+ 
 class SeqExp:public Exp{
 public:
     SeqExp():Exp(kExp_Seq){
@@ -302,12 +357,17 @@ public:
     SeqExp(ExpList* explist):Exp(kExp_Seq){
         m_list = explist;
     }
-    ~SeqExp(){
+    virtual ~SeqExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~SeqExp");
         delete m_list;
     }
 private:
     ExpList* m_list;
 };
+
 class AssignExp:public Exp{
 public:
     AssignExp():Exp(kExp_Assign){
@@ -319,6 +379,10 @@ public:
         m_exp = exp;
     }
     ~AssignExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~AssignExp");
         delete m_var;
         delete m_exp;
     }
@@ -326,6 +390,7 @@ private:
     Var* m_var;
     Exp* m_exp;
 };
+
 class IfExp:public Exp{
 public:
     IfExp():Exp(kExp_If){
@@ -339,6 +404,10 @@ public:
         m_elsee = elsee;
     }
     ~IfExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~IfExp");
         delete m_test;
         delete m_then;
         delete m_elsee;
@@ -348,6 +417,7 @@ private:
     Exp* m_then;
     Exp* m_elsee;
 };
+
 class WhileExp:public Exp{
 public:
     WhileExp():Exp(kExp_While){
@@ -359,6 +429,10 @@ public:
         m_body = body;
     }
     ~WhileExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~WhileExp");
         delete m_test;
         delete m_body;
     }
@@ -366,10 +440,12 @@ private:
     Exp* m_test;
     Exp* m_body;
 };
+
 class BreakExp:public Exp{
 public:
     BreakExp():Exp(kExp_Break){}
 };
+
 class ForExp:public Exp{
 public:
     ForExp():Exp(kExp_For){
@@ -385,6 +461,10 @@ public:
         m_body = body;
     }
     ~ForExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~ForExp");
         delete m_var;
         delete m_lo;
         delete m_hi;
@@ -413,6 +493,7 @@ private:
     DecList* m_decs;
     Exp* m_body;
 };
+
 class ArrayExp:public Exp{
 public:
     ArrayExp():Exp(kExp_Array){
@@ -426,6 +507,10 @@ public:
         m_init = init;
     }
     ~ArrayExp(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~ArrayExp");
         delete m_type;
         delete m_size;
         delete m_init;
@@ -451,6 +536,7 @@ public:
 private:
     s32 m_kind;
 };
+
 struct DecNode{
     DecNode(){
         m_dec = 0;
@@ -468,15 +554,21 @@ struct DecNode{
     DecNode* next;
     
 };
+
 class DecList{
 public:
     DecList(){m_head=0;}
     DecList(DecNode* head){m_head = head;}
     ~DecList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~DecList");
         DecNode* p;
         p = m_head;
         while(p)
         {
+            logger.D("~DecList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -487,6 +579,7 @@ private:
 };
 
 class FieldList;
+
 class FunDec{
 public:
     FunDec(){
@@ -508,6 +601,7 @@ private:
     Symbol* m_result;
     Exp* m_body;
 };
+
 struct FunDecNode{
     FunDecNode(){
         m_fundec = 0;
@@ -523,14 +617,20 @@ struct FunDecNode{
     FunDecNode* prev;
     FunDecNode* next;
 };
+
 class FunDecList{
 public:
     FunDecList(){m_head=0;}
     FunDecList(FunDecNode* head){m_head=head;}
     ~FunDecList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~FunDecList");
         FunDecNode* p;
         p = m_head;
         while(p){
+            logger.D("~FunDecList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -539,6 +639,7 @@ public:
 private:
     FunDecNode* m_head;
 };
+
 class FunctionDec:public Dec{
 public:
     FunctionDec():Dec(kDec_Function){
@@ -548,11 +649,16 @@ public:
         m_fundeclist = funs;
     }
     ~FunctionDec(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~FunctionDec");
         delete m_fundeclist;
     }
 private:
     FunDecList* m_fundeclist;
 };
+
 class VarDec:public Dec{
 public:
     VarDec():Dec(kDec_Var){
@@ -566,6 +672,10 @@ public:
         m_init = init;
     }
     ~VarDec(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~VarDec");
         delete m_var;
         delete m_type;
         delete m_init;
@@ -577,6 +687,7 @@ private:
 };
 
 class NameTyPairList;
+
 class TypeDec:public Dec{
 public:
     TypeDec():Dec(kDec_Type){m_nametylist = 0;}
@@ -601,6 +712,7 @@ public:
 private:
     s32 m_kind;
 };
+
 class NameTy:public Ty{
 public:
     NameTy():Ty(kTy_Name){
@@ -610,6 +722,10 @@ public:
         m_sym = sym;
     }
     ~NameTy(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~NameTy");
         delete m_sym;
     }
 private:
@@ -629,6 +745,7 @@ public:
 private:
     FieldList* m_list;
 };
+
 class ArrayTy:public Ty{
 public:
     ArrayTy():Ty(kTy_Array){
@@ -638,6 +755,10 @@ public:
         m_name = name;
     }
     ~ArrayTy(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~ArrayTy");
         delete m_name;
     }
 private:
@@ -649,6 +770,10 @@ public:
     NameTyPair(){m_name=0;m_ty=0;}
     NameTyPair(Symbol* name,Ty* a_ty){m_name = name; m_ty = a_ty;}
     ~NameTyPair(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~NameTyPair");
         delete m_name;
         delete m_ty;
     }
@@ -656,6 +781,7 @@ private:
     Symbol* m_name;
     Ty* m_ty;
 };
+
 struct NameTyPairNode{
     NameTyPairNode(){
         m_nametypair = 0;
@@ -671,14 +797,20 @@ struct NameTyPairNode{
     NameTyPairNode* prev;
     NameTyPairNode* next;
 };
+
 class NameTyPairList{
 public:
     NameTyPairList(){m_head=0;}
     NameTyPairList(NameTyPairNode* head){m_head=head;}
     ~NameTyPairList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~NameTyPairList");
         NameTyPairNode* p;
         p = m_head;
         while(p){
+            logger.D("~NameTyPairList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -687,6 +819,7 @@ public:
 private:
     NameTyPairNode* m_head;
 };
+
 class Field{
 public:
     Field(){m_name = 0;m_type = 0;}
@@ -694,11 +827,19 @@ public:
         m_name = name;
         m_type = type;
     }
-    ~Field(){delete m_name;delete m_type;}
+    ~Field(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~Field");
+        delete m_name;
+        delete m_type;
+    }
 private:
     Symbol* m_name;
     Symbol* m_type;
 };
+
 struct FieldNode{
     FieldNode(){
         m_field = 0;
@@ -714,6 +855,7 @@ struct FieldNode{
     FieldNode* prev;
     FieldNode* next;
 };
+
 class FieldList{
 public:
     FieldList(){
@@ -723,9 +865,14 @@ public:
         m_head = head;
     }
     ~FieldList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~FieldList");
         FieldNode* p;
         p = m_head;
         while(p){
+            logger.D("~FieldList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -734,6 +881,7 @@ public:
 private:
     FieldNode* m_head;
 };
+
 class EField{
 public:
     EField(){m_name=0;m_exp=0;}
@@ -741,11 +889,19 @@ public:
         m_name = name;
         m_exp = exp;
     }
-    ~EField(){delete m_name;delete m_exp;}
+    ~EField(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~EField");
+        delete m_name;
+        delete m_exp;
+    }
 private:
     Symbol* m_name;
     Exp* m_exp;
 };
+
 struct EFieldNode{
     EFieldNode(){
         m_efield = 0;
@@ -762,6 +918,7 @@ struct EFieldNode{
     EFieldNode* next;
     
 };
+
 class EFieldList{
 public:
     EFieldList(){m_head=0;}
@@ -769,9 +926,14 @@ public:
         m_head = head;
     }
     ~EFieldList(){
+        LoggerStdio logger;
+        logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        logger.SetModule("absyn");
+        logger.D("~EFieldList");
         EFieldNode* p;
         p = m_head;
         while(p){
+            logger.D("~EFieldList #");
             m_head = m_head->next;
             delete p;
             p = m_head;

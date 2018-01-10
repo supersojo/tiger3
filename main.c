@@ -72,11 +72,11 @@ void test_sbsyn()
 void test_parser()
 {
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 in end");
-    
+    tiger::scanner::StringSourceCodeStream stream((char*)"(a+1;b+2;c>3)");
+    tiger::Exp* exp;
     tiger::parser::Parser parser(&stream);
-    parser.Parse();
-    
+    parser.Parse(&exp);
+    delete exp;
 }
 void test_Logger(){
     tiger::LoggerFile logger;

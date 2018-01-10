@@ -6,6 +6,25 @@
 
 namespace tiger{
 
+char* Exp::ExpKindStrings[]={
+        "kExp_Var",
+        "kExp_Nil",
+        "kExp_Int",
+        "kExp_String",
+        "kExp_Call",
+        "kExp_Op",
+        "kExp_Record",
+        "kExp_Seq",
+        "kExp_Assign",
+        "kExp_If",
+        "kExp_While",
+        "kExp_Break",
+        "kExp_For",
+        "kExp_Let",
+        "kExp_Array",
+        "kExp_Invalid"
+};
+
 SubscriptVar::~SubscriptVar(){
         delete m_var;
         delete m_exp;

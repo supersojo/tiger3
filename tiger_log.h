@@ -1,7 +1,10 @@
 /* Coding: ANSI */
 #ifndef _TIGER_LOG_H
 #define _TIGER_LOG_H
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
 #include <stdarg.h>
 #include "tiger_type.h"
 
@@ -36,16 +39,26 @@ public:
     virtual bool E(char* fmt,...){return true;}
     s32 GetLevel(){return m_level;}
     void SetLevel(s32 level){m_level = level;}
-    LoggerBase(){m_kind = kLogger_Invalid;m_level = kLogger_Level_Invalid;}
-    LoggerBase(s32 kind){m_kind=kind;m_level=kLogger_Level_Default;}
+    LoggerBase(){m_kind = kLogger_Invalid;m_level = kLogger_Level_Invalid;m_module=0;}
+    LoggerBase(s32 kind){m_kind=kind;m_level=kLogger_Level_Default;m_module=0;}
+    ~LoggerBase(){
+        if(m_module)
+            free(m_module);
+    }
     void SetKind(s32 kind){m_kind = kind;}
+    char* GetModule(){return m_module;}
+    void SetModule(char* module){
+        if(m_module)
+            free(m_module);
+        m_module=strdup(module);//Note: free memory
+    }
     static char* GetLevelString(s32 level){
         return LevelStrings[level];
     }
 private:
     s32 m_kind;
     s32 m_level;
-    
+    char* m_module;
     static char* LevelStrings[];
 };
 

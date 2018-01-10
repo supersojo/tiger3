@@ -21,10 +21,19 @@ bool LoggerBase::Log(s32 level,char* fmt,...)
 }
 void LoggerStdio::LogHeader(s32 level)
 {
-    if(GetLevel()==kLogger_Level_Error)
+    if(GetLevel()==kLogger_Level_Error){
+        if(GetModule())
+            fprintf(stderr,"[%s]",GetModule());
+        else
+            fprintf(stderr,"[]");
         fprintf(stderr,"%s: ",LoggerBase::GetLevelString(level));
-    else
+    }else{
+        if(GetModule())
+            fprintf(stderr,"[%s]",GetModule());
+        else
+            fprintf(stderr,"[]");
         fprintf(stdout,"%s: ",LoggerBase::GetLevelString(level));
+    }
 }
 void LoggerStdio::LogEnder()
 {
@@ -117,6 +126,10 @@ LoggerFile::LoggerFile()
 
 void LoggerFile::LogHeader(s32 level)
 {
+    if(GetModule())
+        fprintf(m_file,"[%s]",GetModule());
+    else
+        fprintf(m_file,"[]");
     fprintf(m_file,"%s: ",LoggerBase::GetLevelString(level));
 }
 
