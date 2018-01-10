@@ -315,6 +315,7 @@ Exp* Parser::_ParseTerm()
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
+        m_logger->D(token_string((TokenType)v));
         assert(1==0);
         return 0;
     } 

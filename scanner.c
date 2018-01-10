@@ -266,6 +266,10 @@ s32 Scanner::Next(Token* t)
         }
         else
         {
+            if((char)v=='\n'){
+                m_stream->NewLine();
+                v = m_stream->Next();
+            } 
             if(v!=kSourceCodeStream_EOS)
                 m_stream->Back(1);
         }
