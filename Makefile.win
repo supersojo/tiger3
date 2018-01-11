@@ -1,16 +1,20 @@
 all:main.exe
 
-main.exe:main.c scanner.c parser.c token.c tiger_log.c
+main.exe:main.c scanner.c parser.c absyn.c token.c tiger_log.c tiger_assert.c
 	cl /c /Tp  main.c /EHsc
 	cl /c /Tp  scanner.c /EHsc
 	cl /c /Tp  parser.c /EHsc
+	cl /c /Tp  absyn.c /EHsc
 	cl /c /Tp  token.c /EHsc
 	cl /c /Tp  tiger_log.c /EHsc
-	link /subsystem:console main.obj scanner.obj parser.obj token.obj tiger_log.obj /out:main.exe
+	cl /c /Tp  tiger_assert.c /EHsc
+	link /subsystem:console main.obj scanner.obj parser.obj absyn.obj token.obj tiger_log.obj tiger_assert.obj /out:main.exe
 clean:
 	rm main.exe
 	rm main.obj
 	rm scanner.obj
 	rm parser.obj
+	rm absyn.obj
 	rm token.obj	
 	rm tiger_log.obj	
+	rm tiger_assert.obj	
