@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "tiger_log.h"
 #include "tiger_assert.h"
+#include "types.h"
 
 void test_StringSourceCodeStream()
 {
@@ -90,12 +91,23 @@ void test_Logger(){
 void test_assert(){
     TIGER_ASSERT(1==0,"Expected %s %d",__FILE__,__LINE__);
 }
+void test_types(){
+    tiger::TypeBase* a;
+    a = new tiger::TypeNil;
+    
+    assert(a->Kind()==tiger::TypeBase::kType_Nil);
+    tiger::LoggerStdio logger;
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    logger.D("%d",a->Kind());
+}
+
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
     //test_sbsyn();
-    test_parser();
+    //test_parser();
     //test_Logger();
     //test_assert();
+    test_types();
     return 0;
 }
