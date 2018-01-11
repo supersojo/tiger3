@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "tiger_assert.h"
 
 namespace tiger{
 
@@ -22,7 +23,7 @@ bool Parser::Parse(Exp** prog)
     m_logger->D("End Parse()");
     v = m_scanner->Next(&t);
     m_logger->D("%s",token_string((TokenType)v));
-    assert(v==kToken_EOT);
+    TIGER_ASSERT(v==kToken_EOT,"Expected kToken_EOT here, but %s provided",token_string((TokenType)v));
     m_logger->D("parse ok");
     //print something about absyn
     m_logger->D("Top exp: %s",Exp::KindString(exp->Kind()));
@@ -64,6 +65,7 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
         m_logger->D("End _ParseExpSeq()");
         return _ParseExpSeq(anode);
     }else{
+        m_logger->D(token_string((TokenType)v));
         m_logger->D("retrieve the head node of ExpNode list");
         m_scanner->Back(&t);
         p = anode;
@@ -86,7 +88,7 @@ Var* Parser::_ParseLvalueTerm()
         m_logger->D("Get a new SimpleVar with %s",t.u.name);
         return new SimpleVar(new Symbol(t.u.name));
     }
-    assert(1==0);
+    TIGER_ASSERT(0,"Wrong token %s here",token_string((TokenType)v));
     return 0;
 }
 Var* Parser::_ParseLvalueRest(Var* var)
@@ -97,7 +99,7 @@ Var* Parser::_ParseLvalueRest(Var* var)
     v = m_scanner->Next(&t);
     if(v==kToken_DOT){
         v1 = m_scanner->Next(&t1);
-        assert(v1==kToken_ID);
+        TIGER_ASSERT(v1==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v1));
         m_logger->D("Get a new field var with %s",t1.u.name);
         return _ParseLvalueRest(new FieldVar(var,new Symbol(t1.u.name)));
     }
@@ -107,7 +109,7 @@ Var* Parser::_ParseLvalueRest(Var* var)
         Exp* exp;
         exp = _ParseExp();
         v1 = m_scanner->Next(&t1);
-        assert(v1==kToken_RSQB);
+        TIGER_ASSERT(v1==kToken_RSQB,"Expected kToken_RSQB here, but %s provided",token_string((TokenType)v1));
         m_logger->D("Get a new subscript var");
         return _ParseLvalueRest(new SubscriptVar(var,exp));
     }
@@ -169,7 +171,6 @@ ExpNode* Parser::_ParseParms(ExpNode* head)
         }
         return q;
     }
-    assert(1==0);
     return 0;
 }
 EFieldList* Parser::_ParseIdList()
@@ -187,8 +188,10 @@ DecList* Parser::_ParseDecs()
     DecList* list=0;
     head = 0;
     tail = 0;
+    m_logger->D("Begin _ParseDecs");
     do{
         v = m_scanner->Next(&t);
+        m_logger->D(token_string((TokenType)v));
         if(v==kToken_IN){
             m_scanner->Back(&t);
             if(head){
@@ -219,7 +222,6 @@ DecList* Parser::_ParseDecs()
         }
     }while(1);
     
-    assert(1==0);
     return 0;
 }
 Exp* Parser::_ParseTerm()
@@ -249,7 +251,7 @@ Exp* Parser::_ParseTerm()
         Exp* if_exp,*then_exp,*else_exp;
         if_exp=_ParseExp();
         v = m_scanner->Next(&t);
-        assert(v==kToken_THEN);
+        TIGER_ASSERT(v==kToken_THEN,"Expected kToken_THEN here, but %s provided",token_string((TokenType)v));
         then_exp=_ParseExp();
         v = m_scanner->Next(&t);
         if(v==kToken_ELSE){
@@ -268,7 +270,7 @@ Exp* Parser::_ParseTerm()
         Exp* body_exp;
         test_exp=_ParseExp();
         v = m_scanner->Next(&t);
-        assert(v==kToken_DO);
+        TIGER_ASSERT(v==kToken_DO,"Expected kToken_DO here, but %s provided",token_string((TokenType)v));
         body_exp=_ParseExp();
         return new WhileExp(test_exp,body_exp);
     }
@@ -280,16 +282,16 @@ Exp* Parser::_ParseTerm()
         Exp* hi_exp;
         Exp* body_exp;
         v = m_scanner->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         id = new Symbol(t.u.name);
         v = m_scanner->Next(&t);
-        assert(v==kToken_ASSIGN);
+        TIGER_ASSERT(v==kToken_ASSIGN,"Expected kToken_ASSIGN here, but %s provided",token_string((TokenType)v));
         lo_exp=_ParseExp();
         v = m_scanner->Next(&t);
-        assert(v==kToken_TO);
+        TIGER_ASSERT(v==kToken_TO,"Expected kToken_TO here, but %s provided",token_string((TokenType)v));
         hi_exp=_ParseExp();
         v = m_scanner->Next(&t);
-        assert(v==kToken_DO);
+        TIGER_ASSERT(v==kToken_DO,"Expected kToken_DO here, but %s provided",token_string((TokenType)v));
         body_exp=_ParseExp();
         return new ForExp(id,lo_exp,hi_exp,body_exp);
     }
@@ -300,7 +302,7 @@ Exp* Parser::_ParseTerm()
         ExpNode* head;
         declist=_ParseDecs();
         v = m_scanner->Next(&t);
-        assert(v==kToken_IN);
+        TIGER_ASSERT(v==kToken_IN,"Expected kToken_IN here, but %s provided",token_string((TokenType)v));
         v1 = m_scanner->Next(&t1);
         if(v1==kToken_END){
             
@@ -310,13 +312,15 @@ Exp* Parser::_ParseTerm()
             m_scanner->Back(&t1);
         head = _ParseExpSeq(0);
         v = m_scanner->Next(&t);
+        TIGER_ASSERT(v==kToken_END,"Expected  kToken_END here, but %s provided",token_string((TokenType)v));
         if(v==kToken_END){
+            m_logger->D("return a new LetExp");
             return new LetExp(declist,new SeqExp(new ExpList(head)));	
         }
         if(v!=kToken_EOT)
             m_scanner->Back(&t);
         m_logger->D(token_string((TokenType)v));
-        assert(1==0);
+        TIGER_ASSERT(0,"Wrong token %s here",token_string((TokenType)v));
         return 0;
     } 
     /* exp -> break */
@@ -336,7 +340,7 @@ Exp* Parser::_ParseTerm()
         m_scanner->Back(&t1);
         head=_ParseExpSeq(0);
         v1 = m_scanner->Next(&t1);
-        assert(v1==kToken_RPAR);
+        TIGER_ASSERT(v1==kToken_RPAR,"Expected kToken_RPAR here, but %s provided",token_string((TokenType)v1));
         m_logger->D("Get a new SeqExp");
         return new SeqExp(new ExpList(head));
     }
@@ -354,7 +358,7 @@ Exp* Parser::_ParseTerm()
         if(v1==kToken_LPAR){
             head=_ParseParms(0);
             v2 = m_scanner->Next(&t2);
-            assert(v2==kToken_RPAR);
+            TIGER_ASSERT(v2==kToken_RPAR,"Expected kToken_RPAR here, but %s provided",token_string((TokenType)v2));
             m_logger->D("Get a new CallExp");
             return new CallExp(new Symbol(t.u.name),new ExpList(head));
         }
@@ -363,7 +367,7 @@ Exp* Parser::_ParseTerm()
             EFieldList* efields;
             efields = _ParseIdList();
             v2 = m_scanner->Next(&t2);
-            assert(v2==kToken_RBRA);
+            TIGER_ASSERT(v2==kToken_RBRA,"Expected kToken_RBRA here, but %s provided",token_string((TokenType)v2));
             m_logger->D("Get a new RecordExp");
             return new RecordExp(new Symbol(t.u.name),efields);
         }
@@ -377,7 +381,7 @@ Exp* Parser::_ParseTerm()
             id = new Symbol(t.u.name);
             exp1 = _ParseExp();
             v1 = m_scanner->Next(&t1);
-            assert(v1==kToken_RSQB);
+            TIGER_ASSERT(v1==kToken_RSQB,"Expected kToken_RSQB here, but %s provided",token_string((TokenType)v1));
             v1 = m_scanner->Next(&t1);
             if(v1==kToken_OF){
                 exp2 = _ParseExp();
@@ -648,11 +652,11 @@ EFieldNode* IdList::_ParseIdList(Parser* parser){
         /* empty EFieldNode */
         return 0;
     }
-    assert(v==kToken_ID);
+    TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
     if(v==kToken_ID){
         Exp* exp;
         v1 = parser->GetScanner()->Next(&t1);
-        assert(v1==kToken_EQUAL);
+        TIGER_ASSERT(v1==kToken_EQUAL,"Expected kToken_EQUAL here, but %s provided",token_string((TokenType)v1));
         if(v1==kToken_EQUAL){
             exp = parser->ParseExp();
         }
@@ -700,15 +704,15 @@ Ty* TyDeclaration::Parse(Parser* parser){
     if(v==kToken_LBRA){
         fields = _ParseTyFields(0,parser);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_RBRA);
+        TIGER_ASSERT(v==kToken_RBRA,"Expected kToken_RBRA here, but %s provided",token_string((TokenType)v));
         parser->GetLogger()->D("Get a new RecordTy");
         return new RecordTy(fields);
     }
     if(v==kToken_ARRAY){
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_OF);
+        TIGER_ASSERT(v==kToken_OF,"Expected kToken_OF here, but %s provided",token_string((TokenType)v));
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         parser->GetLogger()->D("Get a new ArrayTy");
         return new ArrayTy(new Symbol(t.u.name));
     }
@@ -731,9 +735,9 @@ FieldList* TyDeclaration::_ParseTyFields(FieldNode* head,Parser* parser){
     if(v==kToken_ID){
         id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_COLON);
+        TIGER_ASSERT(v==kToken_COLON,"Expected kToken_COLON here, but %s provided",token_string((TokenType)v));
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         type_id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
         
@@ -792,10 +796,10 @@ NameTyPairNode* TyDec::_ParseTyDec(NameTyPairNode* head,Parser* parser){
     v = parser->GetScanner()->Next(&t);
     if(v==kToken_TYPE){
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_EQUAL);
+        TIGER_ASSERT(v==kToken_EQUAL,"Expected kToken_EQUAL here, but %s provided",token_string((TokenType)v));
         TyDeclaration ty;
         id_ty=ty.Parse(parser);
         
@@ -836,31 +840,31 @@ Dec* VarDeclaration::Parse(Parser* parser){
     v = parser->GetScanner()->Next(&t);
     if(v==kToken_VAR){
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
         if(v==kToken_ASSIGN){
-            assert(v==kToken_ASSIGN);
+            TIGER_ASSERT(v==kToken_ASSIGN,"Expected kToken_ASSIGN here, but %s provided",token_string((TokenType)v));
             init_exp=parser->ParseExp();
             parser->GetLogger()->D("Get a new VarDec");
             return new VarDec(id,0,init_exp);
         }
         if(v==kToken_COLON){
             v = parser->GetScanner()->Next(&t);
-            assert(v==kToken_ID);
+            TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
             type_id = new Symbol(t.u.name);
             v = parser->GetScanner()->Next(&t);
-            assert(v==kToken_ASSIGN);
+            TIGER_ASSERT(v==kToken_ASSIGN,"Expected kToken_ASSIGN here, but %s provided",token_string((TokenType)v));
             init_exp=parser->ParseExp();
             parser->GetLogger()->D("Get a new VarDec");
             return new VarDec(id,type_id,init_exp);
         }
         /* error */
-        assert(1==0);
+        TIGER_ASSERT(0,"Wrong token %s here",token_string((TokenType)v));
         return 0;
     }
     /* error */
-    assert(1==0);
+    TIGER_ASSERT(0,"Wrong token %s here",token_string((TokenType)v));
     return 0;
 }
 Dec* FunDeclaration::Parse(Parser* parser){
@@ -891,13 +895,13 @@ FunDecNode* FunDeclaration::_ParseFuncDec(FunDecNode* head,Parser* parser){
     v = parser->GetScanner()->Next(&t);
     if(v==kToken_FUNCTION){
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT(v==kToken_ID,"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_LPAR); 
+        TIGER_ASSERT(v==kToken_LPAR,"Expected kToken_LPAR here, but %s provided",token_string((TokenType)v));
         fields = _ParseTyFields(0,parser);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_RPAR); 
+        TIGER_ASSERT(v==kToken_RPAR,"Expected kToken_RPAR here, but %s provided",token_string((TokenType)v));
         v = parser->GetScanner()->Next(&t);
         if(v==kToken_EQUAL){
             body_exp = parser->ParseExp();
@@ -929,10 +933,10 @@ FunDecNode* FunDeclaration::_ParseFuncDec(FunDecNode* head,Parser* parser){
         }
         if(v==kToken_COLON){
             v = parser->GetScanner()->Next(&t);
-            assert(v==kToken_ID);
+            TIGER_ASSERT((v==kToken_ID),"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
             type_id = new Symbol(t.u.name);
             v = parser->GetScanner()->Next(&t);
-            assert(v==kToken_EQUAL);
+            TIGER_ASSERT((v==kToken_EQUAL),"Expected kToken_EQUAL here, but %s provided",token_string((TokenType)v));
             body_exp=parser->ParseExp();
             
             
@@ -977,9 +981,9 @@ FieldList* FunDeclaration::_ParseTyFields(FieldNode* head,Parser* parser){
     if(v==kToken_ID){
         id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_COLON);
+        TIGER_ASSERT((v==kToken_COLON),"Expected kToken_COLON here, but %s provided",token_string((TokenType)v));
         v = parser->GetScanner()->Next(&t);
-        assert(v==kToken_ID);
+        TIGER_ASSERT((v==kToken_ID),"Expected kToken_ID here, but %s provided",token_string((TokenType)v));
         type_id = new Symbol(t.u.name);
         v = parser->GetScanner()->Next(&t);
         
@@ -1008,7 +1012,7 @@ FieldList* FunDeclaration::_ParseTyFields(FieldNode* head,Parser* parser){
         }
         return new FieldList(q);
     }
-    assert(1==0);
+    TIGER_ASSERT(0,"Wrong token %s here",token_string((TokenType)v));
     return 0;
 }
 

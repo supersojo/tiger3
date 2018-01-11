@@ -4,6 +4,7 @@
 #include "absyn.h"
 #include "parser.h"
 #include "tiger_log.h"
+#include "tiger_assert.h"
 
 void test_StringSourceCodeStream()
 {
@@ -71,8 +72,8 @@ void test_sbsyn()
 }
 void test_parser()
 {
-    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    //tiger::scanner::StringSourceCodeStream stream((char*)"(a+1;b+2;c>3)");
+    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    //tiger::scanner::StringSourceCodeStream stream((char*)"`");
     tiger::Exp* exp;
     tiger::parser::Parser parser(&stream);
     parser.Parse(&exp);
@@ -86,11 +87,15 @@ void test_Logger(){
     logger.W("warn info");
     logger.E("error info");
 }
+void test_assert(){
+    TIGER_ASSERT(1==0,"Expected %s %d",__FILE__,__LINE__);
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
     //test_sbsyn();
     test_parser();
     //test_Logger();
+    //test_assert();
     return 0;
 }

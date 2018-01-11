@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "scanner.h"
+#include "tiger_assert.h"
 
 namespace tiger {
     
@@ -35,13 +36,13 @@ void StringSourceCodeStream::Back(s32 n)
     when we get end of stream, the m_pos == m_len
     0<=(m_pos-n)<=m_len
     */
-    assert(n<=m_pos &&n>=(m_pos-m_len+0));
+    TIGER_ASSERT(n<=m_pos &&n>=(m_pos-m_len+0),"Back %d out of string source",n);
     m_pos = m_pos-n;
     m_off = m_off-n;
     while(m_off<0){
         m_lineno = m_lineno-1;
         //m_off = m_off_prev;
-        assert(m_line_info);
+        TIGER_ASSERT(m_line_info,"m_line_info is null");
         m_off = + m_line_info->line_size;
         lineinfo = m_line_info;
         
@@ -67,7 +68,7 @@ FileSourceCodeStream::FileSourceCodeStream(char* file)
 {
     FILE *fp = fopen(file,"rb");
     
-    assert(fp!=0);
+    TIGER_ASSERT(fp!=0,"open file %s error",file);
     
     m_file = fp;
     
@@ -107,7 +108,7 @@ void FileSourceCodeStream::Back(s32 n)
     when we get end of stream, the m_pos == m_len
     0<=(m_pos-n)<=m_len
     */
-    assert(n<=pos &&n>=(pos-m_len+0));
+    TIGER_ASSERT(n<=pos &&n>=(pos-m_len+0),"Back %d out of file source",n);
     
     pos = pos-n;
     m_off = m_off - n;
@@ -115,7 +116,7 @@ void FileSourceCodeStream::Back(s32 n)
     while(m_off<0){
         m_lineno = m_lineno-1;
         //m_off = m_off_prev;
-        assert(m_line_info);
+        TIGER_ASSERT(m_line_info,"m_line_info is null");
         m_off = + m_line_info->line_size;
         lineinfo = m_line_info;
         
@@ -244,7 +245,7 @@ s32 Scanner::Next(Token* t)
     s32 v;
     s32 i = 0;
     
-    assert(t!=0);
+    TIGER_ASSERT((t!=0),"Param t is null");
         
     // !! free token related memory
     t->Clear();
@@ -266,10 +267,11 @@ s32 Scanner::Next(Token* t)
         }
         else
         {
+            /* on linux platform \n for newline */
             if((char)v=='\n'){
                 m_stream->NewLine();
                 v = m_stream->Next();
-            } 
+            }
             if(v!=kSourceCodeStream_EOS)
                 m_stream->Back(1);
         }
@@ -278,7 +280,8 @@ s32 Scanner::Next(Token* t)
         v = m_stream->Next();
         if((char)v==' '|| 
            (char)v=='\t'||
-           (char)v=='\r')
+           (char)v=='\r'||
+           (char)v=='\n')
         {
             m_stream->Back(1);
             continue;
@@ -309,7 +312,7 @@ s32 Scanner::Next(Token* t)
             v = m_stream->Next();
             sval[i++]=(char)v;
         }while(v!='"' && v!=kSourceCodeStream_EOS);
-        assert(v=='"');
+        TIGER_ASSERT(v=='"',"Expected \"");
         sval[i-1]='\0';
         t->len = i-1;
         t->u.sval=strdup(sval);
@@ -475,7 +478,7 @@ s32 Scanner::Next(Token* t)
         t->kind=kToken_EOT;
         return kToken_EOT;
     }
-    
+    TIGER_ASSERT(0,"Unknown char %c",(char)v);
     /* Known token */
     return kToken_Unknown;
 }
