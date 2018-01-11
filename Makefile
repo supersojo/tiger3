@@ -1,7 +1,7 @@
 all:main
 
 
-main:main.c token.c scanner.c tiger_log.c absyn.c tiger_assert.c types.c
+main:main.c token.c scanner.c tiger_log.c absyn.c tiger_assert.c types.c semant.c
 	g++ -g -c -Wno-write-strings  main.c
 	g++ -g -c -Wno-write-strings scanner.c
 	g++ -g -c -Wno-write-strings token.c
@@ -10,7 +10,8 @@ main:main.c token.c scanner.c tiger_log.c absyn.c tiger_assert.c types.c
 	g++ -g -c -Wno-write-strings absyn.c
 	g++ -g -c -Wno-write-strings tiger_assert.c
 	g++ -g -c -Wno-write-strings types.c
-	g++ main.o parser.o scanner.o token.o tiger_log.o absyn.o tiger_assert.o types.o -o main
+	g++ -g -c -Wno-write-strings semant.c
+	g++ main.o parser.o scanner.o token.o tiger_log.o absyn.o tiger_assert.o types.o semant.o -o main
 clean:
 	rm main 
 	rm main.o 
@@ -21,4 +22,5 @@ clean:
 	rm absyn.o
 	rm tiger_assert.o
 	rm types.o
+	rm semant.o
 

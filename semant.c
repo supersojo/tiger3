@@ -59,7 +59,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                 }
             }
             
-            ret = TransExp(venv,tenv,body);
+            if(body)
+                ret = TransExp(venv,tenv,body);
             
             tenv->EndScope();
             venv->EndScope();
