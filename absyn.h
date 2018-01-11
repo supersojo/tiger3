@@ -30,8 +30,8 @@ public:
     ~Symbol(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
-        logger.SetModule("absun");
-        logger.D("~SimpleVar");
+        logger.SetModule("absyn");
+        logger.D("~Symbol");
         free(m_name);
     }
 private:

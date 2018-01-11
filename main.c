@@ -100,7 +100,17 @@ void test_types(){
     logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
     logger.D("%d",a->Kind());
 }
+void test_symtab(){
+    tiger::SymTab symtab;
+    symtab.Enter(new tiger::Symbol("a"),0);
+    symtab.Enter(new tiger::Symbol("a"),0);
+    symtab.BeginScope();
+    symtab.Enter(new tiger::Symbol("a"),0);
+    symtab.Enter(new tiger::Symbol("b"),0);
+    symtab.EndScope();
+    std::cout<<"-----"<<std::endl;
 
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -108,6 +118,7 @@ int main()
     //test_parser();
     //test_Logger();
     //test_assert();
-    test_types();
+    //test_types();
+    test_symtab();
     return 0;
 }

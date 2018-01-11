@@ -178,6 +178,8 @@ public:
         m_name = name;
         m_binding = binding;
     }
+    Symbol* GetSymbol(){return m_name;}
+    EnvEntryBase* GetEnvEntryBase(){return m_binding;}
     ~SymTabEntry(){
         delete m_name;
         delete m_binding;
@@ -201,7 +203,47 @@ struct SymTabEntryNode{
     SymTabEntryNode* prev;
     SymTabEntryNode* next;
 };
-
+struct SimpleStackNode{
+    SimpleStackNode(){
+        m_name = 0;
+        next = 0;
+    }
+    Symbol* m_name;
+    SimpleStackNode* next;
+};
+class SimpleStack{
+public:
+    SimpleStack(){m_top = 0;}
+    void Push(Symbol* name){
+        SimpleStackNode* n;
+        n = new SimpleStackNode;
+        n->m_name = name;
+        n->next = m_top;
+        m_top = n;
+    }
+    Symbol* Pop(){
+        SimpleStackNode* p;
+        p = m_top;
+        if(m_top){
+            m_top = m_top->next;
+        }
+        if(p)
+            return p->m_name;
+        else
+            return 0;
+    }
+    ~SimpleStack(){
+        SimpleStackNode*p;
+        p = m_top;
+        while(p){
+            m_top = m_top->next;
+            delete p;
+            p = m_top;
+        }
+    }
+private:
+    SimpleStackNode* m_top;
+};
 class SymTab{
 public:
     enum{
@@ -209,12 +251,15 @@ public:
         kSymTab_Invalid
     };
     SymTab();
+    void Erase(Symbol* name);
+    void BeginScope();
+    void EndScope();
     void Enter(Symbol* key,EnvEntryBase* value);
     EnvEntryBase* Lookup(Symbol* key);
-    void Pop();
     ~SymTab();
 private:
     SymTabEntryNode** m_tab;
+    SimpleStack* m_stack;
     s32 hash(Symbol* key);
     void Clean();
     Symbol* m_marker;
