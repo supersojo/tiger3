@@ -23,7 +23,7 @@ void tiger_assert_win(bool condition,char* fmt,...)
     if(condition)
         return;
     
-    fprintf(stderr,"[tiger_assertion <%s,%d> Asserion failed] ",assert_info.file,assert_info.line);
+    fprintf(stderr,"[tiger_assertion <%s,%d> Assertion failed] ",assert_info.file,assert_info.line);
     va_list args;
     va_start(args,fmt);
     vfprintf(stderr,fmt,args);
