@@ -63,6 +63,7 @@ public:
     SimpleVar(Symbol* sym):Var(kVar_Simple){
         m_sym = sym;
     }
+    Symbol* GetSymbol(){return m_sym;}
     ~SimpleVar(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -317,6 +318,9 @@ public:
         m_left = left;
         m_right = right;
     }
+    Oper* GetOper(){return m_oper;}
+    Exp* GetLeft(){return m_left;}
+    Exp* GetRight(){return m_right;}
     ~OpExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -488,6 +492,8 @@ public:
         m_decs = decs;
         m_body = body;
     }
+    DecList* GetDecList(){return m_decs;}
+    Exp*     GetBody(){return m_body;}
     ~LetExp();
 private:
     DecList* m_decs;
@@ -559,6 +565,7 @@ class DecList{
 public:
     DecList(){m_head=0;}
     DecList(DecNode* head){m_head = head;}
+    DecNode* GetHead(){return m_head;}
     ~DecList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -671,6 +678,9 @@ public:
         m_type = type;
         m_init = init;
     }
+    Symbol* GetSymbol(){return m_var;}
+    Symbol* GetType(){return m_type;}
+    Exp*    GetExp(){return m_init;}
     ~VarDec(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -683,7 +693,7 @@ public:
 private:
     Symbol* m_var;
     Symbol* m_type;
-    Exp* m_init;
+    Exp*    m_init;
 };
 
 class NameTyPairList;

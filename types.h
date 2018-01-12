@@ -180,6 +180,7 @@ class EnvEntryVar:public EnvEntryBase{
 public:
     EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;}
     EnvEntryVar(TypeBase* ty):EnvEntryBase(kEnvEntry_Var){m_type=ty;}
+    TypeBase* Type(){return m_type;}
     ~EnvEntryVar(){
         delete m_type;
     }
@@ -292,6 +293,9 @@ public:
     void Enter(Symbol* key,EnvEntryBase* value);
     EnvEntryBase* Lookup(Symbol* key);
     Symbol* MakeSymbol(Symbol* s);
+    Symbol* MakeSymbolFromString(char* s);
+    /* helper for types */
+    TypeBase*  Type(Symbol* s);
     ~SymTab();
 private:
     SymTabEntryNode** m_tab;

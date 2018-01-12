@@ -41,11 +41,13 @@ Symbol* SymNameHashTable::MakeSymbol(Symbol* s){
     SymNameHashTableNode* p,*n;
     p = m_tab[index];
     while(p){
+        std::cout<<p->m_name<<" "<<s->Name()<<std::endl;
         if(strcmp(p->m_name,s->Name())==0){
             return p->m_symbol;
         }
         p = p->next;
     }
+    std::cout<<"new make symbol"<<std::endl;
     n = new SymNameHashTableNode;
     n->m_name = strdup(s->Name());// Note: memory leak
     n->m_symbol = new Symbol(s->Name());
@@ -96,6 +98,7 @@ void SymTab::Enter(Symbol* key,EnvEntryBase* value)
         p = p->next;
     }
     n = new SymTabEntryNode;
+    std::cout<<"new symbol "<<key->Name()<<std::endl;
     n->m_entry = new SymTabEntry(key,value);
     if(m_tab[index]){
         n->next = m_tab[index];
@@ -160,6 +163,21 @@ void SymTab::EndScope()
 Symbol* SymTab::MakeSymbol(Symbol* s)
 {
     return m_sym_name_mapping->MakeSymbol(s);
+}
+Symbol* SymTab::MakeSymbolFromString(char* s)
+{
+    Symbol t(s);
+    return MakeSymbol(&t);
+}
+TypeBase*  SymTab::Type(Symbol* s)
+{
+    EnvEntryBase* binding;
+    binding = Lookup(MakeSymbol(s));
+    if(binding && binding->Kind()==EnvEntryBase::kEnvEntry_Var){
+        return dynamic_cast<EnvEntryVar*>(binding)->Type();
+    }
+    std::cout<<"wrong type "<<s->Name()<<std::endl;
+    return 0;
 }
 
 SymTab::~SymTab()

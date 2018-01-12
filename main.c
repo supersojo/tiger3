@@ -6,6 +6,7 @@
 #include "tiger_log.h"
 #include "tiger_assert.h"
 #include "types.h"
+#include "semant.h"
 
 void test_StringSourceCodeStream()
 {
@@ -111,6 +112,25 @@ void test_symtab(){
     std::cout<<"-----"<<std::endl;
 
 }
+void test_typecheck(){
+    tiger::Exp* exp;
+    tiger::ExpBaseTy* ty;
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 var b:=0 in end");
+    
+    /* generate sbstract syntax tree*/
+    tiger::parser::Parser parser(&stream);
+    parser.Parse(&exp);
+
+    tiger::SymTab venv,tenv;
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt()));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString()));
+    tiger::Translator translator;
+    ty=translator.TransExp(&venv,&tenv,exp);
+    delete ty;
+    
+    /* free */
+    delete exp;
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -119,6 +139,7 @@ int main()
     //test_Logger();
     //test_assert();
     //test_types();
-    test_symtab();
+    //test_symtab();
+    test_typecheck();
     return 0;
 }

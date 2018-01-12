@@ -469,7 +469,7 @@ Exp* ExpMulDiv::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 Exp* ExpAddSub::Parse(Parser* parser){
     Exp* left;
@@ -501,7 +501,7 @@ Exp* ExpAddSub::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 Exp* ExpCompare::Parse(Parser* parser){
     Exp* left;
@@ -545,7 +545,7 @@ Exp* ExpCompare::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 
 Exp* ExpEqualOrNot::Parse(Parser* parser){
@@ -578,7 +578,7 @@ Exp* ExpEqualOrNot::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 Exp* ExpAnd::Parse(Parser* parser){
     Exp* left,*rest;
@@ -604,7 +604,7 @@ Exp* ExpAnd::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 Exp* ExpOr::Parse(Parser* parser){
     Exp* left,*rest;
@@ -630,7 +630,7 @@ Exp* ExpOr::_ParseExpRest(Exp* left,Parser* parser){
     if(v!=kToken_EOT)
         parser->GetScanner()->Back(&t);
     /* empty exp */
-    return 0;
+    return left;
 }
 EFieldList* IdList::Parse(Parser* parser){
     EFieldNode* head,*rest;

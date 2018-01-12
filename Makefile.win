@@ -1,6 +1,6 @@
 all:main.exe
 
-main.exe:main.c scanner.c parser.c absyn.c token.c tiger_log.c tiger_assert.c types.c
+main.exe:main.c scanner.c parser.c absyn.c token.c tiger_log.c tiger_assert.c types.c semant.c
 	cl /c /Tp  main.c /EHsc
 	cl /c /Tp  scanner.c /EHsc
 	cl /c /Tp  parser.c /EHsc
@@ -9,7 +9,8 @@ main.exe:main.c scanner.c parser.c absyn.c token.c tiger_log.c tiger_assert.c ty
 	cl /c /Tp  tiger_log.c /EHsc
 	cl /c /Tp  tiger_assert.c /EHsc
 	cl /c /Tp  types.c /EHsc
-	link /subsystem:console main.obj scanner.obj parser.obj absyn.obj token.obj tiger_log.obj tiger_assert.obj types.obj /out:main.exe
+	cl /c /Tp  semant.c /EHsc
+	link /subsystem:console main.obj scanner.obj parser.obj absyn.obj token.obj tiger_log.obj tiger_assert.obj types.obj semant.obj /out:main.exe
 clean:
 	rm main.exe
 	rm main.obj
@@ -20,3 +21,4 @@ clean:
 	rm tiger_log.obj	
 	rm tiger_assert.obj	
 	rm types.obj	
+	rm semant.obj	
