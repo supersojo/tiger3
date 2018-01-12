@@ -3,7 +3,7 @@
 #define TIGER_INTERNAL_TYPES_H
 
 #include "tiger_type.h"
-
+#include "tiger_log.h"
 #include "absyn.h" //Symbol
 
 namespace tiger{
@@ -56,6 +56,9 @@ public:
     TypeBase(){m_kind = kType_Invalid;}
     TypeBase(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    bool Equal(TypeBase* o){
+        return (m_kind==o->Kind());
+    }
 private:
     s32 m_kind;
 };
@@ -304,6 +307,7 @@ private:
     void Clean();
     Symbol* m_marker;
     SymNameHashTable* m_sym_name_mapping;
+    LoggerStdio m_logger;
 };
 
 }//namespace tiger

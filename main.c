@@ -115,13 +115,15 @@ void test_symtab(){
 void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 var b:=0 in end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let type a={x:int,y:int} type b=array of string type c=int  in end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
     parser.Parse(&exp);
 
     tiger::SymTab venv,tenv;
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil()));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid()));
     tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt()));
     tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString()));
     tiger::Translator translator;

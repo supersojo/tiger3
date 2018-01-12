@@ -702,6 +702,7 @@ class TypeDec:public Dec{
 public:
     TypeDec():Dec(kDec_Type){m_nametylist = 0;}
     TypeDec(NameTyPairList* nametylist):Dec(kDec_Type){m_nametylist = nametylist;}
+    NameTyPairList* GetList(){return m_nametylist;}
     ~TypeDec();
 private:
     NameTyPairList* m_nametylist;
@@ -731,6 +732,7 @@ public:
     NameTy(Symbol* sym):Ty(kTy_Name){
         m_sym = sym;
     }
+    Symbol* Name(){return m_sym;}
     ~NameTy(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -751,6 +753,7 @@ public:
     RecordTy(FieldList* list):Ty(kTy_Record){
         m_list = list;
     }
+    FieldList* GetList(){return m_list;}
     ~RecordTy();
 private:
     FieldList* m_list;
@@ -764,6 +767,7 @@ public:
     ArrayTy(Symbol* name):Ty(kTy_Array){
         m_name = name;
     }
+    Symbol* Name(){return m_name;}
     ~ArrayTy(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -778,6 +782,8 @@ private:
 class NameTyPair{
 public:
     NameTyPair(){m_name=0;m_ty=0;}
+    Symbol* Name(){return m_name;}
+    Ty*     Type(){return m_ty;}
     NameTyPair(Symbol* name,Ty* a_ty){m_name = name; m_ty = a_ty;}
     ~NameTyPair(){
         LoggerStdio logger;
@@ -811,6 +817,7 @@ struct NameTyPairNode{
 class NameTyPairList{
 public:
     NameTyPairList(){m_head=0;}
+    NameTyPairNode* GetHead(){return m_head;}
     NameTyPairList(NameTyPairNode* head){m_head=head;}
     ~NameTyPairList(){
         LoggerStdio logger;
@@ -837,6 +844,8 @@ public:
         m_name = name;
         m_type = type;
     }
+    Symbol* Name(){return m_name;}
+    Symbol* Type(){return m_type;}
     ~Field(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -874,6 +883,7 @@ public:
     FieldList(FieldNode* head){
         m_head = head;
     }
+    FieldNode* GetHead(){return m_head;}
     ~FieldList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);

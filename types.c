@@ -74,6 +74,8 @@ SymTab::SymTab(){
     m_stack = new SimpleStack;
     
     m_sym_name_mapping = new SymNameHashTable;
+    m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
+    m_logger.SetModule("SymTab");
 }
 
 s32 SymTab::hash(Symbol* key){
@@ -83,16 +85,20 @@ s32 SymTab::hash(Symbol* key){
 
 void SymTab::Enter(Symbol* key,EnvEntryBase* value)
 {
+    m_logger.D("New SymTab entry with %s",key->Name());
     m_stack->Push(key);
     if(key==m_marker){
+        m_logger.D("SymTab marker symbol push ok");
         return;
     }
     SymTabEntryNode* p,*n;
     s32 index = hash(key);
     p = m_tab[index];
     while(p){
-        if(p->m_entry->GetSymbol()==key)
+        if(p->m_entry->GetSymbol()==key){
+            m_logger.W("SymTab entry already exist with %s",key->Name());
             return;
+        }
         p = p->next;
     }
     n = new SymTabEntryNode;
@@ -101,28 +107,35 @@ void SymTab::Enter(Symbol* key,EnvEntryBase* value)
         n->next = m_tab[index];
         m_tab[index]->prev = n;
     }
+    m_logger.D("New SymTab entry add ok with %s",key->Name());
     m_tab[index] = n;
 
 }
 EnvEntryBase* SymTab::Lookup(Symbol* key)
 {
+    m_logger.D("Lookup symbol with %s",key->Name());
     s32 index = hash(key);
     SymTabEntryNode*p;
     p = m_tab[index];
     while(p){
-        if(p->m_entry->GetSymbol()==key)
+        if(p->m_entry->GetSymbol()==key){
+            m_logger.D("Lookup symbol ok with %s",key->Name());
             return p->m_entry->GetEnvEntryBase();
+        }
         p = p->next;
     }
+    m_logger.W("Lookup symbol failed with %s",key->Name());
     return 0;
 }
 
 void SymTab::BeginScope()
 {
+        m_logger.D("BeginScope...");
         Enter(m_marker,0);
 }
 void SymTab::Erase(Symbol* key)
 {
+        m_logger.D("SymTab erase with %s",key->Name());
         s32 index = hash(key);
         SymTabEntryNode*p;
         p = m_tab[index];
@@ -138,23 +151,29 @@ void SymTab::Erase(Symbol* key)
                         p->next->prev = p->prev;
                     }
                 } 
+                m_logger.D("SymTab erase ok with %s",key->Name());
                 delete p;
                 return;
             }
             p = p->next;
         }
+        m_logger.W("SymTab erase failed,symbol %s not found",key->Name());
 }
 void SymTab::EndScope()
 {
         Symbol* name;
         do{
             name = m_stack->Pop();
-            if(name==m_marker)
+            if(name==m_marker){
+                m_logger.D("SymTab marker symbol pop ok");
+                m_logger.D("EndScope...");
                 return;
+            }
             /* delete from hash table */
             //std::cout<<name->Name()<<std::endl;
             Erase(name);
         }while(name!=m_marker);
+        m_logger.W("Should not reach here");
 }
 
 Symbol* SymTab::MakeSymbol(Symbol* s)

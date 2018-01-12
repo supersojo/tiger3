@@ -3,6 +3,7 @@
 #define SEMANT_H
 
 #include "tiger_type.h"
+#include "tiger_log.h"
 #include "types.h"// symbol table 
 #include "absyn.h"// sbstract syntax tree
 #include "tree.h"//immediate representation tree
@@ -31,10 +32,10 @@ public:
     ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Exp* exp);
     ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Var* var);
     void        TransDec(SymTab* venv,SymTab* tenv,Dec* dec);
-    TypeBase*  TransTy(SymTab* tenv,Ty* ty){}
+    TypeBase*  TransTy(SymTab* tenv,Ty* ty);
     ~Translator();
 private:
-    
+   LoggerStdio m_logger; 
 };
 
 }//namespace tiger
