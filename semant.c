@@ -22,8 +22,9 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
             if(dynamic_cast<SimpleVar*>(var)->GetSymbol()==0){
                 m_logger.D("~~~");
             }
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
-            m_logger.D("222");
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             return new ExpBaseTy(t->Type(),0);
         }
@@ -116,7 +117,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             ExpNode* head;
             TypeFieldNode* p;
             ExpBaseTy* t;
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
             /* function foo() */
             if(f->GetList()->GetHead()==0){
@@ -124,7 +127,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                 return new ExpBaseTy(f->Type(),0);
             }
             p = f->GetList()->GetHead();
-            TIGER_ASSERT(p!=0,"formals is null");
+            TIGER_ASSERT(p!=0,"%s formals is null",dynamic_cast<CallExp*>(exp)->Name());
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
             TIGER_ASSERT(head!=0,"actuals is null");
             while(head){
@@ -167,9 +170,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             EnvEntryVar* p;
             EFieldNode* head;
             TypeFieldNode* n;
-            
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<RecordExp*>(exp)->Name())));
-            
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             TIGER_ASSERT(p!=0,"type %s not found",dynamic_cast<RecordExp*>(exp)->Name()->Name());
             TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type name is needed",dynamic_cast<RecordExp*>(exp)->Name()->Name());
             
@@ -273,13 +276,15 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"if exp should be int");
             
             delete a;
-            delete b;
-            if(else_exp)
-                delete c;
             
+            if(else_exp){
+                delete b;
+                return c;
+            }else{
+                return b;
+            }
             /* default type */
-            Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+
             break;
         }
         case Exp::kExp_While:
@@ -410,9 +415,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             ExpBaseTy* size_ty;
             ExpBaseTy* init_ty;
             EnvEntryVar* p;
-            
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
-            
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
             size_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetSize());
             init_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetInit());
@@ -456,7 +461,9 @@ TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* 
     while(head)
     {
         tynew = new TypeFieldNode;
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         tynew->m_field = (new TypeField(venv->MakeSymbol(head->m_field->Name()),dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type()));
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         if(tyhead==0)
             tyhead = tynew;
         if(tynext==0)
@@ -503,7 +510,9 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
             venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), 0 ));
 
         }else{
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type() ));
+            m_logger.D("%s,%d",__FILE__,__LINE__);
         }
         fundec_head = fundec_head->next;
     }
@@ -519,12 +528,16 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
         venv->BeginScope();
         if(fundec_head->m_fundec->GetList()!=0){
             while(head){
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value) );
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 head = head->next;
             }
         }
         a = TransExp(venv,tenv,fundec_head->m_fundec->GetExp());
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         TIGER_ASSERT(a->Type() == dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), "return type mismatch");
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         delete a;
         
         venv->EndScope();
@@ -543,7 +556,9 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
         /*
          *
          * */
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+        m_logger.D("%s,%d",__FILE__,__LINE__);
         if(p){
             m_logger.W("Type %s redefined",head->m_nametypair->Name()->Name());
             //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
@@ -557,7 +572,9 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
     while(head){
         TypeBase* t = TransTy(tenv,head->m_nametypair->Type());
         if(t->Kind()!=TypeBase::kType_Name){
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
+            m_logger.D("%s,%d",__FILE__,__LINE__);
         }
         else{
             m_logger.D("TypeName update");
@@ -580,7 +597,9 @@ void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
             ExpBaseTy* t=TransExp(venv,tenv,dynamic_cast<VarDec*>(dec)->GetExp());
             if(dynamic_cast<VarDec*>(dec)->GetType()){
                 EnvEntryBase* p;
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 p = tenv->Lookup(tenv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetType()));
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 /* t->Type() & p check */
                 if(!t->Type()->Equal(dynamic_cast<EnvEntryVar*>(p)->Type()))
                 {
@@ -633,8 +652,9 @@ TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
                 //head->m_field->Name()
                 //head->m_field->Type()
                 n = new TypeFieldNode;
-
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())));
+                m_logger.D("%s,%d",__FILE__,__LINE__);
                 TIGER_ASSERT(p!=0,"type %s not found",head->m_field->Type()->Name());
 
                 n->m_field = new TypeField(tenv->MakeSymbol(head->m_field->Name()),p->Type());
@@ -659,7 +679,9 @@ TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
         {
             m_logger.D("type check with kTy_Array");
             EnvEntryVar* p;
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayTy*>(ty)->Name())));
+            m_logger.D("%s,%d",__FILE__,__LINE__);
             return new TypeArray(p->Type());
             break;
         }

@@ -1,7 +1,7 @@
 all:main
 
 
-main:main.c token.c scanner.c tiger_log.c absyn.c tiger_assert.c types.c semant.c
+main:main.c token.c scanner.c parser.c tiger_log.c absyn.c tiger_assert.c types.c semant.c
 	g++ -g -c -Wno-write-strings  main.c
 	g++ -g -c -Wno-write-strings scanner.c
 	g++ -g -c -Wno-write-strings token.c

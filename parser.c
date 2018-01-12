@@ -396,9 +396,9 @@ Exp* Parser::_ParseTerm()
                 m_logger->D("Get a new ArrayExp");
                 return new ArrayExp(id,exp1,exp2);
             }
-            m_logger->D("Get a new subscript var");
+            m_logger->D("Get a new subscript var with %s",id->Name());
             var1 = new SubscriptVar(new SimpleVar(id),exp1);
-            delete id;
+            //delete id;
         }
         
         if(v1!=kToken_EOT)
