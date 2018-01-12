@@ -9,6 +9,13 @@
 
 namespace tiger{
 
+/*
+All occur of a string in source make only the same symbol.
+All the strings in source stores in a table.
+Type env has such a table, Value env also has such a table.
+For example, the string "a" may be a variable,so a symbol represent "a" in venv table,
+if "a" may also be a type, so a symbol represnt "a" in tenv table.
+*/
 struct SymNameHashTableNode{
     SymNameHashTableNode(){
         m_name = 0;
@@ -41,7 +48,16 @@ private:
     void Clean();
     SymNameHashTableNode** m_tab;
 };
+/* type used in tiger 
+TypeBase is the ancestor of all types in tiger.
+Be care about the type's deletion.
+A type's member may refer to other type,we should only delete type itself,not the refered type member.
+In any moment,tenv contains all the types in tiger.
 
+[a type array ]->[other type]
+we only delete the type array itself,no the other type.
+
+*/
 class TypeBase{
 public:
     enum{
@@ -91,7 +107,7 @@ public:
         //delete m_array;
     }
 private:
-    TypeBase* m_array;
+    TypeBase* m_array;/* memroy managed by type member, not type array */
 };
 
 class TypeField{
@@ -106,8 +122,8 @@ public:
         //delete m_type;
     }
 private:
-    Symbol* m_name;
-    TypeBase* m_type;
+    Symbol* m_name;/* memory managed by string hash table */
+    TypeBase* m_type;/* memroy managed by type member, not type field */
 };
 
 struct TypeFieldNode{
@@ -171,10 +187,12 @@ public:
         //delete m_type;
     }
 private:
-    Symbol* m_name;
-    TypeBase* m_type;
+    Symbol* m_name;/* memory managed by string hash table */
+    TypeBase* m_type;/* memroy managed by type member, not type record */
 };
-/* Env*/
+/* Env
+The base env entry of all env entry types.
+*/
 class EnvEntryBase{
 public:
     enum{
@@ -189,7 +207,11 @@ public:
 private:
     s32 m_kind;
 };
-
+/*
+Type binding maybe used in type env or value env.
+We use intent to distinguish them.
+For value binding,when delete such entry we should not delete the type of value'bingding, because many value maybe refer to the same type.
+*/
 class EnvEntryVar:public EnvEntryBase{
 public:
     enum{
@@ -222,11 +244,11 @@ public:
     EnvEntryFun(TypeFieldList *formals,TypeBase* result):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;}
     ~EnvEntryFun(){
         delete m_formals;
-        delete m_result;
+        //delete m_result;
     }
 private:
     TypeFieldList* m_formals;
-    TypeBase* m_result;
+    TypeBase* m_result;/* memory managed by tenv table */
     
 };
 
@@ -247,7 +269,7 @@ public:
         delete m_binding;
     }
 private:
-    Symbol* m_name;// var or fun name or type name
+    Symbol* m_name;/* var or fun name or type name. memory managed by string hash table */
     EnvEntryBase* m_binding;
 };
 
