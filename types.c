@@ -3,6 +3,67 @@
 
 namespace tiger{
 
+
+
+SymNameHashTable::SymNameHashTable(){
+    m_tab = new SymNameHashTableNode*[kSymNameHashTable_Size];
+    for(s32 i=0;i<kSymNameHashTable_Size;i++)
+        m_tab[i] = 0;
+}
+
+void SymNameHashTable::Clean()
+{
+    SymNameHashTableNode* p,*q;
+    for(s32 i=0;i<kSymNameHashTable_Size;i++){
+        p = m_tab[i];
+        while(p)
+        {
+            q = p;
+            p = p->next;
+            delete q;
+        }
+    }    
+}
+
+s32 SymNameHashTable::hash(char* s)
+{
+    s32 len = strlen(s);
+    s32 ret = 0;
+    for(s32 i=0;i<len;i++)
+        ret += *(s+i);
+    ret %= kSymNameHashTable_Size;
+    
+    return ret;    
+}
+
+Symbol* SymNameHashTable::MakeSymbol(Symbol* s){
+    s32 index = hash(s->Name());
+    SymNameHashTableNode* p,*n;
+    p = m_tab[index];
+    while(p){
+        if(strcmp(p->m_name,s->Name())==0){
+            return p->m_symbol;
+        }
+        p = p->next;
+    }
+    n = new SymNameHashTableNode;
+    n->m_name = strdup(s->Name());// Note: memory leak
+    n->m_symbol = new Symbol(s->Name());
+    
+    if(m_tab[index]){
+        n->next = m_tab[index];
+        m_tab[index]->prev = n;
+    }
+    
+    m_tab[index] = n;
+    
+    return n->m_symbol;
+}
+
+SymNameHashTable::~SymNameHashTable(){
+    Clean();
+}
+
 SymTab::SymTab(){
     
     m_tab = new SymTabEntryNode*[kSymTab_Size];
@@ -11,6 +72,8 @@ SymTab::SymTab(){
     
     m_marker = new Symbol("kSymTab_Marker");
     m_stack = new SimpleStack;
+    
+    m_sym_name_mapping = new SymNameHashTable;
 }
 
 s32 SymTab::hash(Symbol* key){
@@ -94,6 +157,10 @@ void SymTab::EndScope()
         }while(name!=m_marker);
 }
 
+Symbol* SymTab::MakeSymbol(Symbol* s)
+{
+    return m_sym_name_mapping->MakeSymbol(s);
+}
 
 SymTab::~SymTab()
 {
@@ -101,6 +168,7 @@ SymTab::~SymTab()
     
     delete m_marker;
     delete m_stack;
+    delete m_sym_name_mapping;
 }
 
 void SymTab::Clean()

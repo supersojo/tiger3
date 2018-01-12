@@ -102,11 +102,11 @@ void test_types(){
 }
 void test_symtab(){
     tiger::SymTab symtab;
-    symtab.Enter(new tiger::Symbol("a"),0);
-    symtab.Enter(new tiger::Symbol("a"),0);
+    symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
+    symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
     symtab.BeginScope();
-    symtab.Enter(new tiger::Symbol("a"),0);
-    symtab.Enter(new tiger::Symbol("b"),0);
+    symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
+    symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("b")),0);
     symtab.EndScope();
     std::cout<<"-----"<<std::endl;
 

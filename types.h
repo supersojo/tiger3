@@ -8,6 +8,39 @@
 
 namespace tiger{
 
+struct SymNameHashTableNode{
+    SymNameHashTableNode(){
+        m_name = 0;
+        m_symbol = 0;
+        prev = 0;
+        next = 0;
+    }
+    ~SymNameHashTableNode(){
+        if(m_name)
+            free(m_name);
+        if(m_symbol)
+            delete m_symbol;
+    }
+    char* m_name;
+    Symbol* m_symbol;
+    SymNameHashTableNode* prev;
+    SymNameHashTableNode* next;
+};
+class SymNameHashTable{
+public:
+    enum{
+        kSymNameHashTable_Size=32,
+        kSymNameHashTable_Invalid
+    };
+    SymNameHashTable();
+    Symbol* MakeSymbol(Symbol*);
+    ~SymNameHashTable();
+private:
+    s32 hash(char* s);
+    void Clean();
+    SymNameHashTableNode** m_tab;
+};
+
 class TypeBase{
 public:
     enum{
@@ -63,7 +96,7 @@ public:
         m_type = ty;
     }
     ~TypeField(){
-        delete m_name;
+        //delete m_name;
         delete m_type;
     }
 private:
@@ -120,7 +153,7 @@ public:
         m_type = ty;
     }
     ~TypeName(){
-        delete m_name;
+        //delete m_name;
         delete m_type;
     }
 private:
@@ -181,7 +214,7 @@ public:
     Symbol* GetSymbol(){return m_name;}
     EnvEntryBase* GetEnvEntryBase(){return m_binding;}
     ~SymTabEntry(){
-        delete m_name;
+        //delete m_name;
         delete m_binding;
     }
 private:
@@ -207,6 +240,8 @@ struct SimpleStackNode{
     SimpleStackNode(){
         m_name = 0;
         next = 0;
+    }
+    ~SimpleStackNode(){
     }
     Symbol* m_name;
     SimpleStackNode* next;
@@ -256,6 +291,7 @@ public:
     void EndScope();
     void Enter(Symbol* key,EnvEntryBase* value);
     EnvEntryBase* Lookup(Symbol* key);
+    Symbol* MakeSymbol(Symbol* s);
     ~SymTab();
 private:
     SymTabEntryNode** m_tab;
@@ -263,6 +299,7 @@ private:
     s32 hash(Symbol* key);
     void Clean();
     Symbol* m_marker;
+    SymNameHashTable* m_sym_name_mapping;
 };
 
 }//namespace tiger
