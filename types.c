@@ -41,13 +41,11 @@ Symbol* SymNameHashTable::MakeSymbol(Symbol* s){
     SymNameHashTableNode* p,*n;
     p = m_tab[index];
     while(p){
-        std::cout<<p->m_name<<" "<<s->Name()<<std::endl;
         if(strcmp(p->m_name,s->Name())==0){
             return p->m_symbol;
         }
         p = p->next;
     }
-    std::cout<<"new make symbol"<<std::endl;
     n = new SymNameHashTableNode;
     n->m_name = strdup(s->Name());// Note: memory leak
     n->m_symbol = new Symbol(s->Name());
@@ -98,7 +96,6 @@ void SymTab::Enter(Symbol* key,EnvEntryBase* value)
         p = p->next;
     }
     n = new SymTabEntryNode;
-    std::cout<<"new symbol "<<key->Name()<<std::endl;
     n->m_entry = new SymTabEntry(key,value);
     if(m_tab[index]){
         n->next = m_tab[index];
@@ -155,7 +152,7 @@ void SymTab::EndScope()
             if(name==m_marker)
                 return;
             /* delete from hash table */
-            std::cout<<name->Name()<<std::endl;
+            //std::cout<<name->Name()<<std::endl;
             Erase(name);
         }while(name!=m_marker);
 }

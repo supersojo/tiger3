@@ -41,7 +41,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Let:
         {
-            ExpBaseTy* ret;
+            ExpBaseTy* ret=0;
             DecList* declist;
             Exp* body;
             declist = dynamic_cast<LetExp*>(exp)->GetDecList();
@@ -58,7 +58,6 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                     p = p->next;
                 }
             }
-            
             if(body)
                 ret = TransExp(venv,tenv,body);
             
@@ -85,7 +84,6 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 p = tenv->Lookup(tenv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetType()));
                 /* t->Type() & p check */
             }else{
-                std::cout<<"new var"<<std::endl;
                 venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type()));
             }
             delete t;

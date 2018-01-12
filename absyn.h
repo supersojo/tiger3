@@ -673,7 +673,7 @@ public:
         m_type = 0;
         m_init = 0;
     }
-    VarDec(Symbol* var,Symbol* type,Exp* init){
+    VarDec(Symbol* var,Symbol* type,Exp* init):Dec(kDec_Var){
         m_var = var;
         m_type = type;
         m_init = init;
