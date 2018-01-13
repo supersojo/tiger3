@@ -7,6 +7,7 @@
 #include "tiger_assert.h"
 #include "types.h"
 #include "semant.h"
+#include "escape.h"
 
 void test_StringSourceCodeStream()
 {
@@ -135,29 +136,48 @@ void test_typecheck(){
     tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0,0));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;
-    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string"))));
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
 
     /* ord(s:string):int*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int"))));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0));
     
     /* chr(i:int):string*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
-    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string"))));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
     
     
     tiger::Translator translator;
     ty=translator.TransExp(&venv,&tenv,exp);
     delete ty;
     
+    /* free */
+    delete exp;
+}
+void test_escape()
+{
+    tiger::Exp* exp;
+    
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var x:=0 in let var x:=0 in x:=1;x:=x+1 end end");
+    
+    /* generate sbstract syntax tree*/
+    tiger::parser::Parser parser(&stream);
+    parser.Parse(&exp);
+
+    
+    tiger::EscapeHelper escaper;
+    escaper.FindEscape(exp);
+   
     /* free */
     delete exp;
 }
@@ -170,6 +190,7 @@ int main()
     //test_assert();
     //test_types();
     //test_symtab();
-    test_typecheck();
+    //test_typecheck();
+    test_escape();
     return 0;
 }

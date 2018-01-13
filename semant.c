@@ -472,6 +472,59 @@ TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* 
     return new TypeFieldList(tyhead);
     
 }
+
+FrameBase* Translator::MakeNewFrame(FunDec* fundec)
+{
+    FieldNode* head = 0;
+    FrameBase* f;
+    
+    AccessNode* ahead=0,*anext=0,*anew=0;
+    BoolNode* bhead=0,*bnext=0,*bnew=0;
+    
+    f = new FrameBase(FrameBase::kFrame_X86);
+    
+    if(fundec->GetList()==0){
+        //empty formals
+        head = 0;
+    }
+    else{
+        head = fundec->GetList()->GetHead();
+    }
+    while(head){
+
+        anew = new AccessNode;
+        anew->m_access = f->AllocLocal(0);
+        if(ahead==0)
+            ahead = anew;
+        if(anext==0)
+            anext = anew;
+        else{
+            anext->next = anew;
+            anew->prev = anext;
+            anext = anew;
+        }
+        
+        bnew = new BoolNode;
+        bnew->m_kind = BoolNode::kBool_False;
+        if(bhead==0)
+            bhead = bnew;
+        if(bnext==0)
+            bnext = bnew;
+        else{
+            bnext->next = bnew;
+            bnew->prev = bnext;
+            bnext = bnew;
+        }
+        
+        head = head->next;
+    }
+    
+    f->SetFormals(new AccessList(ahead));
+    f->SetEscapes(new BoolList(bhead));
+    
+    return f;
+}
+
 void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
 {
     FunDecNode* fundec_head;
@@ -498,12 +551,16 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
         // TypeFieldList* MakeFormalsList(FieldList *params);
         // new EnvEntryFun(list,type)
 
+        /* level and label */
+        LevelNode* level;
+        level = new LevelNode;
+        level->m_level = new Level(MakeNewFrame(fundec_head->m_fundec));
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("empty function return type ");
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), 0 ));
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), 0, level, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
 
         }else{
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type() ));
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), level, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
         }
         fundec_head = fundec_head->next;
     }
@@ -599,6 +656,10 @@ void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                     venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
                 }
             }else{
+                /*
+                level->m_level->Frame()->AllocLocal(0);
+                VarAccess(level,AccessBase*)
+                */
                 venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
             }
             delete t;

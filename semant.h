@@ -7,6 +7,7 @@
 #include "types.h"// symbol table 
 #include "absyn.h"// sbstract syntax tree
 #include "tree.h"//immediate representation tree
+#include "frame.h"
 
 namespace tiger{
 
@@ -38,6 +39,8 @@ private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec);
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec);
+    FrameBase*     MakeNewFrame(FunDec* fundec);
+    
     LoggerStdio m_logger; 
 };
 

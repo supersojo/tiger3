@@ -48,12 +48,15 @@ public:
         kVar_Subscript,
         kVar_Invalid
     };
-    Var(){m_kind = kVar_Invalid;}
+    Var(){m_kind = kVar_Invalid;m_escape=0;/*false*/}
     Var(s32 kind){m_kind = kind;}
+    void SetEscape(s32 escape){m_escape = escape;}
+    s32  GetEscape(){return m_escape;}
     virtual s32 Kind(){return m_kind;}
     virtual ~Var(){}
 private:
     s32 m_kind;
+    s32 m_escape;
 };
 
 class SimpleVar:public Var{

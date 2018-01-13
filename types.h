@@ -6,6 +6,7 @@
 #include "tiger_log.h"
 #include "tiger_assert.h"
 #include "absyn.h" //Symbol
+#include "frame.h"
 
 namespace tiger{
 
@@ -236,6 +237,7 @@ public:
     enum{
       kEnvEntry_Var,/* type environment always uses this kind */
       kEnvEntry_Fun,
+      kEnvEntry_Escape,/* for escape calculating */
       kEnvEntry_Invalid
     };
     EnvEntryBase(){m_kind=kEnvEntry_Invalid;}
@@ -274,14 +276,18 @@ public:
 private:
     TypeBase* m_type;
     s32 m_intent;
+    /* access infor */
+    
 };
 
 class EnvEntryFun:public EnvEntryBase{
 public:
-    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;}
-    EnvEntryFun(TypeFieldList *formals,TypeBase* result):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;}
+    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;}
+    EnvEntryFun(TypeFieldList *formals,TypeBase* result,LevelNode* level,Label* label):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;}
     TypeBase* Type(){return m_result;}
     TypeFieldList* GetList(){return m_formals;}
+    LevelNode* Level(){return m_level;}
+    Label* GetLabel(){return m_label;}
     ~EnvEntryFun(){
         if(m_formals)
             delete m_formals;
@@ -290,6 +296,25 @@ public:
 private:
     TypeFieldList* m_formals;
     TypeBase* m_result;/* memory managed by tenv table */
+    
+    LevelNode* m_level;// ??
+    Label*     m_label;/*managed by label pool*/
+    
+};
+
+class EnvEntryEscape:public EnvEntryBase{
+public:
+    EnvEntryEscape():EnvEntryBase(kEnvEntry_Escape){m_depth=0;m_escape=0;}
+    EnvEntryEscape(s32 depth,s32 escape):EnvEntryBase(kEnvEntry_Escape){m_depth=depth;m_escape=escape;}
+    s32 GetEscape(){return m_escape;}
+    s32 Depth(){return m_depth;}
+    void SetEscape(s32 escape){m_escape = escape;}
+    ~EnvEntryEscape(){
+
+    }
+private:
+    s32 m_depth;
+    s32 m_escape;
     
 };
 
