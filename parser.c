@@ -199,7 +199,7 @@ DecList* Parser::_ParseDecs()
     m_logger->D("Begin _ParseDecs");
     do{
         v = m_scanner->Next(&t);
-        m_logger->D(token_string((TokenType)v));
+        //m_logger->D(token_string((TokenType)v));
         if(v==kToken_IN){
             m_scanner->Back(&t);
             if(head){
@@ -214,6 +214,7 @@ DecList* Parser::_ParseDecs()
             m_scanner->Back(&t);
         Declaration dec;
         adec = dec.Parse(this);
+        TIGER_ASSERT(adec!=0,"parse declaration failed");
         if(adec){
             anode = new DecNode;
             anode->m_dec = adec;
@@ -228,6 +229,7 @@ DecList* Parser::_ParseDecs()
                 tail = anode;
             }
         }
+        
     }while(1);
     
     return 0;
@@ -912,6 +914,9 @@ FunDecNode* FunDeclaration::_ParseFuncDec(FunDecNode* head,Parser* parser){
         v = parser->GetScanner()->Next(&t);
         TIGER_ASSERT(v==kToken_RPAR,"Expected kToken_RPAR here, but %s provided",token_string((TokenType)v));
         v = parser->GetScanner()->Next(&t);
+        
+        TIGER_ASSERT((v==kToken_EQUAL||v==kToken_COLON),"Expected \"=\" or \":\" here");
+        
         if(v==kToken_EQUAL){
             body_exp = parser->ParseExp();
             

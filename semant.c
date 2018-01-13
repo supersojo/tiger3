@@ -296,7 +296,10 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(body_exp!=0,"while body is null");
             
             a = TransExp(venv,tenv,test_exp);
+            
+            venv->BeginScope(ScopeMaker::kScope_While);
             b = TransExp(venv,tenv,body_exp);
+            venv->EndScope();
             
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"while exp should be int");
             
@@ -310,6 +313,11 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Break:
         {
+            if((venv->Scope()!=ScopeMaker::kScope_For) &&
+               (venv->Scope()!=ScopeMaker::kScope_While)){
+                m_logger.D("break should be in for/while scope.");
+            }
+            TIGER_ASSERT( ((venv->Scope()==ScopeMaker::kScope_For)||(venv->Scope()==ScopeMaker::kScope_While)),"expected in for or while scope");
             Symbol t("int");
             return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
             break;
@@ -346,7 +354,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(b->Type()->Kind()==TypeBase::kType_Int,"for lo should be int");
             TIGER_ASSERT(c->Type()->Kind()==TypeBase::kType_Int,"for hi should be int");
             
-            venv->BeginScope();
+            venv->BeginScope(ScopeMaker::kScope_For);
             //tenv->BeginScope();
             
             venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
@@ -374,8 +382,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             declist = dynamic_cast<LetExp*>(exp)->GetDecList();
             body = dynamic_cast<LetExp*>(exp)->GetBody();
             
-            venv->BeginScope();
-            tenv->BeginScope();
+            venv->BeginScope(ScopeMaker::kScope_Let);
+            tenv->BeginScope(ScopeMaker::kScope_Invalid);// type should not use scope
             // dec list
             DecNode* p;
             if(declist){
@@ -508,7 +516,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
         if(fundec_head->m_fundec->GetList()!=0)
             head = fundec_head->m_fundec->GetList()->GetHead();
         
-        venv->BeginScope();
+        venv->BeginScope(ScopeMaker::kScope_Fun);
         if(fundec_head->m_fundec->GetList()!=0){
             while(head){
                 venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value) );

@@ -105,7 +105,7 @@ void test_symtab(){
     tiger::SymTab symtab;
     symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
     symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
-    symtab.BeginScope();
+    symtab.BeginScope(tiger::ScopeMaker::kScope_Invalid);
     symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("a")),0);
     symtab.Enter(symtab.MakeSymbol(new tiger::Symbol("b")),0);
     symtab.EndScope();
@@ -117,8 +117,8 @@ void test_typecheck(){
     tiger::ExpBaseTy* ty;
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    //tiger::scanner::StringSourceCodeStream stream((char*)"let function a():int=0 in ()  end");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo()=for a:=1 to 10 do break in end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);

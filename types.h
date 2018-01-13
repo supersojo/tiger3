@@ -374,6 +374,23 @@ public:
 private:
     SimpleStackNode* m_top;
 };
+class ScopeMaker{
+friend class SymTab;
+public:
+    enum{
+        kScope_Let,
+        kScope_Fun,
+        kScope_For,
+        kScope_While,
+        kScope_Invalid
+    };
+    ScopeMaker(){m_kind = kScope_Invalid; m_next = 0;}
+    ScopeMaker(s32 kind){m_kind = kind; m_next = 0;}
+    s32 Kind(){return m_kind;}
+private:
+    s32 m_kind;
+    ScopeMaker* m_next;
+};
 class SymTab{
 public:
     enum{
@@ -382,8 +399,13 @@ public:
     };
     SymTab();
     void Erase(Symbol* name);
-    void BeginScope();
+    void BeginScope(s32 scope_kind);
     void EndScope();
+    s32 Scope(){
+        if(m_scope_list) 
+            return m_scope_list->Kind();
+        return ScopeMaker::kScope_Invalid;
+    }
     void Enter(Symbol* key,EnvEntryBase* value);
     EnvEntryBase* Lookup(Symbol* key);
     void Update(Symbol*s,TypeBase* t);
@@ -400,6 +422,7 @@ private:
     Symbol* m_marker;
     SymNameHashTable* m_sym_name_mapping;
     LoggerStdio m_logger;
+    ScopeMaker* m_scope_list;
 };
 
 }//namespace tiger
