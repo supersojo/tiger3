@@ -77,7 +77,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~SimpleVar");
+        //logger.D("~SimpleVar");
         delete m_sym;
     }
 public:
@@ -99,7 +99,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~FieldVar");
+        //logger.D("~FieldVar");
         delete m_var;
         delete m_sym;
     }
@@ -187,10 +187,10 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~ExpList");
+        //logger.D("~ExpList");
         ExpNode* p = m_head;
         while(p){
-            logger.D("~ExpList #");
+            //logger.D("~ExpList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -213,7 +213,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~VarExp");
+        //logger.D("~VarExp");
         delete m_var;
     }
 private:
@@ -252,7 +252,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~StringExp");
+        //logger.D("~StringExp");
         free(m_sval);
     }
 private:
@@ -275,7 +275,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~CallExp");
+        //logger.D("~CallExp");
         delete m_sym;
         delete m_explist;
     }
@@ -337,7 +337,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~OpExp");
+        //logger.D("~OpExp");
         delete m_oper;
         delete m_left;
         delete m_right;
@@ -380,7 +380,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~SeqExp");
+        //logger.D("~SeqExp");
         delete m_list;
     }
 private:
@@ -403,7 +403,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~AssignExp");
+        //logger.D("~AssignExp");
         delete m_var;
         delete m_exp;
     }
@@ -431,7 +431,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~IfExp");
+        //logger.D("~IfExp");
         delete m_test;
         delete m_then;
         delete m_elsee;
@@ -458,7 +458,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~WhileExp");
+        //logger.D("~WhileExp");
         delete m_test;
         delete m_body;
     }
@@ -494,7 +494,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~ForExp");
+        //logger.D("~ForExp");
         delete m_var;
         delete m_lo;
         delete m_hi;
@@ -545,7 +545,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~ArrayExp");
+        //logger.D("~ArrayExp");
         delete m_type;
         delete m_size;
         delete m_init;
@@ -599,12 +599,12 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~DecList");
+        //logger.D("~DecList");
         DecNode* p;
         p = m_head;
         while(p)
         {
-            logger.D("~DecList #");
+            //logger.D("~DecList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -667,11 +667,11 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~FunDecList");
+        //logger.D("~FunDecList");
         FunDecNode* p;
         p = m_head;
         while(p){
-            logger.D("~FunDecList #");
+            //logger.D("~FunDecList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -694,7 +694,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~FunctionDec");
+        //logger.D("~FunctionDec");
         delete m_fundeclist;
     }
 private:
@@ -720,7 +720,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~VarDec");
+        //logger.D("~VarDec");
         delete m_var;
         delete m_type;
         delete m_init;
@@ -773,7 +773,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~NameTy");
+        //logger.D("~NameTy");
         delete m_sym;
     }
 private:
@@ -808,7 +808,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~ArrayTy");
+        //logger.D("~ArrayTy");
         delete m_name;
     }
 private:
@@ -825,7 +825,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~NameTyPair");
+        //logger.D("~NameTyPair");
         delete m_name;
         delete m_ty;
     }
@@ -859,11 +859,11 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~NameTyPairList");
+        //logger.D("~NameTyPairList");
         NameTyPairNode* p;
         p = m_head;
         while(p){
-            logger.D("~NameTyPairList #");
+            //logger.D("~NameTyPairList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -886,7 +886,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~Field");
+        //logger.D("~Field");
         delete m_name;
         delete m_type;
     }
@@ -924,11 +924,11 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~FieldList");
+        //logger.D("~FieldList");
         FieldNode* p;
         p = m_head;
         while(p){
-            logger.D("~FieldList #");
+            //logger.D("~FieldList #");
             m_head = m_head->next;
             delete p;
             p = m_head;
@@ -951,7 +951,7 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~EField");
+        //logger.D("~EField");
         delete m_name;
         delete m_exp;
     }
@@ -988,11 +988,11 @@ public:
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
         logger.SetModule("absyn");
-        logger.D("~EFieldList");
+        //logger.D("~EFieldList");
         EFieldNode* p;
         p = m_head;
         while(p){
-            logger.D("~EFieldList #");
+            //logger.D("~EFieldList #");
             m_head = m_head->next;
             delete p;
             p = m_head;

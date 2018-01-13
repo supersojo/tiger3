@@ -168,7 +168,7 @@ void test_escape()
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var x:=0 in let  in x:=1;x:=x+1 end end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let type a1={a:int,b:string} var a_:=a1{a=0,b=\"\"} in let in a_.b:=\"\" end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);

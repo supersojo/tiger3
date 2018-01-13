@@ -11,7 +11,6 @@ void EscapeHelper::FindEscape(Exp* exp){
 void EscapeHelper::TransExp(SymTab* venv,s32 depth,Exp* exp){
     if(exp==0)
         return;
-    m_logger.D("TransExp with kind %d",exp->Kind());
     switch(exp->Kind()){
         case Exp::kExp_Var:
         {
@@ -46,11 +45,74 @@ void EscapeHelper::TransExp(SymTab* venv,s32 depth,Exp* exp){
             venv->EndScope();
             break;
         }
+        case Exp::kExp_Call:
+        {
+            m_logger.D("TransExp with kExp_Call");
+            m_logger.D("function call with %s",dynamic_cast<CallExp*>(exp)->Name()->Name());
+            ExpNode* head;
+
+            head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
+
+            while(head){
+                TransExp(venv,depth,head->m_exp);
+
+                head = head->next;
+            }
+            break;
+        }
+        case Exp::kExp_Op:
+        {
+            m_logger.D("TransExp with kExp_Op");
+
+            TransExp(venv,depth,dynamic_cast<OpExp*>(exp)->GetLeft());
+            TransExp(venv,depth,dynamic_cast<OpExp*>(exp)->GetRight());
+
+            break;
+        }
+        case Exp::kExp_Record:
+        {
+            m_logger.D("TransExp with kExp_Record");
+            EFieldNode* head;
+
+            /* id{} */
+            head = dynamic_cast<RecordExp*>(exp)->GetList()->GetHead();
+            if(head==0){
+                return;
+            }
+            
+            while(head){
+                
+                TransExp(venv,depth,head->m_efield->GetExp());
+                
+                head = head->next;
+            }
+            break;
+        }
         case Exp::kExp_Assign:
         {
             m_logger.D("TransExp with kExp_Assign");
             TransVar(venv,depth,dynamic_cast<AssignExp*>(exp)->GetVar());
             TransExp(venv,depth,dynamic_cast<AssignExp*>(exp)->GetExp());
+            break;
+        }
+        case Exp::kExp_For:
+        {
+            m_logger.D("TransExp with kExp_For");
+            Symbol* var;
+            Exp* body_exp;
+             
+            var = dynamic_cast<ForExp*>(exp)->GetVar();
+            body_exp = dynamic_cast<ForExp*>(exp)->GetExp();
+                        
+            venv->BeginScope(ScopeMaker::kScope_For);
+            
+            venv->Enter(venv->MakeSymbol(var),new EnvEntryEscape(depth+1,var->GetEscapeRefer()));
+            var->SetEscape(0/*false*/);
+            
+            TransExp(venv,depth+1,body_exp);
+            
+            venv->EndScope();
+            
             break;
         }
         case Exp::kExp_Seq:{
@@ -64,6 +126,50 @@ void EscapeHelper::TransExp(SymTab* venv,s32 depth,Exp* exp){
                 TransExp(venv,depth,p->m_exp);
                 p = p->next;
             }
+
+            break;
+        }
+        case Exp::kExp_If:
+        {
+            m_logger.D("TransExp with kExp_If");
+            Exp* if_exp;
+            Exp* then_exp;
+            Exp* else_exp;
+             
+            if_exp = dynamic_cast<IfExp*>(exp)->GetTest();
+            then_exp = dynamic_cast<IfExp*>(exp)->GetThen();
+            else_exp = dynamic_cast<IfExp*>(exp)->GetElsee();
+            
+            TransExp(venv,depth,if_exp);
+            TransExp(venv,depth,then_exp);
+            if(else_exp)
+                TransExp(venv,depth,else_exp);
+
+            break;
+        }
+        case Exp::kExp_While:
+        {
+            m_logger.D("TransExp with kExp_While");
+            Exp* test_exp;
+            Exp* body_exp;
+
+            test_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+            body_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+
+            TransExp(venv,depth,test_exp);
+            
+            venv->BeginScope(ScopeMaker::kScope_While);// only for "break" match
+            TransExp(venv,depth,body_exp);
+            venv->EndScope();
+            
+            break;
+        }
+        case Exp::kExp_Array:
+        {
+            m_logger.D("TransExp with kExp_Array");
+
+            TransExp(venv,depth,dynamic_cast<ArrayExp*>(exp)->GetSize());
+            TransExp(venv,depth,dynamic_cast<ArrayExp*>(exp)->GetInit());
 
             break;
         }
@@ -93,7 +199,8 @@ void EscapeHelper::TransFunctionDec(SymTab* venv, s32 depth, Dec* dec)
         
         if(fundec_head->m_fundec->GetList()!=0){
             while(head){
-                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryEscape(depth+1,0/*false*/) );
+                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryEscape(depth+1,head->m_field->Name()->GetEscapeRefer()/*false*/) );
+                head->m_field->Name()->SetEscape(0/*false*/);
                 head = head->next;
             }
         }
@@ -131,7 +238,7 @@ void EscapeHelper::TransVar(SymTab* venv,s32 depth,Var* var){
             m_logger.D("TransVar with kVar_Simple");
             EnvEntryEscape* t;
             //dynamic_cast<SimpleVar*>(var)->GetSymbol()
-            t = dynamic_cast<EnvEntryEscape*>( venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())) );
+            t = dynamic_cast<EnvEntryEscape*>( venv->Lookup( venv->MakeSymbol( dynamic_cast<SimpleVar*>(var)->GetSymbol() ) ) );
             if((depth > t->Depth()) && t->GetEscape()==0){
                 t->SetEscape(1/*true*/);
                 m_logger.D("Get a escape var with %s",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());

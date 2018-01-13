@@ -93,7 +93,7 @@ void SymTab::Enter(Symbol* key,EnvEntryBase* value)
     m_logger.D("New SymTab entry with %s",key->Name());
     m_stack->Push(key);
     if(key==m_marker){
-        m_logger.D("SymTab marker symbol push ok");
+        //m_logger.D("SymTab marker symbol push ok");
         return;
     }
     SymTabEntryNode* p,*n;
@@ -150,7 +150,7 @@ void SymTab::BeginScope(s32 scope_kind)
 }
 void SymTab::Erase(Symbol* key)
 {
-    m_logger.D("SymTab erase with %s",key->Name());
+    //m_logger.D("SymTab erase with %s",key->Name());
     s32 index = hash(key);
     SymTabEntryNode*p;
     p = m_tab[index];
@@ -169,7 +169,7 @@ void SymTab::Erase(Symbol* key)
                     p->next->prev = p->prev;
                 }
             } 
-            m_logger.D("SymTab erase ok with %s",key->Name());
+            //m_logger.D("SymTab erase ok with %s",key->Name());
             delete p;
             return;
         }
@@ -191,7 +191,7 @@ void SymTab::EndScope()
     do{
         name = m_stack->Pop();
         if(name==m_marker){
-            m_logger.D("SymTab marker symbol pop ok");
+            //m_logger.D("SymTab marker symbol pop ok");
             m_logger.D("EndScope...");
             return;
         }
