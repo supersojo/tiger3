@@ -1,6 +1,6 @@
 #include <iostream>
 #include "semant.h"
-
+#include "tiger_assert.h"
 namespace tiger{
     
 Translator::Translator(){
@@ -104,15 +104,40 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
             break;
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
-            TypeDec* p;
             NameTyPairNode* head;
+            head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
+            /* process headers of decs */
+            while(head){
+                /*
+                 *
+                 * */
+                EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+                if(p){
+                    TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
+                }
+                //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
+                tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0)));
+                head = head->next;
+            }
+            /* process bodys of decs*/
             head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
             while(head){
                 TypeBase* t = TransTy(tenv,head->m_nametypair->Type());
-                m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
-                tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(t));
+                if(t->Kind()!=TypeBase::kType_Name){
+                    dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
+                }
+                else{
+                    m_logger.D("TypeName update");
+                    EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+                    p->Update(dynamic_cast<TypeName*>(t)->Type());
+                    if(dynamic_cast<TypeName*>(p->Type())->Type()==dynamic_cast<TypeName*>(t)->Type()){
+                        TIGER_ASSERT(0,"cycle dependency occur");                        
+                    }
+
+                }
                 head = head->next;
             }
+
             break;
         }
         default:
@@ -128,6 +153,7 @@ TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
             m_logger.D("type check with kTy_Name");
             EnvEntryVar* t;
             t = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<NameTy*>(ty)->Name())));
+            TIGER_ASSERT(t!=0,"type %s not found",dynamic_cast<NameTy*>(ty)->Name()->Name());
             return t->Type();
             break;
         }
@@ -144,6 +170,7 @@ TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
                 n = new TypeFieldNode;
 
                 p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())));
+                TIGER_ASSERT(p!=0,"type %s not found",head->m_field->Type()->Name());
 
                 n->m_field = new TypeField(tenv->MakeSymbol(head->m_field->Name()),p->Type());
                 if(ret==0)

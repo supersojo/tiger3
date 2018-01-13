@@ -1,9 +1,10 @@
 /* Coding: ANSI */
 #ifndef TIGER_INTERNAL_TYPES_H
 #define TIGER_INTERNAL_TYPES_H
-
+#include <iostream>
 #include "tiger_type.h"
 #include "tiger_log.h"
+#include "tiger_assert.h"
 #include "absyn.h" //Symbol
 
 namespace tiger{
@@ -155,6 +156,14 @@ public:
         m_name = name;
         m_type = ty;
     }
+    Symbol* Name(){return m_name;}
+    TypeBase* Type(){return m_type;}
+    void Update(TypeBase* n){
+        if(m_type){
+            delete m_type;
+        }
+        m_type = n;
+    }
     ~TypeName(){
         //delete m_name;
         delete m_type;
@@ -163,7 +172,6 @@ private:
     Symbol* m_name;
     TypeBase* m_type;
 };
-
 /* Env*/
 class EnvEntryBase{
 public:
@@ -184,6 +192,11 @@ public:
     EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;}
     EnvEntryVar(TypeBase* ty):EnvEntryBase(kEnvEntry_Var){m_type=ty;}
     TypeBase* Type(){return m_type;}
+    void      Update(TypeBase* n){
+        TypeName*p = dynamic_cast<TypeName*>(m_type);
+        p->Update(n);
+
+    }
     ~EnvEntryVar(){
         delete m_type;
     }
@@ -295,6 +308,7 @@ public:
     void EndScope();
     void Enter(Symbol* key,EnvEntryBase* value);
     EnvEntryBase* Lookup(Symbol* key);
+    void Update(Symbol*s,TypeBase* t);
     Symbol* MakeSymbol(Symbol* s);
     Symbol* MakeSymbolFromString(char* s);
     /* helper for types */
