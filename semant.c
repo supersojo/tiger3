@@ -7,13 +7,29 @@ namespace tiger{
     
 Translator::Translator(){
     m_level_manager = new LevelManager;
+    
     m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
     m_logger.SetModule("semant");
+    
+    m_outer_most_level = 0;
+    
 }
 Translator::~Translator(){
     delete m_level_manager;
+    
+    //free all temp label memory
+    TempLabel::Exit();
 }
 
+Level*      Translator::OuterMostLevel()
+{
+    if(m_outer_most_level==0)
+    {
+        m_outer_most_level = new Level;
+        m_level_manager->NewLevel(m_outer_most_level);
+    }
+    return m_outer_most_level;
+}
 ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var){
     m_logger.D("TransVar with kind %d",var->Kind());
     switch(var->Kind()){
@@ -427,6 +443,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             TIGER_ASSERT(size_ty->Type()->Kind()==TypeBase::kType_Int,"array size type error");
             TIGER_ASSERT(init_ty->Type()==dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),"array init type mismatch");
             
+            delete size_ty;
+            delete init_ty;
+            
             return new ExpBaseTy(p->Type(),0);
             break;
         }
@@ -487,6 +506,14 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     f = new FrameBase(FrameBase::kFrame_X86);
     al = f->GetFormals();
     bl = f->GetEscapes();
+    
+    m_logger.D("New Frame Begin~~~");
+    /**for static linklist **/
+    access = f->AllocLocal(1/*true*/);
+    access->Retain();//inc refcnt
+    al->Insert(access,AccessList::kAccessList_Rear);
+    bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
+        
     if(fundec->GetList()==0){
         //empty formals
         head = 0;
@@ -504,7 +531,9 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
         
         head = head->next;
     }
-    
+    m_logger.D("formals size:%d",al->Size());
+    m_logger.D("escapes size:%d",bl->Size());
+    m_logger.D("New Frame End~~~");
     
     return f;
 }
@@ -539,7 +568,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
 
         /* level and label */
         alevel = new Level(level,MakeNewFrame(fundec_head->m_fundec));
-	m_level_manager->NewLevel(alevel);
+        m_level_manager->NewLevel(alevel);
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("empty function return type ");
             venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), 0, alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));

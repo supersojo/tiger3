@@ -1,5 +1,5 @@
 #include "temp.h"
-
+#include <iostream>
 namespace tiger{
     
 //temp

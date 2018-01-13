@@ -24,7 +24,7 @@ public:
     Temp(){m_name=0;}
     Temp(char* name){m_name=strdup(name);/* memory leak */}
     char* Name(){return m_name;}
-    ~Temp(){free(m_name);}
+    ~Temp(){free(m_name);m_name = 0;}
 private:
     char* m_name;
 };
@@ -55,7 +55,7 @@ public:
     Label(){m_name=0;}
     Label(char* name){m_name=strdup(name);/* memory leak */}
     char* Name(){return m_name;}
-    ~Label(){free(m_name);}
+    ~Label(){free(m_name);m_name = 0;}
 private:
     char* m_name;
 };
@@ -63,6 +63,10 @@ struct LabelNode{
     LabelNode(){
         m_label = 0;
         prev = next = 0;
+    }
+    ~LabelNode(){
+        delete m_label;
+        m_label = 0;
     }
     Label* m_label;
     LabelNode* prev;
@@ -87,13 +91,16 @@ public:
             m_temp_pool = new TempPool;
         if(m_label_pool==0)
             m_label_pool = new LabelPool;
-        m_initialized = 0;
+        m_initialized = 1;
     }
-    static void exit(){
+    static void Exit(){
         if(m_temp_pool)
             delete m_temp_pool;
         if(m_label_pool)
             delete m_label_pool;
+        
+        m_temp_pool = 0;
+        m_label_pool = 0;
     }
     static Temp* NewTemp(){
         if(m_initialized==0)

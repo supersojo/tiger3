@@ -117,9 +117,9 @@ void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
-    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in  let in a:=2 end end");
+    //tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in  let in a:=2 end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -156,7 +156,7 @@ void test_typecheck(){
     
     
     tiger::Translator translator;
-    ty=translator.TransExp(&venv,&tenv,0,exp);
+    ty=translator.TransExp(&venv,&tenv,translator.OuterMostLevel(),exp);
     delete ty;
     
     /* free */
@@ -190,7 +190,7 @@ int main()
     //test_assert();
     //test_types();
     //test_symtab();
-    //test_typecheck();
-    test_escape();
+    test_typecheck();
+    //test_escape();
     return 0;
 }

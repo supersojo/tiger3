@@ -1,7 +1,7 @@
 /* Coding: ANSI */
 #ifndef FRAME_H
 #define FRAME_H
-
+#include <iostream>
 #include "temp.h"
 
 namespace tiger{
@@ -57,6 +57,7 @@ struct AccessNode{
                 m_access = 0;
             }
         }
+        
     }
     /* members */
     AccessBase* m_access;
@@ -70,15 +71,17 @@ public:
         kAccessList_Front,
         kAccessList_Invalid
     };
-    AccessList(){m_head=0;}
-    AccessList(AccessNode* head){m_head=head;}
+    AccessList(){m_head=0;m_size=0;}
+    /*AccessList(AccessNode* head){m_head=head;m_size=0;}*/
     AccessNode* GetHead(){return m_head;}
     void Insert(AccessBase* access, s32 dir){
         AccessNode* n;
         AccessNode* p;
         AccessNode* q;
+        
         n = new AccessNode;
-        n->m_access= access;
+        
+        n->m_access = access;
         if(dir==kAccessList_Rear){
             p = m_head;
             q = m_head;
@@ -99,19 +102,26 @@ public:
                 m_head->prev = n;
             m_head = n;
         }
+        m_size++;
 
     }
+    s32 Size(){return m_size;}
     ~AccessList(){
+        
         AccessNode* p;
         p = m_head;
+        s32 i=0;
         while(p){
             m_head = m_head->next;
             delete p;
+            i++;
             p = m_head;
         }
+        
     }
 private:
     AccessNode* m_head;
+    s32 m_size;/* element num */
 };
 struct BoolNode{
     enum{
@@ -121,23 +131,29 @@ struct BoolNode{
     };
     BoolNode(){
         m_kind = kBool_Invalid;
+        prev = next = 0;
     }
     BoolNode(s32 v){
         m_kind = v;
+        prev = next = 0;
     }
     /* members */
     s32 m_kind;
     BoolNode* prev;
     BoolNode* next;
 };
+
+class BoolListIterator;
+
 class BoolList{
+friend class BoolListIterator;
 public:
     enum{
         kBoolList_Rear,
         kBoolList_Front,
         kBoolList_Invalid
     };
-    BoolList(){m_head=0;}
+    BoolList(){m_head=0;m_size=0;}
     void Insert(s32 v,s32 dir){
         BoolNode* n;
         n = new BoolNode;
@@ -168,7 +184,9 @@ public:
             }
             m_head = n;
         }
+        m_size++;
     }
+    s32 Size(){return m_size;}
     void NewHead(BoolNode* bn){
         bn->next = m_head;
         if(m_head){
@@ -187,6 +205,31 @@ public:
     }
 private:
     BoolNode* m_head;
+    s32 m_size;
+};
+class BoolListIterator{
+public:
+    BoolListIterator(){m_cur = 0;m_origin = 0;}
+    BoolListIterator(BoolList* l){
+        m_cur = l->m_head;
+        m_origin = l->m_head;
+    }
+    s32 Next(){
+        BoolNode* ret = 0;
+        if(m_cur){
+            ret = m_cur;
+            m_cur = m_cur->next;
+        }
+        if(ret)
+            return ret->m_kind;
+        return BoolNode::kBool_Invalid;
+    }
+    void Reset(){
+        m_cur = m_origin;    
+    }
+private:
+    BoolNode* m_cur;
+    BoolNode* m_origin;
 };
 class FrameBase{
 public:
@@ -218,9 +261,12 @@ public:
     virtual s32         Kind(){return m_kind;}
     
     virtual ~FrameBase(){
-        delete m_formals;
-        delete m_escapes;
-        delete m_locals;
+        if(m_formals)
+            delete m_formals;
+        if(m_escapes)
+            delete m_escapes;
+        if(m_locals)
+            delete m_locals;
     }
     virtual AccessBase* AllocLocal(s32 escape){
         AccessBase* ret = 0;
@@ -232,6 +278,7 @@ public:
         /* record the allocation */
         ret->Retain();
         m_locals->Insert(ret,AccessList::kAccessList_Rear);
+        return ret;/* MARK */
     }
 public:
     s32 m_kind;
@@ -257,7 +304,10 @@ public:
     }
     FrameBase* Frame(){return m_frame;}
     Level* Parent(){return m_parent;}
-    ~Level(){delete m_frame;}
+    ~Level(){
+        if(m_frame)
+            delete m_frame;
+    }
 private:
     FrameBase* m_frame;//
     Level* m_parent;
@@ -269,7 +319,8 @@ struct LevelNode{
         prev=next=0;
     }
     ~LevelNode(){
-        delete m_level;
+        if(m_level)
+            delete m_level;
     }
     Level* m_level;
     LevelNode* prev;
@@ -280,6 +331,9 @@ public:
     LevelManager(){m_head = 0;}
     void NewLevel(Level* l){
         LevelNode* n;
+        
+        n = new LevelNode;/* MARK */
+        
         n->m_level = l;
         n->next = m_head;
         if(m_head)

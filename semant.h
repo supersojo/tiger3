@@ -34,6 +34,7 @@ public:
     ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var);
     void        TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
+    Level*      OuterMostLevel();
     ~Translator();
 private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
@@ -43,6 +44,7 @@ private:
     
     LevelManager* m_level_manager;
     LoggerStdio m_logger; 
+    Level* m_outer_most_level;
 };
 
 }//namespace tiger
