@@ -129,8 +129,8 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 else{
                     m_logger.D("TypeName update");
                     EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
-                    p->Update(dynamic_cast<TypeName*>(t)->Type());
-                    if(dynamic_cast<TypeName*>(p->Type())->Type()==dynamic_cast<TypeName*>(t)->Type()){
+                    p->Update(dynamic_cast<TypeName*>(t));
+                    if(dynamic_cast<TypeName*>(t)->Type()==dynamic_cast<TypeName*>(p->Type())){
                         TIGER_ASSERT(0,"cycle dependency occur");                        
                     }
 
