@@ -147,7 +147,7 @@ public:
     AccessList* m_formals;
     BoolList*   m_escapes;
 
-    AccessList* m_locals;
+    AccessList* m_locals;// all accesses from the frame
     
 };
 class FrameX86:public FrameBase{
