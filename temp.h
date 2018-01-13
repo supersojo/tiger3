@@ -66,7 +66,6 @@ struct LabelNode{
     }
     ~LabelNode(){
         delete m_label;
-        m_label = 0;
     }
     Label* m_label;
     LabelNode* prev;

@@ -594,7 +594,10 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                 head = head->next;
             }
         }
-        a = TransExp(venv,tenv,level,fundec_head->m_fundec->GetExp());
+        /* each function needs its own level information */
+        alevel = dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLevel();
+        TIGER_ASSERT(alevel!=0,"function level is empty!");
+        a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp());
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
         }else

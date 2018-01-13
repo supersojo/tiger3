@@ -8,6 +8,7 @@
 #include "types.h"
 #include "semant.h"
 #include "escape.h"
+#include "tree.h"
 
 void test_StringSourceCodeStream()
 {
@@ -117,8 +118,8 @@ void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
-    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
     //tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in  let in a:=2 end end");
     
     /* generate sbstract syntax tree*/
@@ -181,6 +182,21 @@ void test_escape()
     /* free */
     delete exp;
 }
+void test_tree(){
+    tiger::LoggerStdio logger;
+    logger.SetModule("tree");
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    
+    tiger::ExpBaseName* e;
+    e = new tiger::ExpBaseName(tiger::TempLabel::NewNamedLabel("main"));
+    
+    logger.D(e->GetLabel()->Name());
+    
+    tiger::TempLabel::Exit();
+    
+    delete e;
+    
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -190,7 +206,8 @@ int main()
     //test_assert();
     //test_types();
     //test_symtab();
-    test_typecheck();
+    //test_typecheck();
     //test_escape();
+    test_tree();
     return 0;
 }
