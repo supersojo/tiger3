@@ -173,6 +173,7 @@ public:
     ExpList(ExpNode* exp_node){
         m_head = exp_node;
     }
+    ExpNode* GetHead(){return m_head;}
     ~ExpList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -361,6 +362,7 @@ public:
     SeqExp(ExpList* explist):Exp(kExp_Seq){
         m_list = explist;
     }
+    ExpList* GetList(){return m_list;}
     virtual ~SeqExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);

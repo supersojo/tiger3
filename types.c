@@ -97,7 +97,11 @@ void SymTab::Enter(Symbol* key,EnvEntryBase* value)
     while(p){
         if(p->m_entry->GetSymbol()==key){
             m_logger.W("SymTab entry already exist with %s",key->Name());
-            return;
+            //return;
+            /*
+             * all string share Symbol, so we should insert key with many values
+             */
+            break;
         }
         p = p->next;
     }
@@ -140,6 +144,9 @@ void SymTab::Erase(Symbol* key)
         SymTabEntryNode*p;
         p = m_tab[index];
         while(p){
+            /*
+             * only back current scope 
+             */
             if(p->m_entry->GetSymbol()==key){
                 if(p->prev==0){
                     m_tab[index]=p->next;

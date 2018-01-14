@@ -70,11 +70,24 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             
             return ret;
         }
+        case Exp::kExp_Seq:
+        {
+            ExpList* l = dynamic_cast<SeqExp*>(exp)->GetList();
+            ExpNode* p = l->GetHead();
+
+            // return value ignore for now
+            while(p){
+                TransExp(venv,tenv,p->m_exp);
+                p = p->next;
+            }
+            return 0;
+            break;
+        }
         // to be continue
         default:
             break;
     }
-    std::cout<<"should not reach here"<<std::endl;
+    std::cout<<"should not reach here "<<exp->Kind()<<std::endl;
     return 0;
 }
 void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
@@ -113,7 +126,8 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                  * */
                 EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
                 if(p){
-                    TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
+                    m_logger.W("Type %s redefined",head->m_nametypair->Name()->Name());
+                    //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
                 }
                 //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
                 tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type));

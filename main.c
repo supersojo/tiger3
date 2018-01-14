@@ -115,7 +115,7 @@ void test_symtab(){
 void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
-    tiger::scanner::StringSourceCodeStream stream((char*)"let type a={x:int,y:b} type b=a type c=int type d=c in end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 in let var a:=1 in end  end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
