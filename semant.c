@@ -92,10 +92,10 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 {
                     std::cout<<"type not match"<<std::endl;
                 }else{
-                    venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type()));
+                    venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
                 }
             }else{
-                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type()));
+                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
             }
             delete t;
             break;
@@ -116,7 +116,7 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
                     TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
                 }
                 //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
-                tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0)));
+                tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type));
                 head = head->next;
             }
             /* process bodys of decs*/

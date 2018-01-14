@@ -115,17 +115,17 @@ void test_symtab(){
 void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
-    tiger::scanner::StringSourceCodeStream stream((char*)"let type a={x:int,y:b} type b=a in end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let type a={x:int,y:b} type b=a type c=int type d=c in end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
     parser.Parse(&exp);
 
     tiger::SymTab venv,tenv;
-    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil()));
-    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid()));
-    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt()));
-    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString()));
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
     tiger::Translator translator;
     ty=translator.TransExp(&venv,&tenv,exp);
     delete ty;

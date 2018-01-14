@@ -87,7 +87,9 @@ class TypeArray:public TypeBase{
 public:
     TypeArray():TypeBase(kType_Array){m_array=0;}
     TypeArray(TypeBase* array):TypeBase(kType_Array){m_array = array;}
-    ~TypeArray(){delete m_array;}
+    ~TypeArray(){
+        //delete m_array;
+    }
 private:
     TypeBase* m_array;
 };
@@ -101,7 +103,7 @@ public:
     }
     ~TypeField(){
         //delete m_name;
-        delete m_type;
+        //delete m_type;
     }
 private:
     Symbol* m_name;
@@ -166,7 +168,7 @@ public:
     }
     ~TypeName(){
         //delete m_name;
-        delete m_type;
+        //delete m_type;
     }
 private:
     Symbol* m_name;
@@ -183,14 +185,21 @@ public:
     EnvEntryBase(){m_kind=kEnvEntry_Invalid;}
     EnvEntryBase(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    virtual ~EnvEntryBase(){}
 private:
     s32 m_kind;
 };
 
 class EnvEntryVar:public EnvEntryBase{
 public:
-    EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;}
-    EnvEntryVar(TypeBase* ty):EnvEntryBase(kEnvEntry_Var){m_type=ty;}
+    enum{
+        kEnvEntryVar_For_Type,/* used in type environment*/
+        kEnvEntryVar_For_Value,/* value environment*/
+        kEnvEntryVar_Invalid/* invalid */
+    };
+    EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;m_intent = kEnvEntryVar_Invalid;}
+    EnvEntryVar(TypeBase* ty,s32 intent):EnvEntryBase(kEnvEntry_Var){m_type=ty;m_intent = intent;}
+    s32 Intent(){return m_intent;}
     TypeBase* Type(){return m_type;}
     void      Update(TypeBase* n){
         TypeName*p = dynamic_cast<TypeName*>(m_type);
@@ -198,10 +207,13 @@ public:
 
     }
     ~EnvEntryVar(){
-        delete m_type;
+        if(m_intent==kEnvEntryVar_For_Type){
+            delete m_type;
+        }
     }
 private:
     TypeBase* m_type;
+    s32 m_intent;
 };
 
 class EnvEntryFun:public EnvEntryBase{
