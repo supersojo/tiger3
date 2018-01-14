@@ -13,9 +13,15 @@ Translator::Translator(){
     
     m_outer_most_level = 0;
     
+    m_lit_string_list = new LitStringList;
+    
+    //frame pointer
+    m_fp = 0;
 }
 Translator::~Translator(){
     delete m_level_manager;
+    
+    delete m_lit_string_list;
     
     //free all temp label memory
     TempLabel::Exit();
@@ -38,7 +44,20 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             EnvEntryVar* t;
             t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
-            return new ExpBaseTy(t->Type(),0);
+            
+            TreeBaseEx* ex;
+            AccessFrame* af;
+            AccessReg*   ar;
+            if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Frame){
+                af = dynamic_cast<AccessFrame*>(t->Access()->GetAccess());
+                ex = new TreeBaseEx( new ExpBaseMem( new ExpBaseBinop(BinaryOp::kBinaryOp_Add,new ExpBaseTemp( FP() ),new ExpBaseConst(af->Offset()))) );
+            }
+            if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Reg){
+                ar = dynamic_cast<AccessReg*>(t->Access()->GetAccess());
+                ex = new TreeBaseEx( new ExpBaseTemp( ar->GetTemp() ) );
+            }
+
+            return new ExpBaseTy(t->Type(),ex);//
         }
         case Var::kVar_Field:
         {
@@ -116,12 +135,18 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         {
             m_logger.D("type check with kExp_Int");
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseConst(dynamic_cast<IntExp*>(exp)->GetInt()) ));
         }
         case Exp::kExp_String:
         {
             Symbol t("string");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            Label* l;
+            l = m_lit_string_list->FindByString(dynamic_cast<StringExp*>(exp)->GetString());
+            if(l==0){
+                l = TempLabel::NewLabel();
+                m_lit_string_list->Insert(l,dynamic_cast<StringExp*>(exp)->GetString());
+            }
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseName( l ) ));
         }
         case Exp::kExp_Call:
         {
@@ -150,7 +175,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 head = head->next;
                 p = p->next;
             }
-            return new ExpBaseTy(f->Type(),0);
+            return new ExpBaseTy(f->Type(),0);// new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), new ExpBaseList()) )
             break;
         }
         case Exp::kExp_Op:
@@ -158,22 +183,29 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             m_logger.D("type check with kExp_Op");
             Oper* op = dynamic_cast<OpExp*>(exp)->GetOper();
             ExpBaseTy* left,*right;
+            TreeBase* l, *r;
             left = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetLeft());
             right = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetRight());
-            if(op->Kind()==Oper::kOper_Add){
+            l = left->Tree();
+            r = right->Tree();
+            if(op->Kind()==Oper::kOper_Add||
+               op->Kind()==Oper::kOper_Sub||
+               op->Kind()==Oper::kOper_Mul||
+               op->Kind()==Oper::kOper_Div){
                 if(left->Type()->Kind()!=TypeBase::kType_Int)
                     std::cout<<"type error"<<std::endl;
                 if(right->Type()->Kind()!=TypeBase::kType_Int)
                     std::cout<<"type error"<<std::endl;
+                
                 delete left;
                 delete right;
                 Symbol t("int");
-                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) ));
             }
             delete left;
             delete right;
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) ));
             break;
         }
         case Exp::kExp_Record:
@@ -221,27 +253,55 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         {
             m_logger.D("type check with kExp_Seq");
             ExpBaseTy* tmp=0;
+            TypeBase* ty=0;
+            TreeBase* result=0;
+            StatementBase* statement=0;
             ExpNode* p = dynamic_cast<SeqExp*>(exp)->GetList()->GetHead();
             if(p==0){
                 m_logger.D("empty seq exp");
+                Symbol t("int");
+                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
             }
             // return value ignore for now
             while(p){
                 tmp = TransExp(venv,tenv,level,p->m_exp);
                 p = p->next;
-                if(p)
+                if(p){
+                    if(statement==0)
+                        statement = TreeBase::UnNx( tmp->Tree() );
+                    else
+                        statement = new StatementSeq(statement, TreeBase::UnNx( tmp->Tree() ));
                     delete tmp;
+                }
             }
-            if(tmp)
-                return tmp;
-            Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
-            break;
+            
+            if( statement )// at least 2 exps 
+            {
+                if(statement->Kind()==StatementBase::kStatement_Seq){
+                    result = new TreeBaseEx( new ExpBaseEseq( statement, TreeBase::UnEx( tmp->Tree() ) ) );
+                }else{
+                    result = new TreeBaseEx( TreeBase::UnEx( tmp->Tree() ) );
+                }
+            }
+            else// 1 exp
+            {
+                result = new TreeBaseEx( TreeBase::UnEx( tmp->Tree() ) );
+            }
+            
+            if(tmp){
+                ty = tmp->Type();
+                delete tmp;
+            }
+            //Symbol t("int");
+            // need optimize for type 
+            //return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),result);
+            return new ExpBaseTy(ty,result);
         }
         case Exp::kExp_Assign:
         {
             ExpBaseTy* a;
             ExpBaseTy* b;
+            ExpBaseTy* result;
             
             m_logger.D("type check with kExp_Assign");
             
@@ -256,11 +316,14 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             TIGER_ASSERT(a->Type()==b->Type(),"type mismatch");
             
+            //new TreeBaseNx( new StatementMove( TreeBase::UnEx( a->Tree() ), TreeBase::UnEx( b->Tree() ) ) );
+            
+            result = new ExpBaseTy( b->Type(), new TreeBaseNx( new StatementMove( TreeBase::UnEx( a->Tree() ), TreeBase::UnEx( b->Tree() ) ) ) );
             
             delete a;
+            delete b;
 
-            return b;
-            break;
+            return result;
         }
         case Exp::kExp_If:
         {
@@ -376,7 +439,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             venv->BeginScope(ScopeMaker::kScope_For);
             //tenv->BeginScope();
             
-            venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
+            venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0));
             
             d = TransExp(venv,tenv,level,body_exp);
             
@@ -396,6 +459,13 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         {
             m_logger.D("type check with kExp_Let");
             ExpBaseTy* ret=0;
+            ExpBaseTy* result=0;
+            
+            Level* alevel;
+            
+            TreeBase* tree;
+            StatementBase* statement = 0;
+            
             DecList* declist;
             Exp* body;
             declist = dynamic_cast<LetExp*>(exp)->GetDecList();
@@ -403,23 +473,50 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             venv->BeginScope(ScopeMaker::kScope_Let);
             tenv->BeginScope(ScopeMaker::kScope_Invalid);// type should not use scope
+            
+            alevel = new Level(level,MakeNewFrame( 0 ));
+            m_level_manager->NewLevel(alevel);
+        
             // dec list
             DecNode* p;
             if(declist){
                 p = declist->GetHead();
                 while(p){
-                    TransDec(venv,tenv,level,p->m_dec);
+                    tree = TransDec(venv,tenv,alevel,p->m_dec);
                     p = p->next;
+                    /*
+                    a=1
+                    b=2
+                    c=3
+                           seq
+                         /   \
+                       seq  c=3
+                     /   \
+                    a=1  b=2
+                    */
+                    if(statement==0)
+                        statement = TreeBase::UnNx(tree);
+                    else
+                        statement = new StatementSeq(statement, TreeBase::UnNx(tree));
                 }
             }
-            if(body)
+            
+            if(body){
                 ret = TransExp(venv,tenv,level,body);
+                statement = new StatementSeq( statement, TreeBase::UnNx(ret->Tree()) );
+            }
             
             
             tenv->EndScope();
             venv->EndScope();
-            return ret; 
-            break;
+            if(body){
+                result = new ExpBaseTy( ret->Type(), new TreeBaseNx(statement) );
+                delete ret;
+            }else{
+                Symbol t("int");
+                result = new ExpBaseTy( tenv->Type( tenv->MakeSymbol(&t) ), new TreeBaseNx(statement) );
+            }
+            return result; 
         }
         case Exp::kExp_Array:
         {
@@ -513,7 +610,11 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     access->Retain();//inc refcnt
     al->Insert(access,AccessList::kAccessList_Rear);
     bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
-        
+    
+    
+    if(fundec==0)
+        return f;
+    
     if(fundec->GetList()==0){
         //empty formals
         head = 0;
@@ -590,7 +691,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         venv->BeginScope(ScopeMaker::kScope_Fun);
         if(fundec_head->m_fundec->GetList()!=0){
             while(head){
-                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value) );
+                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0) );
                 head = head->next;
             }
         }
@@ -633,7 +734,7 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
             //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
         }
         //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
-        tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type));
+        tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type, 0) );
         head = head->next;
     }
     /* process bodys of decs*/
@@ -655,13 +756,28 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         head = head->next;
     }
 }
-void Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
+TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
 {
     switch(dec->Kind())
     {
         case Dec::kDec_Var:{
             m_logger.D("type check with kDec_Var");
             ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp());
+            
+            TreeBase* tree;
+            AccessFrame* af;
+            AccessReg*   ar;
+            VarAccess* access;
+            
+            tree = t->Tree();
+            
+            if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
+                af = dynamic_cast<AccessFrame*>( level->Frame()->AllocLocal(1) );
+                access = new VarAccess(level,af);
+            }else{
+                ar = dynamic_cast<AccessReg*>( level->Frame()->AllocLocal(0) );
+                access = new VarAccess(level,ar);
+            }
             if(dynamic_cast<VarDec*>(dec)->GetType()){
                 EnvEntryBase* p;
                 p = tenv->Lookup(tenv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetType()));
@@ -670,17 +786,38 @@ void Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
                 {
                     std::cout<<"type not match"<<std::endl;
                 }else{
-                    venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
+                    
+                    venv->Enter( venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()), new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access) );
                 }
             }else{
-                /*
-                level->m_level->Frame()->AllocLocal(0);
-                VarAccess(level,AccessBase*)
-                */
-                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
+                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access));
             }
+            
+            
+            
+            /* tree */
+            if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
+                tree = new TreeBaseNx( new StatementMove( 
+                                          new ExpBaseMem( 
+                                             new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst( af->Offset() ) 
+                                             ) 
+                                          ),
+                                          TreeBase::UnEx( tree )                                          
+                                       )
+                                     );
+            }
+            else
+            {
+                tree = new TreeBaseNx( new StatementMove ( 
+                                          new ExpBaseTemp( ar->GetTemp() 
+                                          ),
+                                          TreeBase::UnEx( tree )                                          
+                                       )
+                                     );
+            }
+            
             delete t;
-            break;
+            return tree;
         }
         case Dec::kDec_Function:
         {
@@ -838,5 +975,146 @@ TreeBaseCx* TreeBase::UnCx(TreeBase* tree){
             ;/* should not reach here */
     }
 }
-   
+LitStringList::LitStringList(){
+    m_tab = new LitStringNode*[kLitStringList_Size];
+    for(s32 i=0;i<kLitStringList_Size;i++){
+        m_tab[i] = 0;
+    }
+    m_size = 0;
+    
+    m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
+    m_logger.SetModule("LitStringList");
+}
+void LitStringList::Insert(Label* l,char* str){
+    s32 index = hash(l);
+    LitStringNode* p;
+    p = m_tab[index];
+    while(p){
+        if(l==p->m_label){
+            // exist already
+            m_logger.D("%s already exist",l->Name());
+            return;
+        }
+        p = p->next;
+    }
+    LitStringNode* n;
+    n = new LitStringNode;
+    n->m_label = l;
+    n->m_string = strdup(str);//memory leak
+    n->next = m_tab[index];
+    if(m_tab[index])
+        m_tab[index]->prev = n;
+    m_tab[index] = n;
+    m_size++;
+    m_logger.D("%s with \"%s\" insert ok",l->Name(),str);
+}
+char* LitStringList::Find(Label* l){
+    s32 index = hash(l);
+    LitStringNode* p;
+    p = m_tab[index];
+    while(p){
+        if(l==p->m_label){
+            // exist already
+            return p->m_string;
+        }
+        p = p->next;
+    }
+    return 0;//not found
+}
+char* LitStringList::FindByLabel(Label* l){
+    return Find(l);
+}
+Label* LitStringList::FindByString(char* str){// low performance 
+    LitStringNode* p;
+    for(s32 i=0;i<kLitStringList_Size;i++){
+        p = m_tab[i];
+        while(p){
+            if(strcmp(p->m_string,str)==0){
+                m_logger.D("FindByString with \"%s\" ok",str);
+                return p->m_label;
+            }
+            p = p->next;
+        }
+    }
+    return 0;
+}
+LitStringList::~LitStringList(){
+    for(s32 i=0;i<kLitStringList_Size;i++){
+        Clean(m_tab[i]);
+    }
+    
+    delete[] m_tab;
+}
+
+void Translator::Traverse(TreeBase* tree)
+{
+    if(tree->Kind()==TreeBase::kTreeBase_Ex)
+        TraverseEx(dynamic_cast<TreeBaseEx*>(tree)->GetExp());
+    if(tree->Kind()==TreeBase::kTreeBase_Nx)
+        TraverseNx(dynamic_cast<TreeBaseNx*>(tree)->GetStatement());
+    if(tree->Kind()==TreeBase::kTreeBase_Cx)
+        TraverseCx(dynamic_cast<TreeBaseCx*>(tree)->GetStatement());
+}
+void Translator::TraverseEx(ExpBase* exp){
+    if(exp==0)
+        return;
+    switch(exp->Kind()){
+        case ExpBase::kExpBase_Binop:
+            m_logger.D("ADD(");
+            TraverseEx( dynamic_cast<ExpBaseBinop*>(exp)->Left() );
+            m_logger.D(",");
+            TraverseEx( dynamic_cast<ExpBaseBinop*>(exp)->Right() );
+            m_logger.D(")");
+            break;
+        case ExpBase::kExpBase_Mem:
+            m_logger.D("MEM(");
+            TraverseEx( dynamic_cast<ExpBaseMem*>(exp)->GetExp() );
+            m_logger.D(")");
+            break;
+        case ExpBase::kExpBase_Temp:
+            m_logger.D("TEMP(%s)",dynamic_cast<ExpBaseTemp*>(exp)->GetTemp()->Name());
+            break;
+        case ExpBase::kExpBase_Eseq:
+            break;
+        case ExpBase::kExpBase_Name:
+            m_logger.D("NAME(%s)",dynamic_cast<ExpBaseName*>(exp)->GetLabel()->Name());
+            break;
+        case ExpBase::kExpBase_Const:
+            m_logger.D("CONST(%d)",dynamic_cast<ExpBaseConst*>(exp)->GetValue());
+            break;
+        case ExpBase::kExpBase_Call:
+            break;
+    }
+}
+void Translator::TraverseNx(StatementBase* statement){
+    if(statement==0)
+        return;
+    switch(statement->Kind())
+    {
+        case StatementBase::kStatement_Seq:
+            TraverseNx( dynamic_cast<StatementSeq*>(statement)->Left() );
+            TraverseNx( dynamic_cast<StatementSeq*>(statement)->Right() );
+            break;
+        case StatementBase::kStatement_Label:
+            m_logger.D("LABEL(%s)",dynamic_cast<StatementLabel*>(statement)->GetLabel()->Name());
+            break;
+        case StatementBase::kStatement_Jump:
+            break;
+        case StatementBase::kStatement_Cjump:
+            break;
+        case StatementBase::kStatement_Move:
+            m_logger.D("MOVE(");
+            TraverseEx( dynamic_cast<StatementMove*>(statement)->Left() );
+            m_logger.D(",");
+            TraverseEx( dynamic_cast<StatementMove*>(statement)->Right() );
+            m_logger.D(")");
+            break;
+        case StatementBase::kStatement_Exp:
+            break;
+    }
+}
+void Translator::TraverseCx(StatementBase* statement){
+    
+}
+    
 }//namespace tiger

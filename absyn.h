@@ -37,6 +37,7 @@ public:
         free(m_name);
     }
     s32* GetEscapeRefer(){return &m_escape;}
+    s32  GetEscape(){return m_escape;}
     void SetEscape(s32 escape){m_escape = escape;}
 private:
     char* m_name;

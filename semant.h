@@ -29,7 +29,7 @@ public:
     static TreeBaseCx*    UnCx(TreeBase* tree);
     
     virtual ~TreeBase(){}
-    s32 Kind(){return m_kind;}
+    virtual s32 Kind(){return m_kind;}
 private:
     s32 m_kind;
 };
@@ -38,7 +38,9 @@ public:
     TreeBaseEx():TreeBase(kTreeBase_Ex){m_exp=0;}
     TreeBaseEx(ExpBase* exp):TreeBase(kTreeBase_Ex){m_exp=exp;}
     ExpBase* GetExp(){return m_exp;}
-    ~TreeBaseEx(){}
+    ~TreeBaseEx(){
+        //delete m_exp;
+    }
 private:
     ExpBase* m_exp;/* ??? */
 };
@@ -47,7 +49,9 @@ public:
     TreeBaseNx():TreeBase(kTreeBase_Nx){m_statement=0;}
     TreeBaseNx(StatementBase* statement):TreeBase(kTreeBase_Nx){m_statement=statement;}
     StatementBase* GetStatement(){return m_statement;}
-    ~TreeBaseNx(){}
+    ~TreeBaseNx(){
+        //delete m_statement;
+    }
 private:
     StatementBase* m_statement;/* ??? */
 };
@@ -132,6 +136,7 @@ public:
     PatchList* GetTrues(){return m_trues;}
     PatchList* GetFalses(){return m_falses;}
     ~TreeBaseCx(){
+        //delete m_statement;
         delete m_trues;
         delete m_falses;
     }
@@ -144,26 +149,77 @@ private:
 class ExpBaseTy{
 public:
     ExpBaseTy(){m_type=0;m_tree=0;}
-    ExpBaseTy(TypeBase* ty,ExpBase* tree){m_type=ty;m_tree = tree;}
+    ExpBaseTy(TypeBase* ty,TreeBase* tree){m_type=ty;m_tree = tree;}
     TypeBase* Type(){return m_type;}
-    ExpBase*  Tree(){return m_tree;}
+    TreeBase* Tree(){return m_tree;}
     ~ExpBaseTy(){
         //delete m_type;
         delete m_tree;
     }
 private:
     TypeBase* m_type;
-    ExpBase*  m_tree;
+    TreeBase*  m_tree;// ???
 };
+struct LitStringNode{
+    LitStringNode(){
+        m_label = 0;
+        m_string = 0;
+        prev = next = 0;
+    }
+    ~LitStringNode(){
+        free(m_string);
+    }
+    /* members */
+    Label* m_label;/* managed by TempLabel */
+    char*  m_string;
+    LitStringNode* prev;
+    LitStringNode* next;
+    
+};
+/* hash table for label/string mapping */
+class LitStringList{
+public:
+    enum{
+        kLitStringList_Size=32
+    };
+    LitStringList();
+    ~LitStringList();
+    void Insert(Label* l,char* str);
+    char* Find(Label* l);
+    char* FindByLabel(Label* l);
+    Label* FindByString(char* str);
+private:
+    s32 hash(Label* l){
+        return reinterpret_cast<u64>(l)%kLitStringList_Size;
+    }
+    void Clean(LitStringNode* list){
+        LitStringNode* p;
+        p = list;
+        while(p){
+            list = list->next;
+            delete p;
+            p = list;
+        }
+    }
+    LitStringNode** m_tab;
+    s32 m_size;
 
+    LoggerStdio m_logger; 
+};
 class Translator{
 public:
     Translator();
     ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp);
     ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var);
-    void        TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    TreeBase*   TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
     Level*      OuterMostLevel();
+    Temp* FP(){
+        if(m_fp==0)
+            m_fp = TempLabel::NewTemp();
+        return m_fp;
+    }
+    void Traverse(TreeBase* tree);
     ~Translator();
 private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
@@ -171,9 +227,18 @@ private:
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);
     
+    void TraverseEx(ExpBase* exp);
+    void TraverseNx(StatementBase* statement);
+    void TraverseCx(StatementBase* statement);
+    
     LevelManager* m_level_manager;
     LoggerStdio m_logger; 
     Level* m_outer_most_level;
+    
+    LitStringList* m_lit_string_list;
+    
+    // frame pointer
+    Temp* m_fp;
 };
 
 }//namespace tiger

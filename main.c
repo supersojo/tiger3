@@ -119,8 +119,8 @@ void test_typecheck(){
     tiger::ExpBaseTy* ty;
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
-    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    //tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in  let in a:=2 end end");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=0 in let in  a:=2; b:=1 end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -128,10 +128,10 @@ void test_typecheck(){
 
     tiger::SymTab venv,tenv;
     /* init types */
-    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
-    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
-    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
-    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type));
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
     /* internal functions */
     /* print(x:string)*/
     tiger::TypeFieldNode* node;
@@ -155,9 +155,29 @@ void test_typecheck(){
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
     venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
     
+    // find escape 
+    tiger::EscapeHelper escaper;
+    escaper.FindEscape(exp);
     
     tiger::Translator translator;
     ty=translator.TransExp(&venv,&tenv,translator.OuterMostLevel(),exp);
+    
+    translator.Traverse( ty->Tree() );
+    
+    if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
+    {
+        delete dynamic_cast<tiger::TreeBaseEx*>(ty->Tree())->GetExp();
+    }
+    
+    if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
+    {
+        delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
+    }
+    if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
+    {
+        delete dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement();
+    }
+    
     delete ty;
     
     /* free */
@@ -197,6 +217,21 @@ void test_tree(){
     delete e;
     
 }
+void test_litstringlist(){
+    tiger::LoggerStdio logger;
+    logger.SetModule("tree");
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    
+    tiger::LitStringList list;
+    tiger::Label* l1,* l2,* l3;
+    l1 = tiger::TempLabel::NewNamedLabel("a");
+    l2 = tiger::TempLabel::NewNamedLabel("b");
+    l3 = tiger::TempLabel::NewNamedLabel("c");
+    list.Insert(l1,"a");
+    list.Insert(l1,"b");
+    logger.D(list.Find(l1));
+    tiger::TempLabel::Exit();
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -206,8 +241,9 @@ int main()
     //test_assert();
     //test_types();
     //test_symtab();
-    //test_typecheck();
+    test_typecheck();
     //test_escape();
-    test_tree();
+    //test_tree();
+    //test_litstringlist();
     return 0;
 }

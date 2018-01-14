@@ -4,6 +4,7 @@
 
 #include "tiger_type.h"
 #include "temp.h"
+#include "absyn.h"
 
 namespace tiger{
 
@@ -97,6 +98,8 @@ class StatementSeq:public StatementBase{
 public:
     StatementSeq():StatementBase(kStatement_Seq){m_left=0;m_right=0;}
     StatementSeq(StatementBase* left,StatementBase* right):StatementBase(kStatement_Seq){m_left=left;m_right=right;}
+    StatementBase* Left(){return m_left;}
+    StatementBase* Right(){return m_right;}
     ~StatementSeq(){
         delete m_left;
         delete m_right;
@@ -192,6 +195,7 @@ public:
         m_exp = exp;
         m_list = list;
     }
+    
     ~StatementJump();
 private:
     ExpBase* m_exp;
@@ -238,6 +242,18 @@ public:
         kBinaryOp_Invalid
         
     };
+    static s32 ToBinaryOp(s32 k){
+        if(k==Oper::kOper_Add)
+            return kBinaryOp_Add;
+        if(k==Oper::kOper_Sub)
+            return kBinaryOp_Sub;
+        if(k==Oper::kOper_Mul)
+            return kBinaryOp_Mul;
+        if(k==Oper::kOper_Div)
+            return kBinaryOp_Div;
+        
+        return kBinaryOp_Invalid;
+    }
 };
 class StatementCjump:public StatementBase{
 public:
@@ -269,6 +285,8 @@ public:
         m_left = l;
         m_right = r;
     }
+    ExpBase* Left(){return m_left;}
+    ExpBase* Right(){return m_right;}
     ~StatementMove();
 private:
     ExpBase* m_left;
@@ -298,6 +316,7 @@ public:
     };
     ExpBase(){m_kind=kExpBase_Invalid;}
     ExpBase(s32 kind){m_kind=kind;}
+    s32 Kind(){return m_kind;}
     virtual ~ExpBase();
 private:
     s32 m_kind;
@@ -377,6 +396,8 @@ public:
         m_left = l;
         m_right = r;
     }
+    ExpBase* Left(){return m_left;}
+    ExpBase* Right(){return m_right;}
     ~ExpBaseBinop(){
         delete m_left;
         delete m_right;
@@ -392,6 +413,7 @@ public:
     ExpBaseMem(ExpBase* exp):ExpBase(kExpBase_Mem){
         m_exp = exp;
     }
+    ExpBase* GetExp(){return m_exp;}
     ~ExpBaseMem(){
         delete m_exp;
     }
@@ -404,6 +426,7 @@ public:
     ExpBaseTemp(Temp* t):ExpBase(kExpBase_Temp){
         m_temp = t;
     }
+    Temp* GetTemp(){return m_temp;}
     ~ExpBaseTemp(){
     }
 private:
@@ -442,6 +465,7 @@ public:
     ExpBaseConst(s32 val):ExpBase(kExpBase_Const){
         m_val = val;
     }
+    s32 GetValue(){return m_val;}
 private:
     s32 m_val;
 };

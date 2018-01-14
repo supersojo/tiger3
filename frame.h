@@ -357,13 +357,13 @@ private:
 class VarAccess{
 public:
     VarAccess(){m_level=0;m_access=0;}
-    VarAccess(LevelNode* level,AccessBase* access){m_level=level;m_access=access;}
-    Level* GetLevel(){return m_level->m_level;}
+    VarAccess(Level* level,AccessBase* access){m_level=level;m_access=access;}
+    Level* GetLevel(){return m_level;}
     AccessBase* GetAccess(){return m_access;}
     ~VarAccess(){}
 private:
-    LevelNode* m_level;
-    AccessBase * m_access;
+    Level* m_level;// managed by level manager
+    AccessBase * m_access;// managed by level
 };
 
 }// namespace tiger

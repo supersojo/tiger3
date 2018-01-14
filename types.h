@@ -260,8 +260,9 @@ public:
         kEnvEntryVar_Invalid/* invalid */
     };
     EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;m_intent = kEnvEntryVar_Invalid;}
-    EnvEntryVar(TypeBase* ty,s32 intent):EnvEntryBase(kEnvEntry_Var){m_type=ty;m_intent = intent;}
+    EnvEntryVar(TypeBase* ty,s32 intent,VarAccess* access):EnvEntryBase(kEnvEntry_Var){m_type=ty;m_intent = intent;m_access=access;}
     s32 Intent(){return m_intent;}
+    VarAccess* Access(){return m_access;}
     TypeBase* Type(){return m_type;}
     void      Update(TypeBase* n){
         TypeName*p = dynamic_cast<TypeName*>(m_type);
@@ -272,12 +273,15 @@ public:
         if(m_intent==kEnvEntryVar_For_Type){
             delete m_type;
         }
+        if(m_intent==kEnvEntryVar_For_Value){
+            delete m_access;
+        }
     }
 private:
     TypeBase* m_type;
     s32 m_intent;
     /* access infor */
-    
+    VarAccess* m_access;
 };
 
 class EnvEntryFun:public EnvEntryBase{
@@ -297,7 +301,7 @@ private:
     TypeFieldList* m_formals;
     TypeBase* m_result;/* memory managed by tenv table */
     
-    Level* m_level;// ??
+    Level* m_level;// managed by level manager
     Label*     m_label;/*managed by label pool*/
     
 };
