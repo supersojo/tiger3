@@ -755,6 +755,88 @@ TypeBase* Translator::TransTy(SymTab* tenv,Level* level,Ty* ty)
     }
     return 0;
 }
-    
-    
+
+ExpBase*       TreeBase::UnEx(TreeBase* tree){
+    switch(tree->Kind()){
+        case kTreeBase_Ex:
+        {
+            return dynamic_cast<TreeBaseEx*>(tree)->GetExp();
+        }
+        case kTreeBase_Nx:
+        {
+            return new ExpBaseEseq(dynamic_cast<TreeBaseNx*>(tree)->GetStatement(),new ExpBaseConst(0));
+        }
+        case kTreeBase_Cx:
+        {
+            Temp* r;
+            Label* t,*f;
+            
+            r = TempLabel::NewTemp();
+            t = TempLabel::NewLabel();
+            f = TempLabel::NewLabel();
+            
+            dynamic_cast<TreeBaseCx*>(tree)->GetTrues()->DoPatch(t);
+            dynamic_cast<TreeBaseCx*>(tree)->GetFalses()->DoPatch(f);
+            
+            return new ExpBaseEseq(new StatementMove(new ExpBaseTemp(r),new ExpBaseConst(1)),
+                                      new ExpBaseEseq( dynamic_cast<TreeBaseCx*>(tree)->GetStatement(),
+                                         new ExpBaseEseq( new StatementLabel(f),
+                                            new ExpBaseEseq(new StatementMove(new ExpBaseTemp(r),new ExpBaseConst(0)),
+                                               new ExpBaseEseq(new StatementLabel(t),new ExpBaseTemp(r)
+                                               )
+                                            )
+                                         )
+                                      )
+                                  );
+        }
+        default:
+            ;/* should not reach here */
+    }
+}
+StatementBase* TreeBase::UnNx(TreeBase* tree){
+    switch(tree->Kind()){
+        case kTreeBase_Ex:
+        {
+            return new StatementExp(dynamic_cast<TreeBaseEx*>(tree)->GetExp());
+        }
+        case kTreeBase_Nx:
+        {
+            return dynamic_cast<TreeBaseNx*>(tree)->GetStatement();
+        }
+        case kTreeBase_Cx:
+        {
+            return dynamic_cast<TreeBaseCx*>(tree)->GetStatement();
+        }
+        default:
+            ;/* should not reach here */
+    }
+}
+TreeBaseCx* TreeBase::UnCx(TreeBase* tree){
+    switch(tree->Kind()){
+        case kTreeBase_Ex:
+        {
+            StatementBase* tmp;
+            PatchList * trues = new PatchList;
+            PatchList* falses = new PatchList;
+            
+            tmp = new StatementCjump(RelationOp::kRelationOp_Ne,dynamic_cast<TreeBaseEx*>(tree)->GetExp(),new ExpBaseConst(0),0/*true*/,0/*false*/);
+            
+            trues->Insert(dynamic_cast<StatementCjump*>(tmp)->GetATrueLabel(),PatchList::kPatchList_Rear);
+            falses->Insert(dynamic_cast<StatementCjump*>(tmp)->GetAFalseLabel(),PatchList::kPatchList_Rear);
+            
+            return new TreeBaseCx(tmp,trues,falses);
+        }
+        case kTreeBase_Nx:
+        {
+            ;/*should not reach here */
+        }
+        case kTreeBase_Cx:
+        {
+            return dynamic_cast<TreeBaseCx*>(tree);
+        }
+        default:
+            ;/* should not reach here */
+    }
+}
+   
 }//namespace tiger

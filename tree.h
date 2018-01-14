@@ -250,6 +250,8 @@ public:
         m_false = f;
         
     }
+    Label** GetATrueLabel(){return &m_true;}
+    Label** GetAFalseLabel(){return &m_false;}
     ~StatementCjump();
 private:
     s32 m_op;
