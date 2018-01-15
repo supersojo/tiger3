@@ -418,6 +418,7 @@ Exp* Parser::_ParseTerm()
         return new VarExp(var);
     }
     /* should not reach here */
+    m_logger->D("Unexpected token %s here",token_string((TokenType)v));
     return 0;
     
 }

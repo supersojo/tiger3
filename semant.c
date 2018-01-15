@@ -8,11 +8,124 @@ Translator::Translator(){
     m_logger.SetModule("semant");
 }
 Translator::~Translator(){
+
+}
+
+ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
+    m_logger.D("TransVar with kind %d",var->Kind());
+    switch(var->Kind()){
+        case Var::kVar_Simple:
+        {
+            EnvEntryVar* t;
+            t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
+            TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
+            return new ExpBaseTy(t->Type(),0);
+        }
+        case Var::kVar_Field:
+        {
+            ExpBaseTy* p;
+            TypeFieldNode* head;
+            p = TransVar(venv,tenv,dynamic_cast<FieldVar*>(var)->GetVar());
+            if(p->Type()->Kind()!=TypeBase::kType_Name){
+                m_logger.W("name type needed");
+            }
+            if(dynamic_cast<TypeName*>(p->Type())->Type()->Kind()!=TypeBase::kType_Record)
+            {
+                m_logger.W("record type needed");
+            }
+            head = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
+            while(head){
+                if(head->m_field->Name()==tenv->MakeSymbol(dynamic_cast<FieldVar*>(var)->GetSym())){
+                    /* ok */
+                    delete p;
+                    return new ExpBaseTy(head->m_field->Type(),0);
+                }
+                head = head->next;
+            }
+            TIGER_ASSERT(0,"%s not found in record type",dynamic_cast<FieldVar*>(var)->GetSym()->Name());
+            break;
+
+        }
+        case Var::kVar_Subscript:
+        {
+            ExpBaseTy* p;
+            ExpBaseTy* t;
+            ExpBaseTy* ret;
+            p = TransVar(venv,tenv,dynamic_cast<SubscriptVar*>(var)->GetVar());
+            if(p->Type()->Kind()!=TypeBase::kType_Name){
+                m_logger.W("name type needed");
+            }
+            TIGER_ASSERT(p!=0,"name type needed");
+            
+            //dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type()
+            
+            t = TransExp(venv,tenv,dynamic_cast<SubscriptVar*>(var)->GetExp());
+            if(t->Type()->Kind()!=TypeBase::kType_Int){
+                m_logger.W("array index should be int");
+            }
+            TIGER_ASSERT(p!=0,"array index should be int");
+            
+            ret = new ExpBaseTy(dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),0); 
+            
+            delete p;
+            delete t;
+            return ret;
+            
+        }
+        default:
+            break;
+    }
+    m_logger.W("shoud not reach here %s,%d",__FILE__,__LINE__);
+    return 0;
 }
 
 ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
     switch(exp->Kind())
     {
+        case Exp::kExp_Var:
+        {
+            return TransVar(venv,tenv,dynamic_cast<VarExp*>(exp)->GetVar());
+            break;
+        }
+        case Exp::kExp_Nil:
+        {
+            m_logger.D("type check with kExp_Nil");
+            Symbol t("nil");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+        }
+        case Exp::kExp_Int:
+        {
+            m_logger.D("type check with kExp_Int");
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+        }
+        case Exp::kExp_String:
+        {
+            Symbol t("string");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+        }
+        case Exp::kExp_Call:
+        {
+            ExpNode* head;
+            TypeFieldNode* p;
+            ExpBaseTy* t;
+            EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
+            TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
+            p = f->GetList()->GetHead();
+            TIGER_ASSERT(p!=0,"formals is null");
+            head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
+            TIGER_ASSERT(head!=0,"actuals is null");
+            while(head){
+                t = TransExp(venv,tenv,head->m_exp);
+                if(p->m_field->Type()!=t->Type()){
+                    TIGER_ASSERT(0,"type mismatch");
+                }
+                head = head->next;
+                p = p->next;
+            }
+            return new ExpBaseTy(f->Type(),0);
+            break;
+        }
         case Exp::kExp_Op:
         {
             m_logger.D("type check with kExp_Op");
@@ -25,23 +138,210 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                     std::cout<<"type error"<<std::endl;
                 if(right->Type()->Kind()!=TypeBase::kType_Int)
                     std::cout<<"type error"<<std::endl;
+                delete left;
+                delete right;
                 Symbol t("int");
                 return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
             }
             delete left;
             delete right;
-            break;
-        }
-        case Exp::kExp_Int:
-        {
-            m_logger.D("type check with kExp_Int");
             Symbol t("int");
             return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
         }
-        case Exp::kExp_String:
+        case Exp::kExp_Record:
         {
-            Symbol t("string");
+            EnvEntryVar* p;
+            EFieldNode* head;
+            TypeFieldNode* n;
+            
+            p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<RecordExp*>(exp)->Name())));
+            
+            TIGER_ASSERT(p!=0,"type %s not found",dynamic_cast<RecordExp*>(exp)->Name()->Name());
+            TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type name is needed",dynamic_cast<RecordExp*>(exp)->Name()->Name());
+            
+            TIGER_ASSERT(dynamic_cast<TypeName*>(p->Type())->Type()->Kind()==TypeBase::kType_Record,"record type needed");
+            
+            head = dynamic_cast<RecordExp*>(exp)->GetList()->GetHead();
+            
+            n = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
+            
+            while(head){
+                ExpBaseTy* a;
+                TIGER_ASSERT(n->m_field->Name()==tenv->MakeSymbol(head->m_efield->Name()),"member mismatch");
+                
+                a = TransExp(venv,tenv,head->m_efield->GetExp());
+                
+                if(a->Type()->Kind()!=TypeBase::kType_Nil){
+                    m_logger.D("expected type:%s",n->m_field->Type()->TypeString());
+                    m_logger.D("provided type %s",a->Type()->TypeString());
+                    TIGER_ASSERT(n->m_field->Type()==a->Type(),"type mismatch");
+                }
+                
+                delete a;
+                
+                head = head->next;
+                n = n->next;
+            }
+            return new ExpBaseTy(p->Type(),0);
+            break;
+        }
+        case Exp::kExp_Seq:
+        {
+            ExpBaseTy* tmp=0;
+            ExpNode* p = dynamic_cast<SeqExp*>(exp)->GetList()->GetHead();
+
+            // return value ignore for now
+            while(p){
+                tmp = TransExp(venv,tenv,p->m_exp);
+                delete tmp;
+                p = p->next;
+            }
+            
+            Symbol t("int");
             return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
+        }
+        case Exp::kExp_Assign:
+        {
+            ExpBaseTy* a;
+            ExpBaseTy* b;
+            
+            m_logger.D("type check with kExp_Assign");
+            
+            a = TransVar(venv,tenv,dynamic_cast<AssignExp*>(exp)->GetVar());
+            b = TransExp(venv,tenv,dynamic_cast<AssignExp*>(exp)->GetExp());
+            
+            TIGER_ASSERT(a!=0,"var type is null");
+            TIGER_ASSERT(b!=0,"exp type is null");
+            
+            m_logger.D("var type:%s",a->Type()->TypeString());
+            m_logger.D("var type:%s",b->Type()->TypeString());
+            
+            TIGER_ASSERT(a->Type()==b->Type(),"type mismatch");
+            
+            
+            delete a;
+
+            return b;
+            break;
+        }
+        case Exp::kExp_If:
+        {
+            Exp* if_exp;
+            Exp* then_exp;
+            Exp* else_exp;
+            
+            ExpBaseTy* a;
+            ExpBaseTy* b;
+            ExpBaseTy* c;
+            
+            if_exp = dynamic_cast<IfExp*>(exp)->GetTest();
+            then_exp = dynamic_cast<IfExp*>(exp)->GetThen();
+            else_exp = dynamic_cast<IfExp*>(exp)->GetElsee();
+            
+            TIGER_ASSERT(if_exp!=0,"if exp is null");
+            TIGER_ASSERT(then_exp!=0,"then exp is null");
+            
+            a = TransExp(venv,tenv,if_exp);
+            b = TransExp(venv,tenv,then_exp);
+            if(else_exp)
+                c = TransExp(venv,tenv,else_exp);
+            
+            TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"if exp should be int");
+            
+            delete a;
+            delete b;
+            if(else_exp)
+                delete c;
+            
+            /* default type */
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
+        }
+        case Exp::kExp_While:
+        {
+            Exp* test_exp;
+            Exp* body_exp;
+            
+            ExpBaseTy* a;
+            ExpBaseTy* b;
+            
+            test_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+            body_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+            
+            TIGER_ASSERT(test_exp!=0,"while exp is null");
+            TIGER_ASSERT(body_exp!=0,"while body is null");
+            
+            a = TransExp(venv,tenv,test_exp);
+            b = TransExp(venv,tenv,body_exp);
+            
+            TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"while exp should be int");
+            
+            delete a;
+            delete b;
+            
+            /* default type */
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
+        }
+        case Exp::kExp_Break:
+        {
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
+        }
+        case Exp::kExp_For:
+        {
+            Symbol* var;
+            Exp* lo_exp;
+            Exp* hi_exp;
+            Exp* body_exp;
+            
+            //ExpBaseTy* a;
+            ExpBaseTy* b;
+            ExpBaseTy* c;
+            ExpBaseTy* d;
+            
+            var = dynamic_cast<ForExp*>(exp)->GetVar();
+            lo_exp = dynamic_cast<ForExp*>(exp)->GetLo();
+            hi_exp = dynamic_cast<ForExp*>(exp)->GetHi();
+            body_exp = dynamic_cast<ForExp*>(exp)->GetExp();
+            
+            TIGER_ASSERT(var!=0,"for var is null");
+            TIGER_ASSERT(lo_exp!=0,"for lo is null");
+            TIGER_ASSERT(hi_exp!=0,"for hi is null");
+            
+            //a = TransVar(venv,tenv,var);
+            b = TransExp(venv,tenv,lo_exp);
+            c = TransExp(venv,tenv,hi_exp);
+            
+            
+            
+            //TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"for var should be int");
+            TIGER_ASSERT(b->Type()->Kind()==TypeBase::kType_Int,"for lo should be int");
+            TIGER_ASSERT(c->Type()->Kind()==TypeBase::kType_Int,"for hi should be int");
+            
+            venv->BeginScope();
+            tenv->BeginScope();
+            
+            venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
+            
+            d = TransExp(venv,tenv,body_exp);
+            
+            tenv->EndScope();
+            venv->EndScope();
+            
+            //delete a;
+            delete b;
+            delete c;
+            delete d;
+            
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
         }
         case Exp::kExp_Let:
         {
@@ -65,27 +365,48 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             if(body)
                 ret = TransExp(venv,tenv,body);
             
+            if(body)
+                delete ret;
+            
             tenv->EndScope();
             venv->EndScope();
             
-            return ret;
+            Symbol t("int");
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            break;
         }
-        case Exp::kExp_Seq:
+        case Exp::kExp_Array:
         {
-            ExpList* l = dynamic_cast<SeqExp*>(exp)->GetList();
-            ExpNode* p = l->GetHead();
-
-            // return value ignore for now
-            while(p){
-                TransExp(venv,tenv,p->m_exp);
-                p = p->next;
-            }
-            return 0;
+            //dynamic_cast<ArrayExp*>(exp)->Name();//
+            Exp* size_exp;
+            Exp* init_exp;
+            
+            ExpBaseTy* size_ty;
+            ExpBaseTy* init_ty;
+            EnvEntryVar* p;
+            
+            p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
+            
+            TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
+            size_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetSize());
+            init_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetInit());
+            
+            TIGER_ASSERT(size_ty!=0,"array size type is null");
+            TIGER_ASSERT(init_ty!=0,"array init type is null");
+            
+            //dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())
+            TIGER_ASSERT(size_ty->Type()->Kind()==TypeBase::kType_Int,"array size type error");
+            TIGER_ASSERT(init_ty->Type()==dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type()),"array init type mismatch");
+            
+            return new ExpBaseTy(p->Type(),0);
             break;
         }
         // to be continue
         default:
+        {
+            m_logger.W("should not reach here %s,%d",__FILE__,__LINE__);
             break;
+        }
     }
     std::cout<<"should not reach here "<<exp->Kind()<<std::endl;
     return 0;
@@ -114,7 +435,11 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
             break;
         }
         case Dec::kDec_Function:
+        {
+            m_logger.D("type check with kDec_Function");
+            
             break;
+        }
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
             NameTyPairNode* head;
@@ -210,34 +535,6 @@ TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
             EnvEntryVar* p;
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayTy*>(ty)->Name())));
             return new TypeArray(p->Type());
-            break;
-        }
-        default:
-            break;
-    }
-    return 0;
-}
-ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var)
-{
-    switch(var->Kind()){
-        case Var::kVar_Simple:
-        {
-            EnvEntryBase* binding;
-            binding = venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol()));
-            
-            if(binding && binding->Kind()==EnvEntryBase::kEnvEntry_Var){
-                return new ExpBaseTy(dynamic_cast<EnvEntryVar*>(binding)->Type(),0);
-            }else{
-            //undefined symbol
-            }
-            break;
-        }
-        case Var::kVar_Field:
-        {
-            break;
-        }
-        case Var::kVar_Subscript:
-        {
             break;
         }
         default:

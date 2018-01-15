@@ -76,6 +76,26 @@ public:
     bool Equal(TypeBase* o){
         return (m_kind==o->Kind());
     }
+    virtual char* TypeString(){
+        switch(m_kind){
+            case kType_Int:
+                return "int";
+            case kType_String:
+                return "string";
+            case kType_Nil:
+                return "nil";
+            case kType_Void:
+                return "void";    
+            case kType_Array:
+                return "[]"; 
+            case kType_Record:
+                return "{}";
+            case kType_Name:
+                return "name";
+            default:
+                return "invalid";
+        }
+    }
 private:
     s32 m_kind;
 };
@@ -103,6 +123,7 @@ class TypeArray:public TypeBase{
 public:
     TypeArray():TypeBase(kType_Array){m_array=0;}
     TypeArray(TypeBase* array):TypeBase(kType_Array){m_array = array;}
+    TypeBase* Type(){return m_array;}
     ~TypeArray(){
         //delete m_array;
     }
@@ -117,6 +138,8 @@ public:
         m_name = name;
         m_type = ty;
     }
+    Symbol* Name(){return m_name;}
+    TypeBase* Type(){return m_type;}
     ~TypeField(){
         //delete m_name;
         //delete m_type;
@@ -145,6 +168,7 @@ class TypeFieldList{
 public:
     TypeFieldList(){m_head = 0;}
     TypeFieldList(TypeFieldNode* head){m_head = head;}
+    TypeFieldNode* GetHead(){return m_head;}
     ~TypeFieldList(){
         TypeFieldNode*p;
         p = m_head;
@@ -162,6 +186,7 @@ class TypeRecord:public TypeBase{
 public:
     TypeRecord():TypeBase(kType_Record){m_record=0;}
     TypeRecord(TypeFieldList* record):TypeBase(kType_Record){m_record = record;}
+    TypeFieldList* GetList(){return m_record;}
     ~TypeRecord(){delete m_record;}
 private:
     TypeFieldList* m_record;
@@ -181,6 +206,14 @@ public:
             delete m_type;
         }
         m_type = n;
+    }
+    virtual char* TypeString(){
+        switch(Kind()){
+            case kType_Name:
+                return m_name->Name();
+            default:
+                return "invalid";
+        }
     }
     ~TypeName(){
         //delete m_name;
@@ -242,6 +275,8 @@ class EnvEntryFun:public EnvEntryBase{
 public:
     EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;}
     EnvEntryFun(TypeFieldList *formals,TypeBase* result):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;}
+    TypeBase* Type(){return m_result;}
+    TypeFieldList* GetList(){return m_formals;}
     ~EnvEntryFun(){
         delete m_formals;
         //delete m_result;

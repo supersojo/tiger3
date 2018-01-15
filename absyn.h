@@ -260,6 +260,8 @@ public:
         m_sym = sym;
         m_explist = explist;
     }
+    Symbol* Name(){return m_sym;}
+    ExpList* GetList(){return m_explist;}
     ~CallExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -348,6 +350,8 @@ public:
         m_type = type;
         m_fields = fields;
     }
+    Symbol* Name(){return m_type;}
+    EFieldList* GetList(){return m_fields;}
     ~RecordExp();
 private:
     Symbol* m_type;
@@ -384,6 +388,8 @@ public:
         m_var = var;
         m_exp = exp;
     }
+    Var* GetVar(){return m_var;}
+    Exp* GetExp(){return m_exp;}
     ~AssignExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -409,6 +415,9 @@ public:
         m_then = then;
         m_elsee = elsee;
     }
+    Exp* GetTest(){return m_test;}
+    Exp* GetThen(){return m_then;}
+    Exp* GetElsee(){return m_elsee;}
     ~IfExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -434,6 +443,8 @@ public:
         m_test = test;
         m_body = body;
     }
+    Exp* GetTest(){return m_test;}
+    Exp* GetExp(){return m_body;}
     ~WhileExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -466,6 +477,10 @@ public:
         m_hi = hi;
         m_body = body;
     }
+    Symbol* GetVar(){return m_var;}
+    Exp* GetLo(){return m_lo;}
+    Exp* GetHi(){return m_hi;}
+    Exp* GetExp(){return m_body;}
     ~ForExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -514,6 +529,9 @@ public:
         m_size = size;
         m_init = init;
     }
+    Symbol* Name(){return m_type;}
+    Exp* GetSize(){return m_size;}
+    Exp* GetInit(){return m_init;}
     ~ArrayExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -911,6 +929,8 @@ public:
         m_name = name;
         m_exp = exp;
     }
+    Symbol* Name(){return m_name;}
+    Exp* GetExp(){return m_exp;}
     ~EField(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -947,6 +967,7 @@ public:
     EFieldList(EFieldNode* head){
         m_head = head;
     }
+    EFieldNode* GetHead(){return m_head;}
     ~EFieldList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
