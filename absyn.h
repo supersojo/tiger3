@@ -621,6 +621,10 @@ public:
         m_result = result;
         m_body = body;
     }
+    Symbol* Name(){return m_name;}
+    FieldList* GetList(){return m_params;}
+    Symbol* Type(){return m_result;}
+    Exp* GetExp(){return m_body;}
     ~FunDec();
 private:
     Symbol* m_name;

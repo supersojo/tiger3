@@ -436,8 +436,47 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
         }
         case Dec::kDec_Function:
         {
+            FunDec* fundec;
+            FieldNode* head;
+            TypeFieldNode* tyhead=0;
+            TypeFieldNode* tynext=0;
+            TypeFieldNode* tynew=0;
+            ExpBaseTy *result;
+            EnvEntryVar* p;
             m_logger.D("type check with kDec_Function");
-            
+            fundec = dynamic_cast<FunDec*>(dec); 
+            p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec->Type()))); 
+            head = fundec->GetList()->GetHead();
+            while(head)
+            {
+                //head->m_field->Name()
+                //head->m_field->Type()
+                tynew = new TypeFieldNode;
+                tynew->m_field = (new TypeField(venv->MakeSymbol(head->m_field->Name()),dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type()));
+                if(tyhead==0)
+                    tyhead = tynew;
+                if(tynext==0)
+                    tynext = tynew;
+                else{
+                    tynext->next = tynew;
+                    tynew->prev = tynext;
+                    tynext = tynew;
+
+                }
+                head = head->next;
+            }
+            venv->Enter(venv->MakeSymbol(fundec->Name()),new EnvEntryFun(new TypeFieldList(tyhead),p->Type()));
+
+            venv->BeginScope();
+            head = fundec->GetList()->GetHead();
+            while(head)
+            {
+                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar(dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
+                head = head->next;
+            }
+            delete TransExp(venv,tenv,fundec->GetExp());
+            venv->EndScope();
+
             break;
         }
         case Dec::kDec_Type:{
