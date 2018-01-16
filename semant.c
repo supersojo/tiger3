@@ -17,7 +17,13 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
         case Var::kVar_Simple:
         {
             EnvEntryVar* t;
+            m_logger.D("aaa");
+            m_logger.D("111 %s",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
+            if(dynamic_cast<SimpleVar*>(var)->GetSymbol()==0){
+                m_logger.D("~~~");
+            }
             t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
+            m_logger.D("222");
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             return new ExpBaseTy(t->Type(),0);
         }
@@ -416,7 +422,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             
             //dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())
             TIGER_ASSERT(size_ty->Type()->Kind()==TypeBase::kType_Int,"array size type error");
-            TIGER_ASSERT(init_ty->Type()==dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type()),"array init type mismatch");
+            TIGER_ASSERT(init_ty->Type()==dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),"array init type mismatch");
             
             return new ExpBaseTy(p->Type(),0);
             break;
@@ -492,8 +498,13 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
         // TypeFieldList* MakeFormalsList(FieldList *params);
         // new EnvEntryFun(list,type)
 
-        venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type() ));
-        
+        if(fundec_head->m_fundec->Type()==0){
+            m_logger.D("empty function return type ");
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), 0 ));
+
+        }else{
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type() ));
+        }
         fundec_head = fundec_head->next;
     }
     
