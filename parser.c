@@ -356,7 +356,7 @@ Exp* Parser::_ParseTerm()
     if(v==kToken_SUB){
         Exp* exp;
         exp = _ParseExp();
-        return new OpExp(new Oper(Oper::kOper_Sub),0,exp);
+        return new OpExp(new Oper(Oper::kOper_Sub),new IntExp(0),exp);
     }
     
     if(v==kToken_ID){

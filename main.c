@@ -116,7 +116,8 @@ void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
-    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
     //tiger::scanner::StringSourceCodeStream stream((char*)"let function a():int=0 in ()  end");
     
     /* generate sbstract syntax tree*/
@@ -135,6 +136,23 @@ void test_typecheck(){
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
     venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0));
+    
+    /* getchar()*/
+    //tiger::TypeFieldNode* node;
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string"))));
+
+    /* ord(s:string):int*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int"))));
+    
+    /* chr(i:int):string*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string"))));
+    
     
     tiger::Translator translator;
     ty=translator.TransExp(&venv,&tenv,exp);

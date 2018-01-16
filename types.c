@@ -37,6 +37,7 @@ s32 SymNameHashTable::hash(char* s)
 }
 
 Symbol* SymNameHashTable::MakeSymbol(Symbol* s){
+    TIGER_ASSERT(s!=0,"s is null");
     s32 index = hash(s->Name());
     SymNameHashTableNode* p,*n;
     p = m_tab[index];
