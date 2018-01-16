@@ -278,7 +278,8 @@ public:
     TypeBase* Type(){return m_result;}
     TypeFieldList* GetList(){return m_formals;}
     ~EnvEntryFun(){
-        delete m_formals;
+        if(m_formals)
+            delete m_formals;
         //delete m_result;
     }
 private:

@@ -32,10 +32,13 @@ public:
     ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Exp* exp);
     ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Var* var);
     void        TransDec(SymTab* venv,SymTab* tenv,Dec* dec);
-    TypeBase*  TransTy(SymTab* tenv,Ty* ty);
+    TypeBase*   TransTy(SymTab* tenv,Ty* ty);
     ~Translator();
 private:
-   LoggerStdio m_logger; 
+    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec);
+    TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* params);
+    void           TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec);
+    LoggerStdio m_logger; 
 };
 
 }//namespace tiger

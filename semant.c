@@ -106,11 +106,17 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Call:
         {
+            m_logger.D("type check with kExp_Call");
             ExpNode* head;
             TypeFieldNode* p;
             ExpBaseTy* t;
             EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
             TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
+            /* function foo() */
+            if(f->GetList()->GetHead()==0){
+                TIGER_ASSERT(dynamic_cast<CallExp*>(exp)->GetList()->GetHead()==0,"function actuals should be empty");
+                return new ExpBaseTy(f->Type(),0);
+            }
             p = f->GetList()->GetHead();
             TIGER_ASSERT(p!=0,"formals is null");
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
@@ -151,6 +157,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Record:
         {
+            m_logger.D("type check with kExp_Record");
             EnvEntryVar* p;
             EFieldNode* head;
             TypeFieldNode* n;
@@ -162,7 +169,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             
             TIGER_ASSERT(dynamic_cast<TypeName*>(p->Type())->Type()->Kind()==TypeBase::kType_Record,"record type needed");
             
+            /* id{} */
             head = dynamic_cast<RecordExp*>(exp)->GetList()->GetHead();
+            if(head==0){
+                m_logger.D("record exp is {}");
+                return new ExpBaseTy(p->Type(),0);
+            }
             
             n = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
             
@@ -188,9 +200,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Seq:
         {
+            m_logger.D("type check with kExp_Seq");
             ExpBaseTy* tmp=0;
             ExpNode* p = dynamic_cast<SeqExp*>(exp)->GetList()->GetHead();
-
+            if(p==0){
+                m_logger.D("empty seq exp");
+            }
             // return value ignore for now
             while(p){
                 tmp = TransExp(venv,tenv,p->m_exp);
@@ -228,6 +243,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_If:
         {
+            m_logger.D("type check with kExp_If");
             Exp* if_exp;
             Exp* then_exp;
             Exp* else_exp;
@@ -262,6 +278,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_While:
         {
+            m_logger.D("type check with kExp_While");
             Exp* test_exp;
             Exp* body_exp;
             
@@ -295,6 +312,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_For:
         {
+            m_logger.D("type check with kExp_For");
             Symbol* var;
             Exp* lo_exp;
             Exp* hi_exp;
@@ -345,6 +363,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Let:
         {
+            m_logger.D("type check with kExp_Let");
             ExpBaseTy* ret=0;
             DecList* declist;
             Exp* body;
@@ -377,6 +396,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
         }
         case Exp::kExp_Array:
         {
+            m_logger.D("type check with kExp_Array");
             //dynamic_cast<ArrayExp*>(exp)->Name();//
             Exp* size_exp;
             Exp* init_exp;
@@ -411,7 +431,136 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
     std::cout<<"should not reach here "<<exp->Kind()<<std::endl;
     return 0;
 }
-void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
+TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* params)
+{
+    FieldNode* head;
+    
+    TypeFieldNode* tyhead=0;
+    TypeFieldNode* tynext=0;
+    TypeFieldNode* tynew=0;
+    
+    /* function foo() */
+    if(params==0){
+        m_logger.D("function formals is empty");
+        return new TypeFieldList(0);
+    }
+    
+    head = params->GetHead();
+    
+    while(head)
+    {
+        tynew = new TypeFieldNode;
+        tynew->m_field = (new TypeField(venv->MakeSymbol(head->m_field->Name()),dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type()));
+        if(tyhead==0)
+            tyhead = tynew;
+        if(tynext==0)
+            tynext = tynew;
+        else{
+            tynext->next = tynew;
+            tynew->prev = tynext;
+            tynext = tynew;
+
+        }
+        head = head->next;
+    }
+    return new TypeFieldList(tyhead);
+    
+}
+void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
+{
+    FunDecNode* fundec_head;
+    FieldNode* head;
+    
+    TypeFieldNode* tyhead=0;
+    TypeFieldNode* tynext=0;
+    TypeFieldNode* tynew=0;
+    
+    ExpBaseTy *a;
+    ExpBaseTy *b;
+    
+    m_logger.D("type check with kDec_Function");
+    
+    fundec_head = dynamic_cast<FunctionDec*>(dec)->GetList()->GetHead();
+    
+    /* process all function header decs */
+    while(fundec_head){
+    
+        //fundec_head->m_fundec->Name() function name
+        //fundec_head->m_fundec->Type() return type name
+        //fundec_head->m_fundec->GetList()->GetHead() formals list
+        //fundec_head->m_fundec->GetExp() function body
+        // TypeFieldList* MakeFormalsList(FieldList *params);
+        // new EnvEntryFun(list,type)
+
+        venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type() ));
+        
+        fundec_head = fundec_head->next;
+    }
+    
+    /* process all function body decs */
+    fundec_head = dynamic_cast<FunctionDec*>(dec)->GetList()->GetHead();
+    while(fundec_head){
+        
+        /* function foo() */
+        if(fundec_head->m_fundec->GetList()!=0)
+            head = fundec_head->m_fundec->GetList()->GetHead();
+        
+        venv->BeginScope();
+        if(fundec_head->m_fundec->GetList()!=0){
+            while(head){
+                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value) );
+                head = head->next;
+            }
+        }
+        a = TransExp(venv,tenv,fundec_head->m_fundec->GetExp());
+        TIGER_ASSERT(a->Type() == dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), "return type mismatch");
+        delete a;
+        
+        venv->EndScope();
+        
+        fundec_head = fundec_head->next;
+    }
+    
+    
+}
+void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
+{
+    NameTyPairNode* head;
+    head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
+    /* process headers of decs */
+    while(head){
+        /*
+         *
+         * */
+        EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+        if(p){
+            m_logger.W("Type %s redefined",head->m_nametypair->Name()->Name());
+            //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
+        }
+        //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
+        tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type));
+        head = head->next;
+    }
+    /* process bodys of decs*/
+    head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
+    while(head){
+        TypeBase* t = TransTy(tenv,head->m_nametypair->Type());
+        if(t->Kind()!=TypeBase::kType_Name){
+            dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
+        }
+        else{
+            m_logger.D("TypeName update");
+            EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+            p->Update(dynamic_cast<TypeName*>(t));
+            if(dynamic_cast<TypeName*>(t)->Type()==dynamic_cast<TypeName*>(p->Type())){
+                TIGER_ASSERT(0,"cycle dependency occur");                        
+            }
+
+        }
+        head = head->next;
+    }
+}
+void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
 {
     switch(dec->Kind())
     {
@@ -436,85 +585,12 @@ void        Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
         }
         case Dec::kDec_Function:
         {
-            FunDec* fundec;
-            FieldNode* head;
-            TypeFieldNode* tyhead=0;
-            TypeFieldNode* tynext=0;
-            TypeFieldNode* tynew=0;
-            ExpBaseTy *result;
-            EnvEntryVar* p;
-            m_logger.D("type check with kDec_Function");
-            fundec = dynamic_cast<FunDec*>(dec); 
-            p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec->Type()))); 
-            head = fundec->GetList()->GetHead();
-            while(head)
-            {
-                //head->m_field->Name()
-                //head->m_field->Type()
-                tynew = new TypeFieldNode;
-                tynew->m_field = (new TypeField(venv->MakeSymbol(head->m_field->Name()),dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type()));
-                if(tyhead==0)
-                    tyhead = tynew;
-                if(tynext==0)
-                    tynext = tynew;
-                else{
-                    tynext->next = tynew;
-                    tynew->prev = tynext;
-                    tynext = tynew;
-
-                }
-                head = head->next;
-            }
-            venv->Enter(venv->MakeSymbol(fundec->Name()),new EnvEntryFun(new TypeFieldList(tyhead),p->Type()));
-
-            venv->BeginScope();
-            head = fundec->GetList()->GetHead();
-            while(head)
-            {
-                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar(dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
-                head = head->next;
-            }
-            delete TransExp(venv,tenv,fundec->GetExp());
-            venv->EndScope();
-
+            TransFunctionDec(venv,tenv,dec);
             break;
         }
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
-            NameTyPairNode* head;
-            head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
-            /* process headers of decs */
-            while(head){
-                /*
-                 *
-                 * */
-                EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
-                if(p){
-                    m_logger.W("Type %s redefined",head->m_nametypair->Name()->Name());
-                    //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
-                }
-                //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
-                tenv->Enter(tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type));
-                head = head->next;
-            }
-            /* process bodys of decs*/
-            head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
-            while(head){
-                TypeBase* t = TransTy(tenv,head->m_nametypair->Type());
-                if(t->Kind()!=TypeBase::kType_Name){
-                    dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
-                }
-                else{
-                    m_logger.D("TypeName update");
-                    EnvEntryVar* p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
-                    p->Update(dynamic_cast<TypeName*>(t));
-                    if(dynamic_cast<TypeName*>(t)->Type()==dynamic_cast<TypeName*>(p->Type())){
-                        TIGER_ASSERT(0,"cycle dependency occur");                        
-                    }
-
-                }
-                head = head->next;
-            }
+            TransTypeDec(venv,tenv,dec);
 
             break;
         }

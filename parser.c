@@ -52,6 +52,13 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
     m_logger->D("Begin _ParseExpSeq()");
     ExpNode* anode,*p,*q;
     exp = _ParseExp();
+    /* () */
+    if(exp==0){
+        m_logger->D("empty exp list");
+        v = m_scanner->Next(&t);
+        anode = head;
+        goto retrieve;
+    }
     anode = new ExpNode;
     anode->m_exp = exp;
     m_logger->D("Get a new ExpNode");
@@ -65,6 +72,7 @@ ExpNode* Parser::_ParseExpSeq(ExpNode* head)
         m_logger->D("End _ParseExpSeq()");
         return _ParseExpSeq(anode);
     }else{
+retrieve:
         m_logger->D(token_string((TokenType)v));
         m_logger->D("retrieve the head node of ExpNode list");
         m_scanner->Back(&t);

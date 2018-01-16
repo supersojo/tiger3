@@ -653,6 +653,7 @@ class FunDecList{
 public:
     FunDecList(){m_head=0;}
     FunDecList(FunDecNode* head){m_head=head;}
+    FunDecNode* GetHead(){return m_head;}
     ~FunDecList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -679,6 +680,7 @@ public:
     FunctionDec(FunDecList* funs):Dec(kDec_Function){
         m_fundeclist = funs;
     }
+    FunDecList* GetList(){return m_fundeclist;}
     ~FunctionDec(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
