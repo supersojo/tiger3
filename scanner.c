@@ -315,6 +315,7 @@ s32 Scanner::Next(Token* t)
         TIGER_ASSERT(v=='"',"Expected \"");
         sval[i-1]='\0';
         t->len = i-1;
+        t->kind = kToken_STR;
         t->u.sval=strdup(sval);
         return kToken_STR;
     } 

@@ -63,6 +63,7 @@ Symbol* SymNameHashTable::MakeSymbol(Symbol* s){
 
 SymNameHashTable::~SymNameHashTable(){
     Clean();
+    delete[] m_tab;
 }
 
 SymTab::SymTab(){
@@ -207,7 +208,7 @@ TypeBase*  SymTab::Type(Symbol* s)
 SymTab::~SymTab()
 {
     Clean();
-    
+    delete[] m_tab;
     delete m_marker;
     delete m_stack;
     delete m_sym_name_mapping;

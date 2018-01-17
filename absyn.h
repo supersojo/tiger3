@@ -51,6 +51,7 @@ public:
     Var(){m_kind = kVar_Invalid;}
     Var(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    virtual ~Var(){}
 private:
     s32 m_kind;
 };
@@ -558,7 +559,7 @@ public:
     Dec(){m_kind = kDec_Invalid;}
     Dec(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
-    
+    virtual ~Dec(){} 
 private:
     s32 m_kind;
 };
@@ -746,6 +747,7 @@ public:
     Ty(){m_kind = kTy_Invalid;}
     Ty(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    virtual ~Ty(){}
 private:
     s32 m_kind;
 };

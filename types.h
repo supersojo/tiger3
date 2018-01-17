@@ -96,6 +96,7 @@ public:
                 return "invalid";
         }
     }
+    virtual ~TypeBase(){}
 private:
     s32 m_kind;
 };
@@ -217,7 +218,11 @@ public:
     }
     ~TypeName(){
         //delete m_name;
-        //delete m_type;
+        if(m_type &&
+           ((m_type->Kind()==kType_Record)||(m_type->Kind()==kType_Array)))
+        {
+            delete m_type;
+        }
     }
 private:
     Symbol* m_name;/* memory managed by string hash table */
@@ -344,14 +349,17 @@ public:
         m_top = n;
     }
     Symbol* Pop(){
+        Symbol* ret;
         SimpleStackNode* p;
         p = m_top;
         if(m_top){
             m_top = m_top->next;
         }
-        if(p)
-            return p->m_name;
-        else
+        if(p){
+            ret = p->m_name;
+            delete p;
+            return ret;
+        }else
             return 0;
     }
     ~SimpleStack(){

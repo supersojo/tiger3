@@ -127,6 +127,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
+                delete t;
                 head = head->next;
                 p = p->next;
             }
