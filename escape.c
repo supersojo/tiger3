@@ -110,7 +110,8 @@ void EscapeHelper::TransDec(SymTab* venv,s32 depth,Dec* dec){
     switch(dec->Kind()){
         case Dec::kDec_Var:{
             m_logger.D("TransDec with kDec_Var");
-            venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryEscape(depth,0/*false*/));
+            venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryEscape(depth,dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscapeRefer()));
+            dynamic_cast<VarDec*>(dec)->GetSymbol()->SetEscape(0/*false*/);
             TransExp(venv,depth,dynamic_cast<VarDec*>(dec)->GetExp());
             break;
         }
@@ -131,9 +132,8 @@ void EscapeHelper::TransVar(SymTab* venv,s32 depth,Var* var){
             EnvEntryEscape* t;
             //dynamic_cast<SimpleVar*>(var)->GetSymbol()
             t = dynamic_cast<EnvEntryEscape*>( venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())) );
-            if(depth > t->Depth()){
+            if((depth > t->Depth()) && t->GetEscape()==0){
                 t->SetEscape(1/*true*/);
-                var->SetEscape(1);// update te escape in abstract syntax tree
                 m_logger.D("Get a escape var with %s",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             }
             break;

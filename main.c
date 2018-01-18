@@ -119,7 +119,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo()=for a:=1 to 10 do break in end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in  let in a:=2 end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -168,7 +168,7 @@ void test_escape()
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var x:=0 in let var x:=0 in x:=1;x:=x+1 end end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var x:=0 in let  in x:=1;x:=x+1 end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);

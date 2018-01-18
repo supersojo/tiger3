@@ -304,17 +304,17 @@ private:
 
 class EnvEntryEscape:public EnvEntryBase{
 public:
-    EnvEntryEscape():EnvEntryBase(kEnvEntry_Escape){m_depth=0;m_escape=0;}
-    EnvEntryEscape(s32 depth,s32 escape):EnvEntryBase(kEnvEntry_Escape){m_depth=depth;m_escape=escape;}
-    s32 GetEscape(){return m_escape;}
+    EnvEntryEscape():EnvEntryBase(kEnvEntry_Escape){m_depth=0;m_escape_refer=0;}
+    EnvEntryEscape(s32 depth,s32* escape_refer):EnvEntryBase(kEnvEntry_Escape){m_depth=depth;m_escape_refer=escape_refer;}
+    s32 GetEscape(){return *m_escape_refer;}
     s32 Depth(){return m_depth;}
-    void SetEscape(s32 escape){m_escape = escape;}
+    void SetEscape(s32 escape){*m_escape_refer = escape;}
     ~EnvEntryEscape(){
 
     }
 private:
-    s32 m_depth;
-    s32 m_escape;
+    s32  m_depth;
+    s32* m_escape_refer;/* refer to symbol's escape in absyn.h*/
     
 };
 

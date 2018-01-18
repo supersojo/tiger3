@@ -11,14 +11,14 @@ namespace tiger{
 class AccessBase{
 public:
     enum{
-        kAccess_Frame,
-        kAccess_Reg,
+        kAccess_Frame,/* memory access */
+        kAccess_Reg, /* register access */
         kAcces_Invalid
     };
     AccessBase(){m_kind = kAcces_Invalid;}
     AccessBase(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
-    virtual ~AccessBase(){}
+    virtual ~AccessBase(){}/* MUST be virtual */
 private:
     s32 m_kind;
 };
@@ -28,7 +28,7 @@ public:
     AccessFrame(s32 offset):AccessBase(kAccess_Frame){m_offset = offset;}
     s32 Offset(){return m_offset;}
 private:
-    s32 m_offset;
+    s32 m_offset;/* offset in the frame*/
 };
 
 class AccessReg:public AccessBase{
@@ -37,7 +37,7 @@ public:
     AccessReg(Temp* temp):AccessBase(kAccess_Reg){m_temp = temp;}
     Temp* GetTemp(){return m_temp;}
 private:
-    Temp* m_temp;
+    Temp* m_temp;/* allocateed from temp pool. it is managed bet the pool. Don't delete it in the destructor */
 };
 
 struct AccessNode{
@@ -92,6 +92,13 @@ public:
     BoolList(){m_head=0;}
     BoolList(BoolNode* head){m_head = head;}
     BoolNode* GetHead(){return m_head;}
+    void NewHead(BoolNode* bn){
+        bn->next = m_head;
+        if(m_head){
+            m_head->prev = bn;
+        }
+        m_head = bn;
+    }
     ~BoolList(){
         BoolNode* p;
         p = m_head;
@@ -138,9 +145,10 @@ public:
     s32 m_kind;
     s32 m_offset;/* current frame offset */
     AccessList* m_formals;
-    BoolList* m_escapes;
+    BoolList*   m_escapes;
+
+    AccessList* m_locals;
     
-    AccessList* m_list;//track all local variables 
 };
 class FrameX86:public FrameBase{
 public:

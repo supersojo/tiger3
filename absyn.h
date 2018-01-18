@@ -22,9 +22,11 @@ class Symbol{
 public:
     Symbol(){
         m_name=0;
+        m_escape = 0;/*false*/
     }
     Symbol(char* name){
         m_name = strdup(name);
+        m_escape = 0;/* false*/
     }
     char* Name(){return m_name;}
     ~Symbol(){
@@ -34,10 +36,13 @@ public:
         //logger.D("~Symbol");
         free(m_name);
     }
+    s32* GetEscapeRefer(){return &m_escape;}
+    void SetEscape(s32 escape){m_escape = escape;}
 private:
     char* m_name;
     /* additional stuff */
     //...
+    s32 m_escape;/* only used in for exp*/
 };
     
 class Var{
