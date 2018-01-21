@@ -156,7 +156,7 @@ void test_typecheck(){
     
     
     tiger::Translator translator;
-    ty=translator.TransExp(&venv,&tenv,exp);
+    ty=translator.TransExp(&venv,&tenv,0,exp);
     delete ty;
     
     /* free */

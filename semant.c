@@ -1,6 +1,8 @@
 #include <iostream>
 #include "semant.h"
 #include "tiger_assert.h"
+#include "frame.h"
+
 namespace tiger{
     
 Translator::Translator(){
@@ -11,7 +13,7 @@ Translator::~Translator(){
 
 }
 
-ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
+ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var){
     m_logger.D("TransVar with kind %d",var->Kind());
     switch(var->Kind()){
         case Var::kVar_Simple:
@@ -25,7 +27,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
         {
             ExpBaseTy* p;
             TypeFieldNode* head;
-            p = TransVar(venv,tenv,dynamic_cast<FieldVar*>(var)->GetVar());
+            p = TransVar(venv,tenv,level,dynamic_cast<FieldVar*>(var)->GetVar());
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
             }
@@ -51,7 +53,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
             ExpBaseTy* p;
             ExpBaseTy* t;
             ExpBaseTy* ret;
-            p = TransVar(venv,tenv,dynamic_cast<SubscriptVar*>(var)->GetVar());
+            p = TransVar(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetVar());
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
             }
@@ -59,7 +61,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
             
             //dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type()
             
-            t = TransExp(venv,tenv,dynamic_cast<SubscriptVar*>(var)->GetExp());
+            t = TransExp(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetExp());
             if(t->Type()->Kind()!=TypeBase::kType_Int){
                 m_logger.W("array index should be int");
             }
@@ -79,12 +81,12 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Var* var){
     return 0;
 }
 
-ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
+ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp){
     switch(exp->Kind())
     {
         case Exp::kExp_Var:
         {
-            return TransVar(venv,tenv,dynamic_cast<VarExp*>(exp)->GetVar());
+            return TransVar(venv,tenv,level,dynamic_cast<VarExp*>(exp)->GetVar());
             break;
         }
         case Exp::kExp_Nil:
@@ -123,7 +125,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
             TIGER_ASSERT(head!=0,"actuals is null");
             while(head){
-                t = TransExp(venv,tenv,head->m_exp);
+                t = TransExp(venv,tenv,level,head->m_exp);
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
@@ -139,8 +141,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             m_logger.D("type check with kExp_Op");
             Oper* op = dynamic_cast<OpExp*>(exp)->GetOper();
             ExpBaseTy* left,*right;
-            left = TransExp(venv,tenv,dynamic_cast<OpExp*>(exp)->GetLeft());
-            right = TransExp(venv,tenv,dynamic_cast<OpExp*>(exp)->GetRight());
+            left = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetLeft());
+            right = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetRight());
             if(op->Kind()==Oper::kOper_Add){
                 if(left->Type()->Kind()!=TypeBase::kType_Int)
                     std::cout<<"type error"<<std::endl;
@@ -182,7 +184,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
                 ExpBaseTy* a;
                 TIGER_ASSERT(n->m_field->Name()==tenv->MakeSymbol(head->m_efield->Name()),"member mismatch");
                 
-                a = TransExp(venv,tenv,head->m_efield->GetExp());
+                a = TransExp(venv,tenv,level,head->m_efield->GetExp());
                 
                 if(a->Type()->Kind()!=TypeBase::kType_Nil){
                     m_logger.D("expected type:%s",n->m_field->Type()->TypeString());
@@ -208,7 +210,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             }
             // return value ignore for now
             while(p){
-                tmp = TransExp(venv,tenv,p->m_exp);
+                tmp = TransExp(venv,tenv,level,p->m_exp);
                 p = p->next;
                 if(p)
                     delete tmp;
@@ -226,8 +228,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             
             m_logger.D("type check with kExp_Assign");
             
-            a = TransVar(venv,tenv,dynamic_cast<AssignExp*>(exp)->GetVar());
-            b = TransExp(venv,tenv,dynamic_cast<AssignExp*>(exp)->GetExp());
+            a = TransVar(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetVar());
+            b = TransExp(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetExp());
             
             TIGER_ASSERT(a!=0,"var type is null");
             TIGER_ASSERT(b!=0,"exp type is null");
@@ -261,10 +263,10 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(if_exp!=0,"if exp is null");
             TIGER_ASSERT(then_exp!=0,"then exp is null");
             
-            a = TransExp(venv,tenv,if_exp);
-            b = TransExp(venv,tenv,then_exp);
+            a = TransExp(venv,tenv,level,if_exp);
+            b = TransExp(venv,tenv,level,then_exp);
             if(else_exp)
-                c = TransExp(venv,tenv,else_exp);
+                c = TransExp(venv,tenv,level,else_exp);
             
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"if exp should be int");
             
@@ -295,10 +297,10 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(test_exp!=0,"while exp is null");
             TIGER_ASSERT(body_exp!=0,"while body is null");
             
-            a = TransExp(venv,tenv,test_exp);
+            a = TransExp(venv,tenv,level,test_exp);
             
             venv->BeginScope(ScopeMaker::kScope_While);
-            b = TransExp(venv,tenv,body_exp);
+            b = TransExp(venv,tenv,level,body_exp);
             venv->EndScope();
             
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"while exp should be int");
@@ -345,8 +347,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             TIGER_ASSERT(hi_exp!=0,"for hi is null");
             
             //a = TransVar(venv,tenv,var);
-            b = TransExp(venv,tenv,lo_exp);
-            c = TransExp(venv,tenv,hi_exp);
+            b = TransExp(venv,tenv,level,lo_exp);
+            c = TransExp(venv,tenv,level,hi_exp);
             
             
             
@@ -359,7 +361,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             
             venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(),EnvEntryVar::kEnvEntryVar_For_Value));
             
-            d = TransExp(venv,tenv,body_exp);
+            d = TransExp(venv,tenv,level,body_exp);
             
             //tenv->EndScope();
             venv->EndScope();
@@ -389,12 +391,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             if(declist){
                 p = declist->GetHead();
                 while(p){
-                    TransDec(venv,tenv,p->m_dec);
+                    TransDec(venv,tenv,level,p->m_dec);
                     p = p->next;
                 }
             }
             if(body)
-                ret = TransExp(venv,tenv,body);
+                ret = TransExp(venv,tenv,level,body);
             
             
             tenv->EndScope();
@@ -414,8 +416,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
             EnvEntryVar* p;
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
             TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
-            size_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetSize());
-            init_ty = TransExp(venv,tenv,dynamic_cast<ArrayExp*>(exp)->GetInit());
+            size_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetSize());
+            init_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetInit());
             
             TIGER_ASSERT(size_ty!=0,"array size type is null");
             TIGER_ASSERT(init_ty!=0,"array init type is null");
@@ -437,7 +439,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Exp* exp){
     std::cout<<"should not reach here "<<exp->Kind()<<std::endl;
     return 0;
 }
-TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* params)
+TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params)
 {
     FieldNode* head;
     
@@ -478,11 +480,12 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     FieldNode* head = 0;
     FrameBase* f;
     
-    AccessNode* ahead=0,*anext=0,*anew=0;
-    BoolNode* bhead=0,*bnext=0,*bnew=0;
-    
+    AccessBase* access;
+    AccessList* al;
+    BoolList* bl;
     f = new FrameBase(FrameBase::kFrame_X86);
-    
+    al = f->GetFormals();
+    bl = f->GetEscapes();
     if(fundec->GetList()==0){
         //empty formals
         head = 0;
@@ -492,40 +495,20 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     }
     while(head){
 
-        anew = new AccessNode;
-        anew->m_access = f->AllocLocal(0);
-        if(ahead==0)
-            ahead = anew;
-        if(anext==0)
-            anext = anew;
-        else{
-            anext->next = anew;
-            anew->prev = anext;
-            anext = anew;
-        }
+        access = f->AllocLocal(0/*false*/);
+        access->Retain();//inc refcnt
+        al->Insert(access,AccessList::kAccessList_Rear);
         
-        bnew = new BoolNode;
-        bnew->m_kind = BoolNode::kBool_False;
-        if(bhead==0)
-            bhead = bnew;
-        if(bnext==0)
-            bnext = bnew;
-        else{
-            bnext->next = bnew;
-            bnew->prev = bnext;
-            bnext = bnew;
-        }
+        bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
         
         head = head->next;
     }
     
-    f->SetFormals(new AccessList(ahead));
-    f->SetEscapes(new BoolList(bhead));
     
     return f;
 }
 
-void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
+void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
 {
     FunDecNode* fundec_head;
     FieldNode* head;
@@ -536,6 +519,8 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
     
     ExpBaseTy *a;
     ExpBaseTy *b;
+
+    Level* alevel;
     
     m_logger.D("type check with kDec_Function");
     
@@ -552,15 +537,13 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
         // new EnvEntryFun(list,type)
 
         /* level and label */
-        LevelNode* level;
-        level = new LevelNode;
-        level->m_level = new Level(MakeNewFrame(fundec_head->m_fundec));
+        alevel = new Level(level,MakeNewFrame(fundec_head->m_fundec));
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("empty function return type ");
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), 0, level, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), 0, alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
 
         }else{
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), level, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
+            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
         }
         fundec_head = fundec_head->next;
     }
@@ -580,7 +563,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 head = head->next;
             }
         }
-        a = TransExp(venv,tenv,fundec_head->m_fundec->GetExp());
+        a = TransExp(venv,tenv,level,fundec_head->m_fundec->GetExp());
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
         }else
@@ -600,7 +583,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
     
     
 }
-void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
+void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
 {
     NameTyPairNode* head;
     head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
@@ -622,7 +605,7 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
     /* process bodys of decs*/
     head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
     while(head){
-        TypeBase* t = TransTy(tenv,head->m_nametypair->Type());
+        TypeBase* t = TransTy(tenv,level,head->m_nametypair->Type());
         if(t->Kind()!=TypeBase::kType_Name){
             dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
         }
@@ -638,13 +621,13 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
         head = head->next;
     }
 }
-void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
+void Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
 {
     switch(dec->Kind())
     {
         case Dec::kDec_Var:{
             m_logger.D("type check with kDec_Var");
-            ExpBaseTy* t=TransExp(venv,tenv,dynamic_cast<VarDec*>(dec)->GetExp());
+            ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp());
             if(dynamic_cast<VarDec*>(dec)->GetType()){
                 EnvEntryBase* p;
                 p = tenv->Lookup(tenv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetType()));
@@ -667,12 +650,12 @@ void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
         }
         case Dec::kDec_Function:
         {
-            TransFunctionDec(venv,tenv,dec);
+            TransFunctionDec(venv,tenv,level,dec);
             break;
         }
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
-            TransTypeDec(venv,tenv,dec);
+            TransTypeDec(venv,tenv,level,dec);
 
             break;
         }
@@ -680,7 +663,7 @@ void Translator::TransDec(SymTab* venv,SymTab* tenv,Dec* dec)
             break;
     }
 }
-TypeBase* Translator::TransTy(SymTab* tenv,Ty* ty)
+TypeBase* Translator::TransTy(SymTab* tenv,Level* level,Ty* ty)
 {
     switch(ty->Kind())
     {

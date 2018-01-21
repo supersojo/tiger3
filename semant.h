@@ -30,15 +30,15 @@ private:
 class Translator{
 public:
     Translator();
-    ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Exp* exp);
-    ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Var* var);
-    void        TransDec(SymTab* venv,SymTab* tenv,Dec* dec);
-    TypeBase*   TransTy(SymTab* tenv,Ty* ty);
+    ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp);
+    ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var);
+    void        TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
     ~Translator();
 private:
-    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec);
-    TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,FieldList* params);
-    void           TransTypeDec(SymTab* venv,SymTab* tenv,Dec* dec);
+    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
+    void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);
     
     LoggerStdio m_logger; 

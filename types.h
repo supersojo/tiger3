@@ -283,10 +283,10 @@ private:
 class EnvEntryFun:public EnvEntryBase{
 public:
     EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;}
-    EnvEntryFun(TypeFieldList *formals,TypeBase* result,LevelNode* level,Label* label):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;}
+    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;}
     TypeBase* Type(){return m_result;}
     TypeFieldList* GetList(){return m_formals;}
-    LevelNode* Level(){return m_level;}
+    Level* GetLevel(){return m_level;}
     Label* GetLabel(){return m_label;}
     ~EnvEntryFun(){
         if(m_formals)
@@ -297,7 +297,7 @@ private:
     TypeFieldList* m_formals;
     TypeBase* m_result;/* memory managed by tenv table */
     
-    LevelNode* m_level;// ??
+    Level* m_level;// ??
     Label*     m_label;/*managed by label pool*/
     
 };
