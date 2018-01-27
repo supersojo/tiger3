@@ -6,11 +6,12 @@
 namespace tiger{
     
 Translator::Translator(){
+    m_level_manager = new LevelManager;
     m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
     m_logger.SetModule("semant");
 }
 Translator::~Translator(){
-
+    delete m_level_manager;
 }
 
 ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var){
@@ -538,6 +539,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
 
         /* level and label */
         alevel = new Level(level,MakeNewFrame(fundec_head->m_fundec));
+	m_level_manager->NewLevel(alevel);
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("empty function return type ");
             venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), 0, alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));

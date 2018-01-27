@@ -41,6 +41,7 @@ private:
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);
     
+    LevelManager* m_level_manager;
     LoggerStdio m_logger; 
 };
 
