@@ -23,7 +23,7 @@ public:
     };
     StatementBase(){m_kind=kStatement_Invalid;}
     StatementBase(s32 kind){m_kind=kind;}
-    ~StatementBase(){}
+    virtual ~StatementBase(){}
     virtual s32 Kind(){return m_kind;}
 private:
     s32 m_kind;

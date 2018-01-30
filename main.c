@@ -118,9 +118,13 @@ void test_typecheck(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
+    tiger::LoggerStdio logger;
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    //logger.setModule("main");
+    
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=0 in let in  a:=2; b:=1 end end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -171,6 +175,7 @@ void test_typecheck(){
     
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
     {
+        logger.D("free tree");
         delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)

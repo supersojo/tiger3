@@ -133,9 +133,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         }
         case Exp::kExp_Int:
         {
+            ExpBaseTy* result=0;
             m_logger.D("type check with kExp_Int");
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseConst(dynamic_cast<IntExp*>(exp)->GetInt()) ));
+            result = new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseConst(dynamic_cast<IntExp*>(exp)->GetInt()) ));
+            m_logger.D("new %p and %p",result,result->Tree());
+            return result;
         }
         case Exp::kExp_String:
         {
@@ -482,6 +485,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             if(declist){
                 p = declist->GetHead();
                 while(p){
+                    m_logger.D("TransDec var a:=1");
                     tree = TransDec(venv,tenv,alevel,p->m_dec);
                     p = p->next;
                     /*
@@ -498,12 +502,18 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                         statement = TreeBase::UnNx(tree);
                     else
                         statement = new StatementSeq(statement, TreeBase::UnNx(tree));
+                    m_logger.D("delete %p",tree);
+                    
+                    delete tree;// the tree is not used already
                 }
             }
             
             if(body){
                 ret = TransExp(venv,tenv,level,body);
-                statement = new StatementSeq( statement, TreeBase::UnNx(ret->Tree()) );
+                if(statement)
+                    statement = new StatementSeq( statement, TreeBase::UnNx(ret->Tree()) );
+                else
+                    statement = TreeBase::UnNx( ret->Tree() );
             }
             
             
@@ -515,6 +525,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }else{
                 Symbol t("int");
                 result = new ExpBaseTy( tenv->Type( tenv->MakeSymbol(&t) ), new TreeBaseNx(statement) );
+                m_logger.D("new %p and %p",result,result->Tree());
             }
             return result; 
         }
@@ -763,7 +774,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         case Dec::kDec_Var:{
             m_logger.D("type check with kDec_Var");
             ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp());
-            
+            m_logger.D("leak %p ?",t);
             TreeBase* tree;
             AccessFrame* af;
             AccessReg*   ar;
@@ -815,8 +826,9 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
                                        )
                                      );
             }
-            
+            m_logger.D("delete %p",t);
             delete t;
+            m_logger.D("new %p",tree);
             return tree;
         }
         case Dec::kDec_Function:
