@@ -124,7 +124,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in let in a:=2 end end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -175,7 +175,6 @@ void test_typecheck(){
     
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
     {
-        logger.D("free tree");
         delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
@@ -246,9 +245,9 @@ int main()
     //test_assert();
     //test_types();
     //test_symtab();
-    test_typecheck();
     //test_escape();
     //test_tree();
     //test_litstringlist();
+    test_typecheck();
     return 0;
 }

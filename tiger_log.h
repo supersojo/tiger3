@@ -19,6 +19,7 @@ public:
         kLogger_Socket,
         kLogger_Invalid
     };
+
     /* log level */
     enum{
         kLogger_Level_Error, /* highest  */

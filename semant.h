@@ -154,7 +154,6 @@ public:
     TreeBase* Tree(){return m_tree;}
     ~ExpBaseTy(){
         //delete m_type;
-        std::cout<<"delete "<<static_cast<const void*>(this)<<" and "<<static_cast<const void *>(m_tree)<<std::endl;
         delete m_tree;
     }
 private:
