@@ -298,6 +298,7 @@ public:
     StatementExp(ExpBase* exp):StatementBase(kStatement_Exp){
         m_exp = exp;
     }
+    ExpBase* GetExp(){return m_exp;}
     ~StatementExp();
 private:
     ExpBase* m_exp;
@@ -439,6 +440,8 @@ public:
         m_statement = s;
         m_exp = exp;
     }
+    StatementBase* GetStatement(){return m_statement;}
+    ExpBase* GetExp(){return m_exp;}
     ~ExpBaseEseq(){
         delete m_statement;
         delete m_exp;

@@ -45,14 +45,46 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             
+            Level* alevel=0;
             TreeBaseEx* ex;
+            ExpBase* tmp=0;/* used to calc static link */
             AccessFrame* af;
             AccessReg*   ar;
             if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Frame){
+                TIGER_ASSERT(t->Access()->GetLevel()!=level,"level must different!!");
                 af = dynamic_cast<AccessFrame*>(t->Access()->GetAccess());
-                ex = new TreeBaseEx( new ExpBaseMem( new ExpBaseBinop(BinaryOp::kBinaryOp_Add,new ExpBaseTemp( FP() ),new ExpBaseConst(af->Offset()))) );
+                //ex = new TreeBaseEx( new ExpBaseMem( new ExpBaseBinop(BinaryOp::kBinaryOp_Add,new ExpBaseTemp( FP() ),new ExpBaseConst(af->Offset()))) );
+                /*
+                a frame variable should access by static link
+                t->Access()->GetLevel() -- the level where var declaration 
+                level -- the level where var being used
+                
+                */
+                alevel = level;
+                TIGER_ASSERT(alevel!=0,"level is null!!");
+                while(alevel!=t->Access()->GetLevel()){
+                    if(tmp==0){
+                        tmp = new ExpBaseMem(
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0/* static link's offset*/)
+                            )
+                        );
+                    }else{
+                        tmp = new ExpBaseMem(
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst(0/* static link's offset*/)
+                            )
+                        );
+                    }
+                    alevel=alevel->Parent();
+                }
+                ex = new TreeBaseEx(
+                    new ExpBaseMem(
+                        new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst( af->Offset() )
+                        )
+                    )
+                );
             }
             if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Reg){
+                TIGER_ASSERT(t->Access()->GetLevel()==level,"level must match!!");
                 ar = dynamic_cast<AccessReg*>(t->Access()->GetAccess());
                 ex = new TreeBaseEx( new ExpBaseTemp( ar->GetTemp() ) );
             }
@@ -297,6 +329,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             //Symbol t("int");
             // need optimize for type 
             //return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),result);
+            //TraverseEx( TreeBase::UnEx(result) );
             return new ExpBaseTy(ty,result);
         }
         case Exp::kExp_Assign:
@@ -320,11 +353,14 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             //new TreeBaseNx( new StatementMove( TreeBase::UnEx( a->Tree() ), TreeBase::UnEx( b->Tree() ) ) );
             
+            //TraverseEx( TreeBase::UnEx(a->Tree()) );
+            //TraverseEx( TreeBase::UnEx(b->Tree()) );
+        
             result = new ExpBaseTy( b->Type(), new TreeBaseNx( new StatementMove( TreeBase::UnEx( a->Tree() ), TreeBase::UnEx( b->Tree() ) ) ) );
             
             delete a;
             delete b;
-
+            //TraverseNx( TreeBase::UnNx(result->Tree()) );
             return result;
         }
         case Exp::kExp_If:
@@ -507,11 +543,15 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }
             
             if(body){
-                ret = TransExp(venv,tenv,level,body);
-                if(statement)
+                ret = TransExp(venv,tenv,alevel,body);
+                if(statement){
+                    //m_logger.D("new statement seq");
+                    //TIGER_ASSERT(TreeBase::UnNx(ret->Tree())!=0,"right is null!!");
+                    //TraverseNx( TreeBase::UnNx(ret->Tree()) );
                     statement = new StatementSeq( statement, TreeBase::UnNx(ret->Tree()) );
-                else
+                }else{
                     statement = TreeBase::UnNx( ret->Tree() );
+                }
             }
             
             
@@ -1081,6 +1121,8 @@ void Translator::TraverseEx(ExpBase* exp){
             m_logger.D("TEMP(%s)",dynamic_cast<ExpBaseTemp*>(exp)->GetTemp()->Name());
             break;
         case ExpBase::kExpBase_Eseq:
+            TraverseNx( dynamic_cast<ExpBaseEseq*>(exp)->GetStatement() );
+            TraverseEx( dynamic_cast<ExpBaseEseq*>(exp)->GetExp() );
             break;
         case ExpBase::kExpBase_Name:
             m_logger.D("NAME(%s)",dynamic_cast<ExpBaseName*>(exp)->GetLabel()->Name());
@@ -1116,6 +1158,7 @@ void Translator::TraverseNx(StatementBase* statement){
             m_logger.D(")");
             break;
         case StatementBase::kStatement_Exp:
+            TraverseEx( dynamic_cast<StatementExp*>(statement)->GetExp() );
             break;
     }
 }
