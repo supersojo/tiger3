@@ -220,6 +220,18 @@ public:
         kRelationOp_Uge,
         kRelationOp_Invalid
     };
+    static s32 ToRelationOp(s32 k){
+        if(k==Oper::kOper_Lt)
+            return kRelationOp_Lt;
+        if(k==Oper::kOper_Le)
+            return kRelationOp_Le;
+        if(k==Oper::kOper_Gt)
+            return kRelationOp_Gt;
+        if(k==Oper::kOper_Ge)
+            return kRelationOp_Ge;
+        
+        return kRelationOp_Invalid;
+    }
 };
 class BinaryOp{
 public:
@@ -266,8 +278,12 @@ public:
         m_false = f;
         
     }
+    ExpBase* Left(){return m_left;}
+    ExpBase* Right(){return m_right;}
     Label** GetATrueLabel(){return &m_true;}
     Label** GetAFalseLabel(){return &m_false;}
+    Label* GetTrueLabel(){return m_true;}
+    Label* GetFalseLabel(){return m_false;}
     ~StatementCjump();
 private:
     s32 m_op;

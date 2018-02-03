@@ -145,6 +145,40 @@ private:
     PatchList* m_trues;
     PatchList* m_falses;
 };
+/* function defination */
+class Frag{
+public:
+    Frag(){m_statement = 0;m_frame=0;}
+    Frag(StatementBase* statement,FrameBase* frame){
+        m_statement = statement;
+        m_frame = frame;
+    }
+    StatementBase* GetStatement(){return m_statement;}
+    FrameBase* Frame(){return m_frame;}
+    ~Frag(){
+        delete m_statement;
+    }
+    
+private:
+    StatementBase* m_statement;
+    FrameBase* m_frame;/* managed by level */
+};
+struct FragNode{
+    FragNode(){
+        m_frag = 0;
+        prev = next = 0;
+    }
+    ~FragNode(){
+        delete m_frag;
+    }
+    /* members */
+    Label* m_label;/* key */
+    Frag* m_frag;
+    FragNode* prev;
+    FragNode* next;
+};
+
+
 //used for type check
 class ExpBaseTy{
 public:
@@ -206,6 +240,7 @@ private:
 
     LoggerStdio m_logger; 
 };
+class FragList;
 class Translator{
 public:
     Translator();
@@ -221,26 +256,60 @@ public:
     }
     void Traverse(TreeBase* tree);
     ~Translator();
+    
+    void TraverseEx(ExpBase* exp);
+    void TraverseNx(StatementBase* statement);
+    void TraverseCx(StatementBase* statement);
+    void TraverseFragList();
+    
 private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);
     
-    void TraverseEx(ExpBase* exp);
-    void TraverseNx(StatementBase* statement);
-    void TraverseCx(StatementBase* statement);
+    
     
     LevelManager* m_level_manager;
     LoggerStdio m_logger; 
     Level* m_outer_most_level;
     
     LitStringList* m_lit_string_list;
-    
+    FragList* m_frag_list;
     // frame pointer
     Temp* m_fp;
 };
 
+class FragList{
+public:
+    enum{
+        kFragList_Size=32
+    };
+    FragList();
+    ~FragList();
+    void Insert(Label* l,Frag* frag);
+    Frag* Find(Label* l);
+    s32 Size(){return m_size;}
+    void Walk(Translator* trans) {
+        FragNode* p;
+        for(s32 i=0;i<kFragList_Size;i++){
+            p = m_tab[i];
+            while(p){
+                trans->TraverseNx( p->m_frag->GetStatement() );
+                p = p->next;
+            }
+        }
+    }
+private:
+    void Clear(FragNode* head);
+    s32 hash(Label* l){
+        return ( reinterpret_cast<u64>(l) )%kFragList_Size;
+    }
+    FragNode** m_tab;
+    s32 m_size;
+};
+    
+    
 }//namespace tiger
 
 #endif

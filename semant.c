@@ -2,6 +2,7 @@
 #include "semant.h"
 #include "tiger_assert.h"
 #include "frame.h"
+#include "tree.h"
 
 namespace tiger{
     
@@ -14,7 +15,7 @@ Translator::Translator(){
     m_outer_most_level = 0;
     
     m_lit_string_list = new LitStringList;
-    
+    m_frag_list = new FragList;
     //frame pointer
     m_fp = 0;
 }
@@ -22,6 +23,8 @@ Translator::~Translator(){
     delete m_level_manager;
     
     delete m_lit_string_list;
+    
+    delete m_frag_list;
     
     //free all temp label memory
     TempLabel::Exit();
@@ -189,6 +192,10 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             ExpNode* head;
             TypeFieldNode* p;
             ExpBaseTy* t;
+        
+            ExpBaseList* explist;
+            explist = new ExpBaseList;
+        
             EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
             TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
             /* function foo() */
@@ -205,11 +212,16 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
+                explist->Insert( TreeBase::UnEx(t->Tree()), ExpBaseList::kExpBaseList_Rear);
                 delete t;
                 head = head->next;
                 p = p->next;
             }
-            return new ExpBaseTy(f->Type(),0);// new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), new ExpBaseList()) )
+            /*
+            static list 
+            f->GetLevel()->Frame()
+            */
+            return new ExpBaseTy(f->Type(),0);// new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist) )
             break;
         }
         case Exp::kExp_Op:
@@ -222,6 +234,26 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             right = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetRight());
             l = left->Tree();
             r = right->Tree();
+            /* compare */
+            if(op->Kind()==Oper::kOper_Lt||
+               op->Kind()==Oper::kOper_Le||
+               op->Kind()==Oper::kOper_Gt||
+               op->Kind()==Oper::kOper_Ge){
+                TreeBaseCx* ex;
+                StatementBase* statement;
+                PatchList * ts = new PatchList;
+                PatchList * fs = new PatchList;
+                statement = new StatementCjump( RelationOp::ToRelationOp(op->Kind()), TreeBase::UnEx(l), TreeBase::UnEx(r), 0/* in place */, 0/* in place */);
+                ts->Insert( dynamic_cast<StatementCjump*>(statement)->GetATrueLabel(), PatchList::kPatchList_Rear );
+                fs->Insert( dynamic_cast<StatementCjump*>(statement)->GetAFalseLabel(), PatchList::kPatchList_Rear );
+                ex = new TreeBaseCx( statement, ts, fs);
+                
+                delete left;
+                delete right;
+                
+                Symbol t("int");
+                return new ExpBaseTy( tenv->Type(tenv->MakeSymbol(&t)), ex );
+            }
             if(op->Kind()==Oper::kOper_Add||
                op->Kind()==Oper::kOper_Sub||
                op->Kind()==Oper::kOper_Mul||
@@ -381,8 +413,28 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             TIGER_ASSERT(if_exp!=0,"if exp is null");
             TIGER_ASSERT(then_exp!=0,"then exp is null");
             
+            StatementBase* statement;
+        
+            Label *t = TempLabel::NewLabel();
+            Label *f = TempLabel::NewLabel();
+            Label *z = TempLabel::NewLabel();
+            Temp* tmp = TempLabel::NewTemp();
             a = TransExp(venv,tenv,level,if_exp);
+            dynamic_cast<TreeBaseCx*>( a->Tree() )->GetTrues()->DoPatch(t);
+            dynamic_cast<TreeBaseCx*>( a->Tree() )->GetFalses()->DoPatch(f);
+            
+                
             b = TransExp(venv,tenv,level,then_exp);
+            //LabelList* llist = new LabelList;
+            //llist->Insert(z,LabelList::kLabelList_Rear);
+            statement = new StatementSeq(
+                new StatementSeq(
+                    new StatementSeq(TreeBase::UnCx(a->Tree())->GetStatement(),new StatementLabel(t)
+                    ), 
+                    new StatementExp(TreeBase::UnEx(b->Tree()))
+                ), 
+                new StatementLabel(f)
+            );
             if(else_exp)
                 c = TransExp(venv,tenv,level,else_exp);
             
@@ -392,9 +444,15 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             if(else_exp){
                 delete b;
-                return c;
+                delete c;
+                //return c;
+                Symbol t("int");
+                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseNx(statement));
             }else{
-                return b;
+                //return b;
+                delete b;
+                Symbol t("int");
+                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseNx(statement));
             }
             /* default type */
 
@@ -512,6 +570,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             venv->BeginScope(ScopeMaker::kScope_Let);
             tenv->BeginScope(ScopeMaker::kScope_Invalid);// type should not use scope
             
+            // for each let expression we create a new level
             alevel = new Level(level,MakeNewFrame( 0 ));
             m_level_manager->NewLevel(alevel);
         
@@ -732,6 +791,10 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
     fundec_head = dynamic_cast<FunctionDec*>(dec)->GetList()->GetHead();
     while(fundec_head){
         
+        /* each function needs its own level information */
+        alevel = dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLevel();
+        TIGER_ASSERT(alevel!=0,"function level is empty!");
+        
         /* function foo() */
         if(fundec_head->m_fundec->GetList()!=0)
             head = fundec_head->m_fundec->GetList()->GetHead();
@@ -739,13 +802,22 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         venv->BeginScope(ScopeMaker::kScope_Fun);
         if(fundec_head->m_fundec->GetList()!=0){
             while(head){
-                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0) );
+                VarAccess* access = 0;
+                AccessFrame* af=0;
+                AccessReg*   ar=0;
+                if(head->m_field->Name()->GetEscape()==1){
+                    af = dynamic_cast<AccessFrame*>( alevel->Frame()->AllocLocal(1/*true*/) );
+                    access = new VarAccess(level,af);
+                }else{
+                    ar = dynamic_cast<AccessReg*>( alevel->Frame()->AllocLocal(0/*false*/) );
+                    access = new VarAccess(level,ar);
+                }
+                
+                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access ) );
                 head = head->next;
             }
         }
-        /* each function needs its own level information */
-        alevel = dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLevel();
-        TIGER_ASSERT(alevel!=0,"function level is empty!");
+        
         a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp());
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
@@ -757,6 +829,9 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                 TIGER_ASSERT(a->Type() == dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), "return type mismatch");
             }
         }
+        
+        m_frag_list->Insert( dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLabel(),
+                             new Frag( TreeBase::UnNx(a->Tree()), alevel->Frame() ) );
         delete a;
         
         venv->EndScope();
@@ -868,7 +943,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         case Dec::kDec_Function:
         {
             TransFunctionDec(venv,tenv,level,dec);
-            break;
+            return new TreeBaseEx( new ExpBaseConst(0) );
         }
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
@@ -977,6 +1052,7 @@ ExpBase*       TreeBase::UnEx(TreeBase* tree){
     }
 }
 StatementBase* TreeBase::UnNx(TreeBase* tree){
+
     switch(tree->Kind()){
         case kTreeBase_Ex:
         {
@@ -1091,7 +1167,60 @@ LitStringList::~LitStringList(){
     
     delete[] m_tab;
 }
-
+FragList::FragList()
+{
+    m_tab = new FragNode*[kFragList_Size];
+    for(s32 i=0;i<kFragList_Size;i++)
+        m_tab[i]=0;
+    m_size = 0;
+}
+FragList::~FragList()
+{
+    for(s32 i=0;i<kFragList_Size;i++)
+        Clear(m_tab[i]);
+    delete[] m_tab;
+}
+void FragList::Clear(FragNode* head)
+{
+    FragNode* p;
+    p = head;
+    while(p){
+        head = head->next;
+        delete p;
+        p = head;
+    }
+}
+void FragList::Insert(Label* l,Frag* frag)
+{
+    s32 index = hash(l);
+    FragNode* p = m_tab[index];
+    FragNode* n;
+    while(p){
+        if(p->m_label==l)
+            return;//already exist
+        p = p->next;
+    }
+    n = new FragNode;
+    n->m_label = l;
+    n->m_frag = frag;
+    n->next = m_tab[index];
+    if(m_tab[index])
+        m_tab[index]->prev = n;
+    m_tab[index] = n;
+    m_size++;
+}
+Frag* FragList::Find(Label* l)
+{
+    s32 index = hash(l);
+    FragNode* p = m_tab[index];
+    while(p){
+        if(p->m_label==l)
+            return p->m_frag;
+        p = p->next;
+    }
+    //not found
+    return 0;
+}
 void Translator::Traverse(TreeBase* tree)
 {
     if(tree->Kind()==TreeBase::kTreeBase_Ex)
@@ -1149,6 +1278,12 @@ void Translator::TraverseNx(StatementBase* statement){
         case StatementBase::kStatement_Jump:
             break;
         case StatementBase::kStatement_Cjump:
+            m_logger.D("CJUMP(");
+            m_logger.D("op,");
+            TraverseEx(dynamic_cast<StatementCjump*>(statement)->Left());
+            m_logger.D(",");
+            TraverseEx(dynamic_cast<StatementCjump*>(statement)->Right());
+            m_logger.D("%s,%s)",dynamic_cast<StatementCjump*>(statement)->GetTrueLabel()->Name(),dynamic_cast<StatementCjump*>(statement)->GetFalseLabel()->Name());
             break;
         case StatementBase::kStatement_Move:
             m_logger.D("MOVE(");
@@ -1163,7 +1298,11 @@ void Translator::TraverseNx(StatementBase* statement){
     }
 }
 void Translator::TraverseCx(StatementBase* statement){
-    
+    TraverseNx(statement);
 }
-    
+void Translator::TraverseFragList()
+{
+    m_frag_list->Walk(this);
+}
+
 }//namespace tiger

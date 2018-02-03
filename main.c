@@ -124,7 +124,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in let in a:=2 end end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=0 in if a>0 then b:=1 end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -136,6 +136,11 @@ void test_typecheck(){
     tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
     tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
     tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    
+    /* for each external function, it's impossible to access outer level's variable 
+    the outer most level do not need frame and actual list 
+    */
+    
     /* internal functions */
     /* print(x:string)*/
     tiger::TypeFieldNode* node;
@@ -181,6 +186,8 @@ void test_typecheck(){
     {
         delete dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement();
     }
+    
+    translator.TraverseFragList();
     
     delete ty;
     

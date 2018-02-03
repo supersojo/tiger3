@@ -74,6 +74,23 @@ public:
     AccessList(){m_head=0;m_size=0;}
     /*AccessList(AccessNode* head){m_head=head;m_size=0;}*/
     AccessNode* GetHead(){return m_head;}
+    AccessBase* Get(s32 index){
+        if(m_size==0)
+            return 0;
+        if(index<0)
+            return 0;
+        if(index>=m_size)//overflow
+            return 0;
+        s32 i=0;
+        AccessNode*p=m_head;
+        while(p){
+            if(i==index)
+                return p->m_access;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
     void Insert(AccessBase* access, s32 dir){
         AccessNode* n;
         AccessNode* p;
@@ -255,7 +272,9 @@ public:
         m_locals=new AccessList;
         m_offset=0;
     }
-    
+    AccessBase* GetAccess(s32 index){
+        return m_locals->Get(index);
+    }
     virtual AccessList* GetFormals(){return m_formals;}
     virtual BoolList*   GetEscapes(){return m_escapes;}
     virtual s32         Kind(){return m_kind;}
