@@ -39,7 +39,7 @@ Level*      Translator::OuterMostLevel()
     }
     return m_outer_most_level;
 }
-ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var){
+ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label){
     m_logger.D("TransVar with kind %d",var->Kind());
     switch(var->Kind()){
         case Var::kVar_Simple:
@@ -90,15 +90,16 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
                 TIGER_ASSERT(t->Access()->GetLevel()==level,"level must match!!");
                 ar = dynamic_cast<AccessReg*>(t->Access()->GetAccess());
                 ex = new TreeBaseEx( new ExpBaseTemp( ar->GetTemp() ) );
+                
             }
-
+            
             return new ExpBaseTy(t->Type(),ex);//
         }
         case Var::kVar_Field:
         {
             ExpBaseTy* p;
             TypeFieldNode* head;
-            p = TransVar(venv,tenv,level,dynamic_cast<FieldVar*>(var)->GetVar());
+            p = TransVar(venv,tenv,level,dynamic_cast<FieldVar*>(var)->GetVar(),done_label);
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
             }
@@ -124,7 +125,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             ExpBaseTy* p;
             ExpBaseTy* t;
             ExpBaseTy* ret;
-            p = TransVar(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetVar());
+            p = TransVar(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetVar(),done_label);
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
             }
@@ -132,7 +133,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             
             //dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type()
             
-            t = TransExp(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetExp());
+            t = TransExp(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetExp(),done_label);
             if(t->Type()->Kind()!=TypeBase::kType_Int){
                 m_logger.W("array index should be int");
             }
@@ -152,12 +153,12 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
     return 0;
 }
 
-ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp){
+ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp,Label* done_label/* for break in while or for*/){
     switch(exp->Kind())
     {
         case Exp::kExp_Var:
         {
-            return TransVar(venv,tenv,level,dynamic_cast<VarExp*>(exp)->GetVar());
+            return TransVar(venv,tenv,level,dynamic_cast<VarExp*>(exp)->GetVar(),done_label);
             break;
         }
         case Exp::kExp_Nil:
@@ -208,7 +209,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
             TIGER_ASSERT(head!=0,"actuals is null");
             while(head){
-                t = TransExp(venv,tenv,level,head->m_exp);
+                t = TransExp(venv,tenv,level,head->m_exp,done_label);
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
@@ -230,8 +231,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             Oper* op = dynamic_cast<OpExp*>(exp)->GetOper();
             ExpBaseTy* left,*right;
             TreeBase* l, *r;
-            left = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetLeft());
-            right = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetRight());
+            left = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetLeft(),done_label);
+            right = TransExp(venv,tenv,level,dynamic_cast<OpExp*>(exp)->GetRight(),done_label);
             l = left->Tree();
             r = right->Tree();
             /* compare */
@@ -263,16 +264,24 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 if(right->Type()->Kind()!=TypeBase::kType_Int)
                     std::cout<<"type error"<<std::endl;
                 
+                
+                TreeBaseEx* ex = new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) );
+                
                 delete left;
                 delete right;
+                
                 Symbol t("int");
-                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) ));
+                return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),ex);
             }
+             
+           
+            TreeBaseEx* ex = new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) );
+                
             delete left;
             delete right;
+            
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseEx( new ExpBaseBinop(BinaryOp::ToBinaryOp(op->Kind()),TreeBase::UnEx(l),TreeBase::UnEx(r)) ));
-            break;
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),ex);
         }
         case Exp::kExp_Record:
         {
@@ -299,7 +308,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 ExpBaseTy* a;
                 TIGER_ASSERT(n->m_field->Name()==tenv->MakeSymbol(head->m_efield->Name()),"member mismatch");
                 
-                a = TransExp(venv,tenv,level,head->m_efield->GetExp());
+                a = TransExp(venv,tenv,level,head->m_efield->GetExp(),done_label);
                 
                 if(a->Type()->Kind()!=TypeBase::kType_Nil){
                     m_logger.D("expected type:%s",n->m_field->Type()->TypeString());
@@ -330,7 +339,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }
             // return value ignore for now
             while(p){
-                tmp = TransExp(venv,tenv,level,p->m_exp);
+                tmp = TransExp(venv,tenv,level,p->m_exp,done_label);
                 p = p->next;
                 if(p){
                     if(statement==0)
@@ -372,8 +381,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             m_logger.D("type check with kExp_Assign");
             
-            a = TransVar(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetVar());
-            b = TransExp(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetExp());
+            a = TransVar(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetVar(),done_label);
+            b = TransExp(venv,tenv,level,dynamic_cast<AssignExp*>(exp)->GetExp(),done_label);
             
             TIGER_ASSERT(a!=0,"var type is null");
             TIGER_ASSERT(b!=0,"exp type is null");
@@ -419,12 +428,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             Label *f = TempLabel::NewLabel();
             Label *z = TempLabel::NewLabel();
             Temp* tmp = TempLabel::NewTemp();
-            a = TransExp(venv,tenv,level,if_exp);
+            a = TransExp(venv,tenv,level,if_exp,done_label);
             dynamic_cast<TreeBaseCx*>( a->Tree() )->GetTrues()->DoPatch(t);
             dynamic_cast<TreeBaseCx*>( a->Tree() )->GetFalses()->DoPatch(f);
             
                 
-            b = TransExp(venv,tenv,level,then_exp);
+            b = TransExp(venv,tenv,level,then_exp,done_label);
             //LabelList* llist = new LabelList;
             //llist->Insert(z,LabelList::kLabelList_Rear);
             statement = new StatementSeq(
@@ -436,7 +445,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 new StatementLabel(f)
             );
             if(else_exp)
-                c = TransExp(venv,tenv,level,else_exp);
+                c = TransExp(venv,tenv,level,else_exp,done_label);
             
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"if exp should be int");
             
@@ -467,18 +476,43 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             ExpBaseTy* a;
             ExpBaseTy* b;
             
-            test_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
-            body_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+            StatementBase* statement=0;
+            Label* test_label;
+            Label* body_label;
+            Label* adone_label;
+            test_label = TempLabel::NewLabel();
+            body_label = TempLabel::NewLabel();
+            adone_label = TempLabel::NewLabel();
+            statement = new StatementLabel(test_label);
             
+            test_exp = dynamic_cast<WhileExp*>(exp)->GetTest();
+            body_exp = dynamic_cast<WhileExp*>(exp)->GetExp();
+            
+        
             TIGER_ASSERT(test_exp!=0,"while exp is null");
             TIGER_ASSERT(body_exp!=0,"while body is null");
             
-            a = TransExp(venv,tenv,level,test_exp);
+            a = TransExp(venv,tenv,level,test_exp,done_label);
             
+            statement = new StatementSeq(statement,
+                            new StatementCjump(RelationOp::kRelationOp_Eq, TreeBase::UnEx(a->Tree()), new ExpBaseConst(1), body_label/*true label*/, adone_label/*false label*/)
+                        );
+                
             venv->BeginScope(ScopeMaker::kScope_While);
-            b = TransExp(venv,tenv,level,body_exp);
+            b = TransExp(venv,tenv,level,body_exp,adone_label);
             venv->EndScope();
             
+            statement = new StatementSeq(statement,
+                            TreeBase::UnNx(b->Tree()));
+        
+            LabelList* llist = new LabelList;
+            llist->Insert(test_label,LabelList::kLabelList_Rear);
+        
+            statement = new StatementSeq(statement,
+                            new StatementJump(new ExpBaseName(test_label),llist));
+            
+            statement = new StatementSeq(statement,new StatementLabel(adone_label));
+        
             TIGER_ASSERT(a->Type()->Kind()==TypeBase::kType_Int,"while exp should be int");
             
             delete a;
@@ -486,7 +520,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             /* default type */
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseNx(statement));
             break;
         }
         case Exp::kExp_Break:
@@ -497,7 +531,10 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }
             TIGER_ASSERT( ((venv->Scope()==ScopeMaker::kScope_For)||(venv->Scope()==ScopeMaker::kScope_While)),"expected in for or while scope");
             Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            LabelList* llist = new LabelList;
+            llist->Insert(done_label,LabelList::kLabelList_Rear);
+            
+            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),new TreeBaseNx(new StatementJump(new ExpBaseName(done_label),llist)));
             break;
         }
         case Exp::kExp_For:
@@ -523,8 +560,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             TIGER_ASSERT(hi_exp!=0,"for hi is null");
             
             //a = TransVar(venv,tenv,var);
-            b = TransExp(venv,tenv,level,lo_exp);
-            c = TransExp(venv,tenv,level,hi_exp);
+            b = TransExp(venv,tenv,level,lo_exp,done_label);
+            c = TransExp(venv,tenv,level,hi_exp,done_label);
             
             
             
@@ -537,7 +574,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0));
             
-            d = TransExp(venv,tenv,level,body_exp);
+            d = TransExp(venv,tenv,level,body_exp,done_label);
             
             //tenv->EndScope();
             venv->EndScope();
@@ -580,7 +617,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 p = declist->GetHead();
                 while(p){
                     m_logger.D("TransDec var a:=1");
-                    tree = TransDec(venv,tenv,alevel,p->m_dec);
+                    tree = TransDec(venv,tenv,alevel,p->m_dec,done_label);
                     p = p->next;
                     /*
                     a=1
@@ -602,7 +639,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }
             
             if(body){
-                ret = TransExp(venv,tenv,alevel,body);
+                ret = TransExp(venv,tenv,alevel,body,done_label);
                 if(statement){
                     //m_logger.D("new statement seq");
                     //TIGER_ASSERT(TreeBase::UnNx(ret->Tree())!=0,"right is null!!");
@@ -637,8 +674,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             EnvEntryVar* p;
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
             TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
-            size_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetSize());
-            init_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetInit());
+            size_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetSize(),done_label);
+            init_ty = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetInit(),done_label);
             
             TIGER_ASSERT(size_ty!=0,"array size type is null");
             TIGER_ASSERT(init_ty!=0,"array init type is null");
@@ -746,7 +783,7 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     return f;
 }
 
-void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
+void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label)
 {
     FunDecNode* fundec_head;
     FieldNode* head;
@@ -818,7 +855,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
             }
         }
         
-        a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp());
+        a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp(),done_label);
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
         }else
@@ -879,13 +916,13 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         head = head->next;
     }
 }
-TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
+TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label)
 {
     switch(dec->Kind())
     {
         case Dec::kDec_Var:{
             m_logger.D("type check with kDec_Var");
-            ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp());
+            ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             TreeBase* tree;
             AccessFrame* af;
             AccessReg*   ar;
@@ -942,7 +979,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         }
         case Dec::kDec_Function:
         {
-            TransFunctionDec(venv,tenv,level,dec);
+            TransFunctionDec(venv,tenv,level,dec,done_label);
             return new TreeBaseEx( new ExpBaseConst(0) );
         }
         case Dec::kDec_Type:{
@@ -1015,6 +1052,8 @@ TypeBase* Translator::TransTy(SymTab* tenv,Level* level,Ty* ty)
 }
 
 ExpBase*       TreeBase::UnEx(TreeBase* tree){
+    if(tree==0)
+        return 0;
     switch(tree->Kind()){
         case kTreeBase_Ex:
         {
@@ -1276,6 +1315,7 @@ void Translator::TraverseNx(StatementBase* statement){
             m_logger.D("LABEL(%s)",dynamic_cast<StatementLabel*>(statement)->GetLabel()->Name());
             break;
         case StatementBase::kStatement_Jump:
+            m_logger.D("JMP (%s)",dynamic_cast<StatementJump*>(statement)->GetList()->GetHeadLabel()->Name());
             break;
         case StatementBase::kStatement_Cjump:
             m_logger.D("CJUMP(");
@@ -1283,6 +1323,7 @@ void Translator::TraverseNx(StatementBase* statement){
             TraverseEx(dynamic_cast<StatementCjump*>(statement)->Left());
             m_logger.D(",");
             TraverseEx(dynamic_cast<StatementCjump*>(statement)->Right());
+            m_logger.D(",");
             m_logger.D("%s,%s)",dynamic_cast<StatementCjump*>(statement)->GetTrueLabel()->Name(),dynamic_cast<StatementCjump*>(statement)->GetFalseLabel()->Name());
             break;
         case StatementBase::kStatement_Move:

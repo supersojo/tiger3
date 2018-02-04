@@ -244,9 +244,9 @@ class FragList;
 class Translator{
 public:
     Translator();
-    ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp);
-    ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var);
-    TreeBase*   TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp,Label* done_label);
+    ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label);
+    TreeBase*   TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
     TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
     Level*      OuterMostLevel();
     Temp* FP(){
@@ -263,7 +263,7 @@ public:
     void TraverseFragList();
     
 private:
-    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);

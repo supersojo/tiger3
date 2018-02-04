@@ -124,7 +124,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=0 in if a>0 then b:=1 end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in while a<10 do a:=a+1 end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -169,7 +169,7 @@ void test_typecheck(){
     escaper.FindEscape(exp);
     
     tiger::Translator translator;
-    ty=translator.TransExp(&venv,&tenv,translator.OuterMostLevel(),exp);
+    ty=translator.TransExp(&venv,&tenv,translator.OuterMostLevel(),exp,0);
     
     translator.Traverse( ty->Tree() );
     

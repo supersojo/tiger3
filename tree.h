@@ -140,6 +140,7 @@ public:
     };
     LabelList(){m_head=0;m_size=0;}
     LabelList(ALabelNode* head){m_head = head;}
+    Label* GetHeadLabel(){return m_head->m_label;}
     void Insert(Label* l,s32 dir){
         ALabelNode* n;
         ALabelNode* p;
@@ -195,7 +196,8 @@ public:
         m_exp = exp;
         m_list = list;
     }
-    
+    ExpBase* GetExp(){return m_exp;}
+    LabelList* GetList(){return m_list;}
     ~StatementJump();
 private:
     ExpBase* m_exp;
