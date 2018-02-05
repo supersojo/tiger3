@@ -109,7 +109,7 @@ void EscapeHelper::TransExp(SymTab* venv,s32 depth,Exp* exp){
             venv->Enter(venv->MakeSymbol(var),new EnvEntryEscape(depth+1,var->GetEscapeRefer()));
             var->SetEscape(0/*false*/);
             
-            TransExp(venv,depth+1,body_exp);
+            TransExp(venv,depth,body_exp);// we still in the depth.no need depth+1
             
             venv->EndScope();
             

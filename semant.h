@@ -267,8 +267,20 @@ private:
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
     FrameBase*     MakeNewFrame(FunDec* fundec);
-    
-    
+    LetExp*        For2Let(ForExp* exp);
+    void           ReleaseTree(TreeBase* tree){
+        switch(tree->Kind()){
+            case TreeBase::kTreeBase_Ex:
+                delete dynamic_cast<TreeBaseEx*>(tree)->GetExp();
+                break;
+            case TreeBase::kTreeBase_Nx:
+                delete dynamic_cast<TreeBaseNx*>(tree)->GetStatement();
+                break;
+            case TreeBase::kTreeBase_Cx:
+                delete dynamic_cast<TreeBaseCx*>(tree)->GetStatement();
+                break;
+        }
+    }
     
     LevelManager* m_level_manager;
     LoggerStdio m_logger; 

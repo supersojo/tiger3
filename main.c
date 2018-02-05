@@ -124,7 +124,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in while a<10 do a:=a+1 end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in (let var a:=2 in a:=3 end;a:=4) end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);

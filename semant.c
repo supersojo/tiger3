@@ -34,11 +34,49 @@ Level*      Translator::OuterMostLevel()
 {
     if(m_outer_most_level==0)
     {
-        m_outer_most_level = new Level;
+        m_outer_most_level = new Level(0, new FrameBase(FrameBase::kFrame_X86));
         m_level_manager->NewLevel(m_outer_most_level);
     }
     return m_outer_most_level;
 }
+LetExp* Translator::For2Let(ForExp* exp)
+{
+    LetExp* let_exp = 0;
+    DecList* decs = 0;
+    VarDec* var1 = new VarDec(exp->GetVar()->Clone(),0,exp->GetLo()->Clone());
+    VarDec* var2 = new VarDec(new Symbol("limit"),0,exp->GetHi()->Clone());
+    DecNode* dec1 = new DecNode;
+    DecNode* dec2 = new DecNode;
+    dec1->m_dec = var1;
+    dec2->m_dec = var2;
+    dec1->next = dec2;
+    dec2->prev = dec1;
+    decs = new DecList(dec1);
+    
+    WhileExp* while_exp = 0;
+    OpExp* test = new OpExp(new Oper(Oper::kOper_Le),new VarExp(new SimpleVar(exp->GetVar()->Clone())),new VarExp(new SimpleVar(new Symbol("limit"))));
+    
+    AssignExp* assign = new AssignExp(new SimpleVar(exp->GetVar()->Clone()), new OpExp(new Oper(Oper::kOper_Add),new VarExp(new SimpleVar(exp->GetVar()->Clone())),new IntExp(1)) );
+    
+    SeqExp* body = 0;
+    
+    ExpList* list = 0;
+    ExpNode* exp1 = new ExpNode;
+    ExpNode* exp2 = new ExpNode;
+    exp1->m_exp = exp->GetExp()->Clone();
+    TIGER_ASSERT(exp1->m_exp->Kind()==Exp::kExp_Assign,"m_exp is null!!");
+    exp2->m_exp = assign;
+    exp1->next = exp2;
+    exp2->prev = exp1;
+    list = new ExpList(exp1);
+    body = new SeqExp(list);
+    
+    while_exp = new WhileExp(test,body);
+    
+    let_exp = new LetExp(decs,while_exp);
+    
+    return let_exp;
+}  
 ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label){
     m_logger.D("TransVar with kind %d",var->Kind());
     switch(var->Kind()){
@@ -152,7 +190,6 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
     m_logger.W("shoud not reach here %s,%d",__FILE__,__LINE__);
     return 0;
 }
-
 ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp,Label* done_label/* for break in while or for*/){
     switch(exp->Kind())
     {
@@ -350,13 +387,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 }
             }
             
-            if( statement )// at least 2 exps 
+            if( statement )// at least 2 exps
             {
-                if(statement->Kind()==StatementBase::kStatement_Seq){
-                    result = new TreeBaseEx( new ExpBaseEseq( statement, TreeBase::UnEx( tmp->Tree() ) ) );
-                }else{
-                    result = new TreeBaseEx( TreeBase::UnEx( tmp->Tree() ) );
-                }
+                result = new TreeBaseEx( new ExpBaseEseq( statement, TreeBase::UnEx( tmp->Tree() ) ) );
             }
             else// 1 exp
             {
@@ -540,12 +573,14 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         case Exp::kExp_For:
         {
             m_logger.D("type check with kExp_For");
+        
+        
             Symbol* var;
             Exp* lo_exp;
             Exp* hi_exp;
             Exp* body_exp;
             
-            //ExpBaseTy* a;
+            ExpBaseTy* a;
             ExpBaseTy* b;
             ExpBaseTy* c;
             ExpBaseTy* d;
@@ -579,14 +614,27 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             //tenv->EndScope();
             venv->EndScope();
             
-            //delete a;
+            // release what we don't use
+            ReleaseTree( b->Tree() );
+            ReleaseTree( c->Tree() );
+            ReleaseTree( d->Tree() );
+        
             delete b;
             delete c;
             delete d;
+            // type check ok
+            LetExp* let_exp;
+            let_exp = For2Let( dynamic_cast<ForExp*>(exp) );
             
-            Symbol t("int");
-            return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
-            break;
+            a = TransExp(venv,tenv,level,let_exp,done_label);
+            delete let_exp;
+        
+            return a;
+        
+            //delete a;
+            //Symbol t("int");
+            //return new ExpBaseTy(tenv->Type(tenv->MakeSymbol(&t)),0);
+            //break;
         }
         case Exp::kExp_Let:
         {
@@ -608,8 +656,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             tenv->BeginScope(ScopeMaker::kScope_Invalid);// type should not use scope
             
             // for each let expression we create a new level
-            alevel = new Level(level,MakeNewFrame( 0 ));
-            m_level_manager->NewLevel(alevel);
+            // wrong here, we should use frame
+            //alevel = new Level(level,MakeNewFrame( 0 ));
+            //m_level_manager->NewLevel(alevel);
         
             // dec list
             DecNode* p;
@@ -617,7 +666,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 p = declist->GetHead();
                 while(p){
                     m_logger.D("TransDec var a:=1");
-                    tree = TransDec(venv,tenv,alevel,p->m_dec,done_label);
+                    tree = TransDec(venv,tenv,level,p->m_dec,done_label);
                     p = p->next;
                     /*
                     a=1
@@ -639,7 +688,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             }
             
             if(body){
-                ret = TransExp(venv,tenv,alevel,body,done_label);
+                ret = TransExp(venv,tenv,level,body,done_label);
                 if(statement){
                     //m_logger.D("new statement seq");
                     //TIGER_ASSERT(TreeBase::UnNx(ret->Tree())!=0,"right is null!!");

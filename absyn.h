@@ -28,6 +28,12 @@ public:
         m_name = strdup(name);
         m_escape = 0;/* false*/
     }
+    Symbol* Clone(){
+        Symbol* n = new Symbol;
+        n->m_name = strdup(m_name);
+        n->m_escape = m_escape;
+        return n;
+    }
     char* Name(){return m_name;}
     ~Symbol(){
         LoggerStdio logger;
@@ -59,6 +65,12 @@ public:
     void SetEscape(s32 escape){m_escape = escape;}
     s32  GetEscape(){return m_escape;}
     virtual s32 Kind(){return m_kind;}
+    virtual Var* Clone(){
+        Var* n = new Var;
+        n->m_kind = m_kind;
+        n->m_escape = m_escape;//not used
+        return n;
+    }
     virtual ~Var(){}
 private:
     s32 m_kind;
@@ -81,6 +93,11 @@ public:
         //logger.D("~SimpleVar");
         delete m_sym;
     }
+    SimpleVar* Clone(){
+        SimpleVar* n = new SimpleVar;
+        n->m_sym = m_sym?m_sym->Clone():0;
+        return n;
+    }
 public:
     Symbol* m_sym;
 };
@@ -96,6 +113,12 @@ public:
     }
     Var* GetVar(){return m_var;}
     Symbol* GetSym(){return m_sym;}
+    FieldVar* Clone(){
+        FieldVar* n = new FieldVar;
+        n->m_var = m_var?m_var->Clone():0;
+        n->m_sym = m_sym?m_sym->Clone():0;
+        return n;
+    }
     ~FieldVar(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -122,6 +145,7 @@ public:
     }
     Var* GetVar(){return m_var;}
     Exp* GetExp(){return m_exp;}
+    SubscriptVar* Clone();
     ~SubscriptVar();
 private:
     Var* m_var;
@@ -154,6 +178,11 @@ public:
     static char* KindString(s32 kind){
         return ExpKindStrings[kind];
     }
+    virtual Exp* Clone(){
+        Exp* n = new Exp;
+        n->m_kind = m_kind;
+        return n;
+    }
     virtual ~Exp(){}
 private:
     s32 m_kind;
@@ -184,6 +213,29 @@ public:
         m_head = exp_node;
     }
     ExpNode* GetHead(){return m_head;}
+    ExpList* Clone(){
+        ExpList* n = new ExpList;
+        ExpNode* p = m_head;
+        ExpNode* q = 0;
+        ExpNode* newhead=0;
+        while(p){
+            ExpNode* t = new ExpNode;
+            t->m_exp = p->m_exp?p->m_exp->Clone():0;
+            if(newhead==0)
+                newhead = t;
+            if(q==0)
+                q = t;
+            else
+            {
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+    }
     ~ExpList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -217,6 +269,10 @@ public:
         //logger.D("~VarExp");
         delete m_var;
     }
+    VarExp* Clone(){
+        VarExp* n = new VarExp;
+        n->m_var = m_var?m_var->Clone():0;
+    }
 private:
     Var* m_var;
 };
@@ -224,6 +280,10 @@ private:
 class NilExp:public Exp{
 public:
     NilExp():Exp(kExp_Nil){
+    }
+    NilExp* Clone(){
+        NilExp* n = new NilExp;
+        return n;
     }
 };
 
@@ -234,6 +294,11 @@ public:
     }
     IntExp(s32 v):Exp(kExp_Int){
         m_ival = v;
+    }
+    IntExp* Clone(){
+        IntExp* n = new IntExp;
+        n->m_ival = m_ival;
+        return n;
     }
     s32 GetInt(){return m_ival;}
 private:
@@ -247,6 +312,11 @@ public:
     }
     StringExp(char* s):Exp(kExp_String){
         m_sval = strdup(s);
+    }
+    StringExp* Clone(){
+        StringExp* n = new StringExp;
+        n->m_sval = strdup(m_sval);
+        return n;
     }
     char* GetString(){return m_sval;}
     ~StringExp(){
@@ -269,6 +339,12 @@ public:
     CallExp(Symbol* sym,ExpList* explist):Exp(kExp_Call){
         m_sym = sym;
         m_explist = explist;
+    }
+    CallExp* Clone(){
+        CallExp* n = new CallExp;
+        n->m_sym = m_sym?m_sym->Clone():0;
+        n->m_explist = m_explist?m_explist->Clone():0;
+        return n;
     }
     Symbol* Name(){return m_sym;}
     ExpList* GetList(){return m_explist;}
@@ -313,6 +389,11 @@ public:
     Oper(){
         m_kind = kOper_Invalid;
     }
+    Oper* Clone(){
+        Oper* n = new Oper;
+        n->m_kind = m_kind;
+        return n;
+    }
     s32 Kind(){return m_kind;}
     Oper(s32 kind){m_kind = kind;}
 private:
@@ -325,6 +406,13 @@ public:
         m_oper = 0;
         m_left = 0;
         m_right = 0;
+    }
+    OpExp* Clone(){
+        OpExp* n = new OpExp;
+        n->m_oper = m_oper?m_oper->Clone():0;
+        n->m_left = m_left?m_left->Clone():0;
+        n->m_right = m_right?m_right->Clone():0;
+        return n;
     }
     OpExp(Oper* oper,Exp* left,Exp* right):Exp(kExp_Op){
         m_oper = oper;
@@ -362,6 +450,7 @@ public:
     }
     Symbol* Name(){return m_type;}
     EFieldList* GetList(){return m_fields;}
+    RecordExp* Clone();
     ~RecordExp();
 private:
     Symbol* m_type;
@@ -377,6 +466,11 @@ public:
         m_list = explist;
     }
     ExpList* GetList(){return m_list;}
+    SeqExp* Clone(){
+        SeqExp* n = new SeqExp;
+        n->m_list = m_list?m_list->Clone():0;
+        return n;
+    }
     virtual ~SeqExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -400,6 +494,12 @@ public:
     }
     Var* GetVar(){return m_var;}
     Exp* GetExp(){return m_exp;}
+    virtual AssignExp* Clone(){
+        AssignExp* n = new AssignExp;
+        n->m_var = m_var?m_var->Clone():0;
+        n->m_exp = m_exp?m_exp->Clone():0;
+        return n;
+    }
     ~AssignExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -428,6 +528,13 @@ public:
     Exp* GetTest(){return m_test;}
     Exp* GetThen(){return m_then;}
     Exp* GetElsee(){return m_elsee;}
+    IfExp* Clone(){
+        IfExp* n = new IfExp;
+        n->m_test = m_test?m_test->Clone():0;
+        n->m_then = m_then?m_then->Clone():0;
+        n->m_elsee = m_elsee?m_elsee->Clone():0;
+        return n;
+    }
     ~IfExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -455,6 +562,12 @@ public:
     }
     Exp* GetTest(){return m_test;}
     Exp* GetExp(){return m_body;}
+    WhileExp* Clone(){
+        WhileExp* n = new WhileExp;
+        n->m_test = m_test?m_test->Clone():0;
+        n->m_body = m_body?m_body->Clone():0;
+        return n;
+    }
     ~WhileExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -471,6 +584,10 @@ private:
 class BreakExp:public Exp{
 public:
     BreakExp():Exp(kExp_Break){}
+    BreakExp* Clone(){
+        BreakExp* n = new BreakExp;
+        return n;
+    }
 };
 
 class ForExp:public Exp{
@@ -491,6 +608,14 @@ public:
     Exp* GetLo(){return m_lo;}
     Exp* GetHi(){return m_hi;}
     Exp* GetExp(){return m_body;}
+    ForExp* Clone(){
+        ForExp* n = new ForExp;
+        n->m_var = m_var?m_var->Clone():0;
+        n->m_lo = m_lo?m_lo->Clone():0;
+        n->m_hi = m_hi?m_hi->Clone():0;
+        n->m_body = m_body?m_body->Clone():0;
+        return n;
+    }
     ~ForExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -519,6 +644,7 @@ public:
         m_decs = decs;
         m_body = body;
     }
+    LetExp* Clone();
     DecList* GetDecList(){return m_decs;}
     Exp*     GetBody(){return m_body;}
     ~LetExp();
@@ -542,6 +668,13 @@ public:
     Symbol* Name(){return m_type;}
     Exp* GetSize(){return m_size;}
     Exp* GetInit(){return m_init;}
+    ArrayExp* Clone(){
+        ArrayExp* n = new ArrayExp;
+        n->m_type = m_type?m_type->Clone():0;
+        n->m_size = m_size?m_size->Clone():0;
+        n->m_init = m_init?m_init->Clone():0;
+        return n;
+    }
     ~ArrayExp(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -568,6 +701,11 @@ public:
     Dec(){m_kind = kDec_Invalid;}
     Dec(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    virtual Dec* Clone(){
+        Dec* n = new Dec;
+        n->m_kind = m_kind;
+        return n;
+    }
     virtual ~Dec(){} 
 private:
     s32 m_kind;
@@ -596,6 +734,31 @@ public:
     DecList(){m_head=0;}
     DecList(DecNode* head){m_head = head;}
     DecNode* GetHead(){return m_head;}
+    DecList* Clone(){
+        DecList* n = new DecList;
+        DecNode* newhead=0;
+        DecNode* q=0;
+        DecNode* p;
+        DecNode* t;
+        p = m_head;
+        while(p)
+        {
+            t = new DecNode;
+            t->m_dec=p->m_dec?p->m_dec->Clone():0;
+            if(newhead==0)
+                newhead=t;
+            if(q==0)
+                q=t;
+            else{
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+    }
     ~DecList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -635,6 +798,7 @@ public:
     FieldList* GetList(){return m_params;}
     Symbol* Type(){return m_result;}
     Exp* GetExp(){return m_body;}
+    FunDec* Clone();
     ~FunDec();
 private:
     Symbol* m_name;
@@ -664,6 +828,31 @@ public:
     FunDecList(){m_head=0;}
     FunDecList(FunDecNode* head){m_head=head;}
     FunDecNode* GetHead(){return m_head;}
+    FunDecList* Clone(){
+        FunDecList* n = new FunDecList;
+        FunDecNode* newhead=0;
+        FunDecNode* q=0;
+        FunDecNode* p;
+        FunDecNode* t;
+        p = m_head;
+        while(p)
+        {
+            t = new FunDecNode;
+            t->m_fundec=p->m_fundec?p->m_fundec->Clone():0;
+            if(newhead==0)
+                newhead=t;
+            if(q==0)
+                q=t;
+            else{
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+    }
     ~FunDecList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -691,6 +880,11 @@ public:
         m_fundeclist = funs;
     }
     FunDecList* GetList(){return m_fundeclist;}
+    FunctionDec* Clone(){
+        FunctionDec* n = new FunctionDec;
+        n->m_fundeclist = m_fundeclist?m_fundeclist->Clone():0;
+        return n;
+    }
     ~FunctionDec(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -717,6 +911,13 @@ public:
     Symbol* GetSymbol(){return m_var;}
     Symbol* GetType(){return m_type;}
     Exp*    GetExp(){return m_init;}
+    VarDec* Clone(){
+        VarDec* n = new VarDec;
+        n->m_var = m_var?m_var->Clone():0;
+        n->m_type = m_type?m_type->Clone():0;
+        n->m_init = m_init?m_init->Clone():0;
+        return n;
+    }
     ~VarDec(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -739,6 +940,7 @@ public:
     TypeDec():Dec(kDec_Type){m_nametylist = 0;}
     TypeDec(NameTyPairList* nametylist):Dec(kDec_Type){m_nametylist = nametylist;}
     NameTyPairList* GetList(){return m_nametylist;}
+    TypeDec* Clone();
     ~TypeDec();
 private:
     NameTyPairList* m_nametylist;
@@ -756,6 +958,11 @@ public:
     Ty(){m_kind = kTy_Invalid;}
     Ty(s32 kind){m_kind = kind;}
     virtual s32 Kind(){return m_kind;}
+    virtual Ty* Clone(){
+        Ty* n = new Ty;
+        n->m_kind = m_kind;
+        return n;
+    }
     virtual ~Ty(){}
 private:
     s32 m_kind;
@@ -768,6 +975,11 @@ public:
     }
     NameTy(Symbol* sym):Ty(kTy_Name){
         m_sym = sym;
+    }
+    NameTy* Clone(){
+        NameTy* n = new NameTy;
+        n->m_sym = m_sym?m_sym->Clone():0;
+        return n;
     }
     Symbol* Name(){return m_sym;}
     ~NameTy(){
@@ -790,6 +1002,7 @@ public:
     RecordTy(FieldList* list):Ty(kTy_Record){
         m_list = list;
     }
+    RecordTy* Clone();
     FieldList* GetList(){return m_list;}
     ~RecordTy();
 private:
@@ -805,6 +1018,11 @@ public:
         m_name = name;
     }
     Symbol* Name(){return m_name;}
+    ArrayTy* Clone(){
+        ArrayTy* n = new ArrayTy;
+        n->m_name = m_name?m_name->Clone():0;
+        return n;
+    }
     ~ArrayTy(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -822,6 +1040,12 @@ public:
     Symbol* Name(){return m_name;}
     Ty*     Type(){return m_ty;}
     NameTyPair(Symbol* name,Ty* a_ty){m_name = name; m_ty = a_ty;}
+    NameTyPair* Clone(){
+        NameTyPair* n = new NameTyPair;
+        n->m_name = m_name?m_name->Clone():0;
+        n->m_ty = m_ty?m_ty->Clone():0;
+        return n;
+    }
     ~NameTyPair(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -856,6 +1080,30 @@ public:
     NameTyPairList(){m_head=0;}
     NameTyPairNode* GetHead(){return m_head;}
     NameTyPairList(NameTyPairNode* head){m_head=head;}
+    NameTyPairList* Clone(){
+        NameTyPairList* n = new NameTyPairList;
+        NameTyPairNode* newhead=0;
+        NameTyPairNode* q=0;
+        NameTyPairNode* p;
+        NameTyPairNode* t;
+        p = m_head;
+        while(p){
+            t = new NameTyPairNode;
+            t->m_nametypair = p->m_nametypair?p->m_nametypair->Clone():0;
+            if(newhead==0)
+                newhead=t;
+            if(q==0)
+                q=t;
+            else{
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+    }
     ~NameTyPairList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -883,6 +1131,12 @@ public:
     }
     Symbol* Name(){return m_name;}
     Symbol* Type(){return m_type;}
+    Field* Clone(){
+        Field* n = new Field;
+        n->m_name = m_name?m_name->Clone():0;
+        n->m_type = m_type?m_type->Clone():0;
+        return n;
+    }
     ~Field(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -921,6 +1175,30 @@ public:
         m_head = head;
     }
     FieldNode* GetHead(){return m_head;}
+    FieldList* Clone(){
+        FieldList* n = new FieldList;
+        FieldNode* newhead=0;
+        FieldNode* q=0;
+        FieldNode* p;
+        FieldNode* t;
+        p = m_head;
+        while(p){
+            t = new FieldNode;
+            t->m_field = p->m_field?p->m_field->Clone():0;
+            if(newhead==0)
+                newhead=t;
+            if(q==0)
+                q=t;
+            else{
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+    }
     ~FieldList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -948,6 +1226,12 @@ public:
     }
     Symbol* Name(){return m_name;}
     Exp* GetExp(){return m_exp;}
+    EField* Clone(){
+        EField* n = new EField;
+        n->m_name = m_name?m_name->Clone():0;
+        n->m_exp = m_exp?m_exp->Clone():0;
+        return n;
+    }
     ~EField(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
@@ -985,6 +1269,31 @@ public:
         m_head = head;
     }
     EFieldNode* GetHead(){return m_head;}
+    EFieldList* Clone(){
+        EFieldList* n = new EFieldList;
+        EFieldNode* newhead=0;
+        EFieldNode* p;
+        EFieldNode* t;
+        EFieldNode* q=0;
+        p = m_head;
+        while(p){
+            t = new EFieldNode;
+            t->m_efield = p->m_efield?p->m_efield->Clone():0;
+            if(newhead==0)
+                newhead=t;
+            if(q==0)
+                q = t;
+            else{
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        return n;
+        
+    }
     ~EFieldList(){
         LoggerStdio logger;
         logger.SetLevel(LoggerBase::kLogger_Level_Error);
