@@ -250,6 +250,33 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
+                
+                // access formal args
+                //f->GetLevel()->Frame()->GetAccess(0);
+                /*
+                int i=1;
+                Level* lev = f->GetLevel();
+                ExpBase* tmp=0;
+                while( lev! = level){
+                    if(tmp==0){
+                        tmp = new ExpBaseMem(
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)
+                            )
+                        );
+                    }else{
+                        tmp = new ExpBaseMem(
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst(0)
+                            )
+                        );
+                    }
+                    lev=lev->Parent();
+                }
+                tmp = new ExpBaseMem(
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst(f->GetLevel()->Frame()->GetAccess(0)->Offset())
+                            )
+                        );
+                new ExpBaseMove(tmp,TreeBase::UnEx(t->Tree()))
+                */
                 explist->Insert( TreeBase::UnEx(t->Tree()), ExpBaseList::kExpBaseList_Rear);
                 delete t;
                 head = head->next;
@@ -894,6 +921,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                 if(head->m_field->Name()->GetEscape()==1){
                     af = dynamic_cast<AccessFrame*>( alevel->Frame()->AllocLocal(1/*true*/) );
                     access = new VarAccess(level,af);
+                    // new ExpBaseName()
                 }else{
                     ar = dynamic_cast<AccessReg*>( alevel->Frame()->AllocLocal(0/*false*/) );
                     access = new VarAccess(level,ar);
