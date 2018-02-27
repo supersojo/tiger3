@@ -272,6 +272,7 @@ public:
     VarExp* Clone(){
         VarExp* n = new VarExp;
         n->m_var = m_var?m_var->Clone():0;
+        return n;
     }
 private:
     Var* m_var;

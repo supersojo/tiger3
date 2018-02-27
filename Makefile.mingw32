@@ -1,0 +1,28 @@
+TARGET = main
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
+DEPS = $(SRCS:.c=.d)
+
+.PHONY: all deps clean
+
+all: deps $(TARGET)
+
+$(TARGET): $(DEPS) $(OBJS) $(SRCS)
+	@x86_64-w64-mingw32-g++ $(OBJS) -static -o $@
+	@echo linking $(TARGET) 
+
+deps: $(DEPS)
+
+%.d: %.c
+	@x86_64-w64-mingw32-g++ -MM $< > $@
+
+%.o: %.c
+	@x86_64-w64-mingw32-g++ -c -g -Wno-write-strings $< -o $@
+	@echo compiling $<
+
+-include $(DEPS)
+
+clean:
+	rm -f main
+	rm -f *.d
+	rm -f *.o
