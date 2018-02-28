@@ -777,7 +777,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             delete size_ty;
             delete init_ty;
             
-            return new ExpBaseTy(p->Type(),0);
+            return new ExpBaseTy(p->Type(),new TreeBaseEx(new ExpBaseConst(0)));
             break;
         }
         // to be continue
