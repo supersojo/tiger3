@@ -177,7 +177,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             }
             TIGER_ASSERT(p!=0,"array index should be int");
             
-            ret = new ExpBaseTy(dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),0); 
+            ret = new ExpBaseTy(dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),new TreeBaseEx(new ExpBaseConst(0))); 
             
             delete p;
             delete t;
