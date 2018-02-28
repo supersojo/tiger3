@@ -13,7 +13,7 @@ public:
         m_list = list;
         m_label = label;
     }
-    StatementBaseList GetStatementList(){return m_list;}
+    StatementBaseList* GetStatementList(){return m_list;}
     Label* GetLabel(){return m_label;}
     ~CanonBlock(){
         delete m_list;

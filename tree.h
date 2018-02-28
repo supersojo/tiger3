@@ -25,6 +25,11 @@ public:
     StatementBase(s32 kind){m_kind=kind;}
     virtual ~StatementBase(){}
     virtual s32 Kind(){return m_kind;}
+    virtual StatementBase* Clone(){
+        StatementBase* n = new StatementBase;
+        n->m_kind = m_kind;
+        return n;
+    }
 private:
     s32 m_kind;
 };
@@ -50,6 +55,30 @@ public:
     };
     StatementBaseList(){m_head = 0;m_size=0;}
     StatementBaseList(StatementBaseNode* head){m_head = head;}
+    StatementBaseList* Clone(){
+        StatementBaseList* n = new StatementBaseList;
+        StatementBaseNode* p = m_head;
+        StatementBaseNode* q = 0;
+        StatementBaseNode* newhead=0;
+        while(p){
+            StatementBaseNode* t = new StatementBaseNode;
+            t->m_statement = p->m_statement?p->m_statement->Clone():0;
+            if(newhead==0)
+                newhead = t;
+            if(q==0)
+                q = t;
+            else
+            {
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        n->m_size = m_size;
+        return n;
+    }
     void Insert(StatementBase* statement,s32 dir){
         StatementBaseNode* n;
         StatementBaseNode* p;
@@ -100,6 +129,13 @@ public:
     StatementSeq(StatementBase* left,StatementBase* right):StatementBase(kStatement_Seq){m_left=left;m_right=right;}
     StatementBase* Left(){return m_left;}
     StatementBase* Right(){return m_right;}
+    virtual StatementSeq* Clone(){
+        StatementSeq* n = new StatementSeq;
+        n->m_left = m_left?m_left->Clone():0;
+        n->m_right = m_right?m_right->Clone():0;
+        return n;
+    }
+
     ~StatementSeq(){
         delete m_left;
         delete m_right;
@@ -110,11 +146,15 @@ private:
 };
 class StatementLabel:public StatementBase{
 public:
-    StatementLabel():StatementBase(kStatement_Label){}
+    StatementLabel():StatementBase(kStatement_Label){m_label=0;}
     StatementLabel(Label* l):StatementBase(kStatement_Label){m_label = l;}
     Label* GetLabel(){return m_label;}
+    virtual StatementLabel* Clone(){
+        StatementLabel* n = new StatementLabel;
+        n->m_label = m_label;
+        return n;
+    }
     ~StatementLabel(){
-       
     }
 private:
     Label* m_label;/* managed by TempLabel */
@@ -141,6 +181,30 @@ public:
     LabelList(){m_head=0;m_size=0;}
     LabelList(ALabelNode* head){m_head = head;}
     Label* GetHeadLabel(){return m_head->m_label;}
+    LabelList* Clone(){
+        LabelList* n = new LabelList;
+        ALabelNode* p = m_head;
+        ALabelNode* q = 0;
+        ALabelNode* newhead=0;
+        while(p){
+            ALabelNode* t = new ALabelNode;
+            t->m_label = p->m_label;
+            if(newhead==0)
+                newhead = t;
+            if(q==0)
+                q = t;
+            else
+            {
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        n->m_size = m_size;
+        return n;
+    }
     void Insert(Label* l,s32 dir){
         ALabelNode* n;
         ALabelNode* p;
@@ -191,13 +255,15 @@ private:
 };
 class StatementJump:public StatementBase{
 public:
-    StatementJump():StatementBase(kStatement_Jump){}
+    StatementJump():StatementBase(kStatement_Jump){ }
     StatementJump(ExpBase* exp,LabelList* list):StatementBase(kStatement_Jump){
         m_exp = exp;
         m_list = list;
     }
     ExpBase* GetExp(){return m_exp;}
     LabelList* GetList(){return m_list;}
+    virtual StatementJump* Clone();
+
     ~StatementJump();
 private:
     ExpBase* m_exp;
@@ -286,6 +352,7 @@ public:
     Label** GetAFalseLabel(){return &m_false;}
     Label* GetTrueLabel(){return m_true;}
     Label* GetFalseLabel(){return m_false;}
+    virtual StatementCjump* Clone();
     ~StatementCjump();
 private:
     s32 m_op;
@@ -305,6 +372,7 @@ public:
     }
     ExpBase* Left(){return m_left;}
     ExpBase* Right(){return m_right;}
+    virtual StatementMove* Clone();
     ~StatementMove();
 private:
     ExpBase* m_left;
@@ -317,6 +385,7 @@ public:
         m_exp = exp;
     }
     ExpBase* GetExp(){return m_exp;}
+    virtual StatementExp* Clone();
     ~StatementExp();
 private:
     ExpBase* m_exp;
@@ -336,6 +405,11 @@ public:
     ExpBase(){m_kind=kExpBase_Invalid;}
     ExpBase(s32 kind){m_kind=kind;}
     s32 Kind(){return m_kind;}
+    virtual ExpBase* Clone(){
+        ExpBase* n = new ExpBase;
+        n->m_kind = m_kind;
+        return n;
+    }
     virtual ~ExpBase();
 private:
     s32 m_kind;
@@ -394,6 +468,30 @@ public:
         m_size++;
     }
     s32 Size(){return m_size;}
+    ExpBaseList* Clone(){
+        ExpBaseList* n = new ExpBaseList;
+        ExpBaseNode* p = m_head;
+        ExpBaseNode* q = 0;
+        ExpBaseNode* newhead=0;
+        while(p){
+            ExpBaseNode* t = new ExpBaseNode;
+            t->m_exp = p->m_exp?p->m_exp->Clone():0;
+            if(newhead==0)
+                newhead = t;
+            if(q==0)
+                q = t;
+            else
+            {
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
+            p = p->next;
+        }
+        n->m_head = newhead;
+        n->m_size = m_size;
+        return n;
+    }
     ~ExpBaseList(){
         ExpBaseNode* p;
         p = m_head;
@@ -417,6 +515,13 @@ public:
     }
     ExpBase* Left(){return m_left;}
     ExpBase* Right(){return m_right;}
+    virtual ExpBaseBinop* Clone(){
+        ExpBaseBinop* n = new ExpBaseBinop;
+        n->m_op = m_op;
+        n->m_left = m_left?m_left->Clone():0;
+        n->m_right = m_right?m_right->Clone():0;
+        return n;
+    }
     ~ExpBaseBinop(){
         delete m_left;
         delete m_right;
@@ -433,6 +538,11 @@ public:
         m_exp = exp;
     }
     ExpBase* GetExp(){return m_exp;}
+    virtual ExpBaseMem* Clone(){
+        ExpBaseMem* n = new ExpBaseMem;
+        n->m_exp = m_exp?m_exp->Clone():0;
+        return n;
+    }
     ~ExpBaseMem(){
         delete m_exp;
     }
@@ -446,6 +556,11 @@ public:
         m_temp = t;
     }
     Temp* GetTemp(){return m_temp;}
+    virtual ExpBaseTemp* Clone(){
+        ExpBaseTemp* n = new ExpBaseTemp;
+        n->m_temp = m_temp;
+        return n;
+    }
     ~ExpBaseTemp(){
     }
 private:
@@ -460,6 +575,12 @@ public:
     }
     StatementBase* GetStatement(){return m_statement;}
     ExpBase* GetExp(){return m_exp;}
+    virtual ExpBaseEseq* Clone(){
+        ExpBaseEseq* n = new ExpBaseEseq;
+        n->m_statement = m_statement?m_statement->Clone():0;
+        n->m_exp = m_exp?m_exp->Clone():0;
+        return n;
+    }
     ~ExpBaseEseq(){
         delete m_statement;
         delete m_exp;
@@ -475,6 +596,11 @@ public:
     ExpBaseName(Label* l):ExpBase(kExpBase_Name){
         m_label = l;
     }
+    virtual ExpBaseName* Clone(){
+        ExpBaseName* n = new ExpBaseName;
+        n->m_label = m_label;
+        return n;
+    }
     ~ExpBaseName(){
     }
 private:
@@ -486,6 +612,11 @@ public:
     ExpBaseConst(s32 val):ExpBase(kExpBase_Const){
         m_val = val;
     }
+    virtual ExpBaseConst* Clone(){
+        ExpBaseConst* n = new ExpBaseConst;
+        n->m_val = m_val;
+        return n;
+    }
     s32 GetValue(){return m_val;}
 private:
     s32 m_val;
@@ -496,6 +627,14 @@ public:
     ExpBaseCall(ExpBase* exp,ExpBaseList* list):ExpBase(kExpBase_Call){
         m_exp = exp;
         m_explist = list;
+    }
+    ExpBase* GetExp(){return m_exp;}
+    ExpBaseList* GetList(){return m_explist;}
+    virtual ExpBaseCall* Clone(){
+        ExpBaseCall* n = new ExpBaseCall;
+        n->m_exp = m_exp?m_exp->Clone():0;
+        n->m_explist = m_explist?m_explist->Clone():0;
+        return n;
     }
     ~ExpBaseCall(){
         delete m_exp;

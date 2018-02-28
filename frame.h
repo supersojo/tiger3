@@ -264,6 +264,7 @@ public:
         m_formals=0;
         m_escapes=0;
         m_offset=0;
+        m_size = 0;
     }
     FrameBase(s32 kind){
         m_kind = kind;
@@ -271,6 +272,7 @@ public:
         m_escapes=new BoolList;
         m_locals=new AccessList;
         m_offset=0;
+        m_size = 0;
     }
     AccessBase* GetAccess(s32 index){
         return m_locals->Get(index);
@@ -292,6 +294,7 @@ public:
         if(escape){
             ret = new AccessFrame(m_offset);
             m_offset = m_offset - 4;
+            m_size += 4;
         }else
             ret = new AccessReg(TempLabel::NewTemp());
         /* record the allocation */
@@ -299,9 +302,11 @@ public:
         m_locals->Insert(ret,AccessList::kAccessList_Rear);
         return ret;/* MARK */
     }
+    s32 Size(){return m_size;}
 public:
     s32 m_kind;
     s32 m_offset;/* current frame offset */
+    s32 m_size;
     AccessList* m_formals;
     BoolList*   m_escapes;
 

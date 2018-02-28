@@ -125,7 +125,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
                 );
             }
             if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Reg){
-                TIGER_ASSERT(t->Access()->GetLevel()==level,"level must match!!");
+                //TIGER_ASSERT(t->Access()->GetLevel()==level,"level must match!!");
                 ar = dynamic_cast<AccessReg*>(t->Access()->GetAccess());
                 ex = new TreeBaseEx( new ExpBaseTemp( ar->GetTemp() ) );
                 
@@ -239,54 +239,68 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             /* function foo() */
             if(f->GetList()->GetHead()==0){
                 TIGER_ASSERT(dynamic_cast<CallExp*>(exp)->GetList()->GetHead()==0,"function actuals should be empty");
-                return new ExpBaseTy(f->Type(),0);
+                /*
+                TreeBase* tree;
+                tree = new TreeBaseEx(
+                    new ExpBaseEseq(
+                        new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) ),
+                        new ExpBaseCall( new ExpBaseName(f->GetLabel()), 0 )) );
+                */
+                TreeBase* tree;
+                tree = new TreeBaseEx(
+                    new ExpBaseEseq(
+                        new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) ),
+                        new ExpBaseCall( new ExpBaseName(f->GetLabel()), 0 )) );
+                return new ExpBaseTy(f->Type(),tree);
             }
             p = f->GetList()->GetHead();
             TIGER_ASSERT(p!=0,"%s formals is null",dynamic_cast<CallExp*>(exp)->Name());
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
             TIGER_ASSERT(head!=0,"actuals is null");
+            StatementBase* st=0;
+            AccessList* al=0;
+            s32 j=1;//0 for static link
+            al = f->GetLevel()->Frame()->GetFormals();
+            //static link
+            st = new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) );
             while(head){
                 t = TransExp(venv,tenv,level,head->m_exp,done_label);
                 if(p->m_field->Type()!=t->Type()){
                     TIGER_ASSERT(0,"type mismatch");
                 }
                 
-                // access formal args
-                //f->GetLevel()->Frame()->GetAccess(0);
-                /*
-                int i=1;
-                Level* lev = f->GetLevel();
-                ExpBase* tmp=0;
-                while( lev! = level){
-                    if(tmp==0){
-                        tmp = new ExpBaseMem(
-                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)
-                            )
-                        );
-                    }else{
-                        tmp = new ExpBaseMem(
-                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst(0)
-                            )
-                        );
-                    }
-                    lev=lev->Parent();
+                // formal args
+                if(al->Get(j)->Kind()==AccessBase::kAccess_Frame){
+                    //dynamic_cast<AccessFrame*>(al->Get(j))->Offset()
+                    st = new StatementSeq(st,
+                         new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(j))->Offset())) ), TreeBase::UnEx(t->Tree()) )
+                    );
+                }else{
+                    //dynamic_cast<AccessReg*>(al->Get(j))->GetTemp()
+                    st = new StatementSeq(st,
+                         new StatementMove( new ExpBaseTemp( dynamic_cast<AccessReg*>(al->Get(j))->GetTemp() ), TreeBase::UnEx(t->Tree()) )
+                    );
                 }
-                tmp = new ExpBaseMem(
-                            new ExpBaseBinop( BinaryOp::kBinaryOp_Add, tmp, new ExpBaseConst(f->GetLevel()->Frame()->GetAccess(0)->Offset())
-                            )
-                        );
-                new ExpBaseMove(tmp,TreeBase::UnEx(t->Tree()))
-                */
-                explist->Insert( TreeBase::UnEx(t->Tree()), ExpBaseList::kExpBaseList_Rear);
+                
+                
+                 
+                
+                explist->Insert( TreeBase::UnEx(t->Tree())->Clone(), ExpBaseList::kExpBaseList_Rear);
                 delete t;
                 head = head->next;
                 p = p->next;
+                j++;
             }
             /*
             static list 
             f->GetLevel()->Frame()
             */
-            return new ExpBaseTy(f->Type(),0);// new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist) )
+            TreeBase* tree;
+            tree = new TreeBaseEx(
+                    new ExpBaseEseq(
+                        st,
+                        new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist )) );
+            return new ExpBaseTy(f->Type(),tree);// new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist) )
             break;
         }
         case Exp::kExp_Op:
@@ -861,6 +875,12 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
 
 void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label)
 {
+    /*
+    stack frame:
+    - static link
+    - formal args
+    - local args
+    */
     FunDecNode* fundec_head;
     FieldNode* head;
     
@@ -914,21 +934,24 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         
         venv->BeginScope(ScopeMaker::kScope_Fun);
         if(fundec_head->m_fundec->GetList()!=0){
+            s32 i=1;//0 for static link
             while(head){
                 VarAccess* access = 0;
                 AccessFrame* af=0;
                 AccessReg*   ar=0;
                 if(head->m_field->Name()->GetEscape()==1){
-                    af = dynamic_cast<AccessFrame*>( alevel->Frame()->AllocLocal(1/*true*/) );
+                    af = dynamic_cast<AccessFrame*>( alevel->Frame()->GetFormals()->Get(i) );
                     access = new VarAccess(level,af);
                     // new ExpBaseName()
                 }else{
-                    ar = dynamic_cast<AccessReg*>( alevel->Frame()->AllocLocal(0/*false*/) );
+                    ar = dynamic_cast<AccessReg*>( alevel->Frame()->GetFormals()->Get(i) );
+                    m_logger.D("----------------formal arg :%s",ar->GetTemp()->Name());
                     access = new VarAccess(level,ar);
                 }
                 
                 venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access ) );
                 head = head->next;
+                i++;
             }
         }
         
@@ -943,6 +966,8 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                 TIGER_ASSERT(a->Type() == dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), "return type mismatch");
             }
         }
+        
+        // stack frame alevel->Frame()->Size()
         
         m_frag_list->Insert( dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLabel(),
                              new Frag( TreeBase::UnNx(a->Tree()), alevel->Frame() ) );
@@ -1006,7 +1031,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
             VarAccess* access;
             
             tree = t->Tree();
-            
+            m_logger.D("~~~~~~~~~~~~~ type size: %d",t->Type()->Size());
             if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
                 af = dynamic_cast<AccessFrame*>( level->Frame()->AllocLocal(1) );
                 access = new VarAccess(level,af);
@@ -1376,6 +1401,7 @@ void Translator::TraverseEx(ExpBase* exp){
             m_logger.D("CONST(%d)",dynamic_cast<ExpBaseConst*>(exp)->GetValue());
             break;
         case ExpBase::kExpBase_Call:
+            m_logger.D("CALL(%s)",dynamic_cast<ExpBaseName*>(dynamic_cast<ExpBaseCall*>(exp)->GetExp())->GetLabel()->Name());
             break;
     }
 }

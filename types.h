@@ -97,6 +97,7 @@ public:
                 return "invalid";
         }
     }
+    virtual s32 Size(){return 0;}
     virtual ~TypeBase(){}
 private:
     s32 m_kind;
@@ -105,20 +106,24 @@ private:
 class TypeInt:public TypeBase{
 public:
     TypeInt():TypeBase(kType_Int){}
+    virtual s32 Size(){return 4;/*ugly code*/}
 };
 class TypeString:public TypeBase{
 public:
     TypeString():TypeBase(kType_String){}
+    virtual s32 Size(){return 4;/*ugly code*/}
 };
 
 class TypeNil:public TypeBase{
 public:
     TypeNil():TypeBase(kType_Nil){}
+    virtual s32 Size(){return 0;/*ugly code*/}
 };
 
 class TypeVoid:public TypeBase{
 public:
     TypeVoid():TypeBase(kType_Void){}
+    virtual s32 Size(){return 0;/*ugly code*/}
 };
 
 class TypeArray:public TypeBase{
@@ -126,6 +131,7 @@ public:
     TypeArray():TypeBase(kType_Array){m_array=0;}
     TypeArray(TypeBase* array):TypeBase(kType_Array){m_array = array;}
     TypeBase* Type(){return m_array;}
+    virtual s32 Size(){return m_array->Size();/*ugly code*/}
     ~TypeArray(){
         //delete m_array;
     }
@@ -142,6 +148,7 @@ public:
     }
     Symbol* Name(){return m_name;}
     TypeBase* Type(){return m_type;}
+    virtual s32 Size(){return m_type->Size();/*ugly code*/}
     ~TypeField(){
         //delete m_name;
         //delete m_type;
@@ -189,6 +196,16 @@ public:
     TypeRecord():TypeBase(kType_Record){m_record=0;}
     TypeRecord(TypeFieldList* record):TypeBase(kType_Record){m_record = record;}
     TypeFieldList* GetList(){return m_record;}
+    virtual s32 Size(){
+        s32 i=0;
+        TypeFieldNode* p;
+        p = m_record->GetHead();
+        while(p){
+            i += p->m_field->Size();
+            p = p->next;
+        }
+        return i;
+    }
     ~TypeRecord(){delete m_record;}
 private:
     TypeFieldList* m_record;
@@ -216,6 +233,9 @@ public:
             default:
                 return "invalid";
         }
+    }
+    virtual s32 Size(){
+        return m_type->Size();
     }
     ~TypeName(){
         //delete m_name;
