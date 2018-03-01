@@ -35,7 +35,21 @@ Level*      Translator::OuterMostLevel()
     if(m_outer_most_level==0)
     {
         m_outer_most_level = new Level(0, new FrameBase(FrameBase::kFrame_X86));
+        
         m_level_manager->NewLevel(m_outer_most_level);
+        
+        AccessBase* access;
+        AccessList* al;
+        BoolList* bl;
+        
+        al = m_outer_most_level->Frame()->GetFormals();
+        bl = m_outer_most_level->Frame()->GetEscapes();
+        
+        m_logger.D("~~~~~~for dynamic size vars ~~~");
+        access = f->AllocLocal(0/*false*/);
+        access->Retain();//inc refcnt
+        al->Insert(access,AccessList::kAccessList_Rear);
+        bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
     }
     return m_outer_most_level;
 }
@@ -706,7 +720,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             if(declist){
                 p = declist->GetHead();
                 while(p){
-                    m_logger.D("TransDec var a:=1");
+                    m_logger.D("TransDec var");
                     tree = TransDec(venv,tenv,level,p->m_dec,done_label);
                     p = p->next;
                     /*
