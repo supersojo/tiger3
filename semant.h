@@ -266,6 +266,8 @@ private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    ExpBaseTy*     TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
+    ExpBaseTy*     TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
     FrameBase*     MakeNewFrame(FunDec* fundec);
     LetExp*        For2Let(ForExp* exp);
     void           ReleaseTree(TreeBase* tree){

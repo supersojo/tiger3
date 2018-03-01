@@ -776,6 +776,11 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             delete size_ty;
             delete init_ty;
+            // allocate array space
+            // 
+            // assign array's address in array var's space
+            // 
+            // zero array's elements
             
             return new ExpBaseTy(p->Type(),new TreeBaseEx(new ExpBaseConst(0)));
             break;
@@ -869,6 +874,13 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     m_logger.D("formals size:%d",al->Size());
     m_logger.D("escapes size:%d",bl->Size());
     m_logger.D("New Frame End~~~");
+    
+    // allocate a new temp store dynamical vars such as array and record
+    access = f->AllocLocal(0/*false*/);
+    access->Retain();//inc refcnt
+    al->Insert(access,AccessList::kAccessList_Rear);
+        
+    bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
     
     return f;
 }
@@ -1018,26 +1030,86 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
         head = head->next;
     }
 }
+ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label)
+{
+    AccessList* al;
+    TreeBase* tree;
+    ExpBase* exp_offset;
+    ExpBase* exp_size;
+    TIGER_ASSERT(dec->Kind()==Dec::kDec_Var,"need array decl");
+    TIGER_ASSERT(exp->Kind()==Exp::kExp_Array,"need array exp");
+    ExpBaseTy* sizeTy = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetSize(),done_label);
+    ExpBaseTy* initTy = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetInit(),done_label);
+    //refill list
+    // record all the expbase using frame->offset()
+    // once has a new local need update the 
+    //new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp(FP()), new ExpBaseConst(0/* need update when all stack space is determine*/))
+    exp_offset = new ExpBaseConst(level->Frame()->Size());//save the offset
+    level->Frame()->GetRefillList()->Insert(exp_offset,ExpBaseList::kExpBaseList_Rear);
+    al = level->Frame()->GetFormals();
+    
+    exp_size = new ExpBaseTemp(dynamic_cast<AccessReg*>(al->Get(al->Size()-1))->GetTemp());
+    
+    tree = new TreeBaseEx(
+        new ExpBaseEseq(
+            new StatementMove( exp_size->Clone(),
+                new ExpBaseBinop( BinaryOp::kBinaryOp_Add, exp_size, TreeBase::UnEx(sizeTy->Tree()) )
+            ),
+            new ExpBaseBinop( BinaryOp::kBinaryOp_Sub,
+                new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp(FP()), exp_offset),
+                exp_size->Clone())
+        )
+    );
+    
+    EnvEntryVar* p;
+    p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
+    TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
+    
+    delete sizeTy;
+    delete initTy;
+    
+    return new ExpBaseTy(p->Type(),tree);
+}
 TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label)
 {
     switch(dec->Kind())
     {
         case Dec::kDec_Var:{
             m_logger.D("type check with kDec_Var");
-            ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            ExpBaseTy* t;
+            //if array exp
+            if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Array){
+                t = TransArrayExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            }else{
+                t = TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            }
+            // ExpBaseTy* t=TransArrayExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            //if record exp
+            // ExpBaseTy* t=TransRecordExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            //ExpBaseTy* t=TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             TreeBase* tree;
             AccessFrame* af;
             AccessReg*   ar;
             VarAccess* access;
-            
-            tree = t->Tree();
+            StatementBase* result;
+
             m_logger.D("~~~~~~~~~~~~~ type size: %d",t->Type()->Size());
+            //if(t->Type()->Kind()==TypeBase::kType_Array){
+                //ExpBaseBinop(Binop::SUB,)
+                //mul t1,w,
+            //}
             if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
                 af = dynamic_cast<AccessFrame*>( level->Frame()->AllocLocal(1) );
                 access = new VarAccess(level,af);
+                // array address 
+                result = new StatementMove( new ExpBaseMem( new ExpBaseBinop( BinaryOp::kBinaryOp_Add,
+                                                       new ExpBaseTemp(FP()), 
+                                                       new ExpBaseConst(af->Offset()) ) ), TreeBase::UnEx(t->Tree()) );
             }else{
                 ar = dynamic_cast<AccessReg*>( level->Frame()->AllocLocal(0) );
                 access = new VarAccess(level,ar);
+                // array address 
+                result = new StatementMove( new ExpBaseTemp(ar->GetTemp()), TreeBase::UnEx(t->Tree()) );
             }
             if(dynamic_cast<VarDec*>(dec)->GetType()){
                 EnvEntryBase* p;
@@ -1054,28 +1126,9 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
                 venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access));
             }
             
-            
-            
             /* tree */
-            if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
-                tree = new TreeBaseNx( new StatementMove( 
-                                          new ExpBaseMem( 
-                                             new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst( af->Offset() ) 
-                                             ) 
-                                          ),
-                                          TreeBase::UnEx( tree )                                          
-                                       )
-                                     );
-            }
-            else
-            {
-                tree = new TreeBaseNx( new StatementMove ( 
-                                          new ExpBaseTemp( ar->GetTemp() 
-                                          ),
-                                          TreeBase::UnEx( tree )                                          
-                                       )
-                                     );
-            }
+            tree = new TreeBaseNx( result );
+            
             delete t;
             return tree;
         }
@@ -1087,7 +1140,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
         case Dec::kDec_Type:{
             m_logger.D("type check with kDec_Type");
             TransTypeDec(venv,tenv,level,dec);
-
+            return new TreeBaseEx( new ExpBaseConst(0) );
             break;
         }
         default:

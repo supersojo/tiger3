@@ -419,15 +419,18 @@ struct ExpBaseNode{
     ExpBaseNode(){
         m_exp = 0;
         prev = next = 0;
+        m_type = 0;
     }
     ~ExpBaseNode(){
-        delete m_exp;
+        if(m_type==0)
+            delete m_exp;
     }
     
     /* members */
     ExpBase* m_exp;
     ExpBaseNode* prev;
     ExpBaseNode* next;
+    s32 m_type;//delete m_exp flag
 };
 class ExpBaseList{
 public:
@@ -436,7 +439,9 @@ public:
         kExpBaseList_Front,
         kExpBaseList_Invalid
     };
-    ExpBaseList(){m_head = 0;m_size=0;}
+    ExpBaseList(){m_head = 0;m_size=0;m_type=0;}
+    ExpBaseList(s32 type){m_head = 0;m_size=0;m_type=type;}
+    ExpBaseNode* GetHead(){return m_head;}
     void Insert(ExpBase* exp,s32 dir){
         ExpBaseNode* n;
         ExpBaseNode* p;
@@ -497,6 +502,7 @@ public:
         p = m_head;
         while(p){
             m_head = m_head->next;
+            p->m_type = m_type;
             delete p;
             p = m_head;
         }
@@ -504,6 +510,7 @@ public:
 private:
     ExpBaseNode* m_head;
     s32 m_size;
+    s32 m_type;//used for container or manage the exp
 };
 class ExpBaseBinop:public ExpBase{
 public:
@@ -618,6 +625,7 @@ public:
         return n;
     }
     s32 GetValue(){return m_val;}
+    void SetValue(s32 v){ m_val = v;}
 private:
     s32 m_val;
 };

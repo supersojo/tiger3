@@ -3,6 +3,7 @@
 #define FRAME_H
 #include <iostream>
 #include "temp.h"
+#include "tree.h"
 
 namespace tiger{
 
@@ -270,6 +271,7 @@ public:
         m_kind = kind;
         m_formals=new AccessList;
         m_escapes=new BoolList;
+        m_refill_list = new ExpBaseList(1);//only reference to expbase ,not free them
         m_locals=new AccessList;
         m_offset=0;
         m_size = 0;
@@ -279,6 +281,7 @@ public:
     }
     virtual AccessList* GetFormals(){return m_formals;}
     virtual BoolList*   GetEscapes(){return m_escapes;}
+    ExpBaseList*  GetRefillList(){return m_refill_list;}
     virtual s32         Kind(){return m_kind;}
     
     virtual ~FrameBase(){
@@ -288,6 +291,8 @@ public:
             delete m_escapes;
         if(m_locals)
             delete m_locals;
+        if(m_refill_list)
+            delete m_refill_list;
     }
     virtual AccessBase* AllocLocal(s32 escape){
         AccessBase* ret = 0;
@@ -295,11 +300,17 @@ public:
             ret = new AccessFrame(m_offset);
             m_offset = m_offset - 4;
             m_size += 4;
+            
+            //update expbase in m_refill_list;
+            Refill();
+            
         }else
             ret = new AccessReg(TempLabel::NewTemp());
         /* record the allocation */
         ret->Retain();
         m_locals->Insert(ret,AccessList::kAccessList_Rear);
+        
+        
         return ret;/* MARK */
     }
     s32 Size(){return m_size;}
@@ -309,6 +320,16 @@ public:
     s32 m_size;
     AccessList* m_formals;
     BoolList*   m_escapes;
+    ExpBaseList* m_refill_list;
+    void Refill(){
+        ExpBaseNode* p;
+        p = m_refill_list->GetHead();
+        while(p){
+            TIGER_ASSERT(p->m_exp->Kind()==ExpBase::kExpBase_Const, "refill item should be ExpBaseConst");
+            dynamic_cast<ExpBaseConst*>(p->m_exp)->SetValue(Size());
+            p = p->next;
+        }
+    }
 
     AccessList* m_locals;// all accesses from the frame
     
