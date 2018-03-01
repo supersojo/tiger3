@@ -46,7 +46,7 @@ Level*      Translator::OuterMostLevel()
         bl = m_outer_most_level->Frame()->GetEscapes();
         
         m_logger.D("~~~~~~for dynamic size vars ~~~");
-        access = f->AllocLocal(0/*false*/);
+        access = m_outer_most_level->Frame()->AllocLocal(0/*false*/);
         access->Retain();//inc refcnt
         al->Insert(access,AccessList::kAccessList_Rear);
         bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
@@ -1080,6 +1080,22 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
     
     delete sizeTy;
+    
+
+    if(initTy->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
+    {
+        delete dynamic_cast<tiger::TreeBaseEx*>(initTy->Tree())->GetExp();
+    }
+    
+    if(initTy->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
+    {
+        delete dynamic_cast<tiger::TreeBaseNx*>(initTy->Tree())->GetStatement();
+    }
+    if(initTy->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
+    {
+        delete dynamic_cast<tiger::TreeBaseCx*>(initTy->Tree())->GetStatement();
+    }
+    
     delete initTy;
     
     return new ExpBaseTy(p->Type(),tree);
