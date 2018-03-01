@@ -177,6 +177,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             ExpBaseTy* p;
             ExpBaseTy* t;
             ExpBaseTy* ret;
+            TreeBase* tree;
             p = TransVar(venv,tenv,level,dynamic_cast<SubscriptVar*>(var)->GetVar(),done_label);
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
@@ -191,38 +192,16 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             }
             TIGER_ASSERT(p!=0,"array index should be int");
             
-            ret = new ExpBaseTy(dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),new TreeBaseEx(new ExpBaseConst(0))); 
             
-            //delete tree 
-            if(p->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
-            {
-                delete dynamic_cast<tiger::TreeBaseEx*>(p->Tree())->GetExp();
-            }
+            tree = new TreeBaseEx(
+                       new ExpBaseMem( new ExpBaseBinop( BinaryOp::kBinaryOp_Add, TreeBase::UnEx(p->Tree()), TreeBase::UnEx(t->Tree()) ) )
+                   );
             
-            if(p->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
-            {
-                delete dynamic_cast<tiger::TreeBaseNx*>(p->Tree())->GetStatement();
-            }
-            if(p->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
-            {
-                delete dynamic_cast<tiger::TreeBaseCx*>(p->Tree())->GetStatement();
-            }
-            //delete tree
-            if(t->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
-            {
-                delete dynamic_cast<tiger::TreeBaseEx*>(t->Tree())->GetExp();
-            }
+            ret = new ExpBaseTy(dynamic_cast<TypeArray*>(dynamic_cast<TypeName*>(p->Type())->Type())->Type(),tree); 
             
-            if(t->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
-            {
-                delete dynamic_cast<tiger::TreeBaseNx*>(t->Tree())->GetStatement();
-            }
-            if(t->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
-            {
-                delete dynamic_cast<tiger::TreeBaseCx*>(t->Tree())->GetStatement();
-            }
             delete p;
             delete t;
+            
             return ret;
             
         }
