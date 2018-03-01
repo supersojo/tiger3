@@ -95,7 +95,7 @@ Temp* CodeGenerator::_MunchExpBaseBinop(InstrList* il, ExpBaseBinop *e){
     src->Insert(_MunchExpBase(il,e->Right()),TempList::kTempList_Rear);        
     il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
 
-    return 0;
+    return r;
 }
 Temp* CodeGenerator::_MunchExpBaseConst(InstrList* il, ExpBaseConst *e){
     Temp* r = TempLabel::NewTemp();

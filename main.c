@@ -314,7 +314,8 @@ void test_canon(){
     
     delete l;
     delete cl;
-    
+    delete il;
+    delete cg; 
     tiger::TempLabel::Exit();
 }
 int main()

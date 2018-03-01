@@ -19,7 +19,7 @@ public:
     InstrBase(s32 kind){m_kind = kind;}
     virtual void Dump(char* o){
     }
-    ~InstrBase(){
+    virtual ~InstrBase(){
     }
 private:
     s32 m_kind;
@@ -50,7 +50,7 @@ public:
             i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
         }
     }
-    ~InstrOper(){
+    virtual ~InstrOper(){
         free(m_str);
         delete m_dst;
         delete m_src;
@@ -72,7 +72,7 @@ public:
     }
     virtual void Dump(char* o){
     }
-    ~InstrLabel(){
+    virtual ~InstrLabel(){
     }
 private:
     Label* m_label;
@@ -96,7 +96,7 @@ public:
             i_offset += sprintf(i_offset+o," dst(%s)",m_dst->Get(0)->Name());
         }
         if(m_src->Size()){// only 1 support
-            //i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
+            i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
         }
     }
     ~InstrMove(){
