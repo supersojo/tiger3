@@ -320,7 +320,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 tree = new TreeBaseEx(
                     new ExpBaseEseq(
                         st,
-                        new ExpBaseCall( new ExpBaseName(f->GetLabel()), 0 )) );
+                        new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist )) );
                 return new ExpBaseTy(f->Type(),tree);
             }
             p = f->GetList()->GetHead();

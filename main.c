@@ -196,7 +196,6 @@ void test_typecheck(){
         tiger::StatementBase* s;
         s = dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
         s = canon.Statementize( s );
-        #if 0
         // linearlize
         tiger::StatementBaseList* l;
         l = canon.Linearize( s );
@@ -215,7 +214,6 @@ void test_typecheck(){
         il = cg->CodeGen(0,l);
         il->Dump(t);
         printf("%s\n",t);
-    #endif
         
         //delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }

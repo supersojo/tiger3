@@ -72,7 +72,7 @@ Temp* CodeGenerator::_MunchExpBaseMem(InstrList* il, ExpBaseMem *e){
         //mov 'd0,[i]
         Temp* r = TempLabel::NewTemp();
         char buf[1024]={0};
-        sprintf(buf,"mov 'd0,'[s0]",dynamic_cast<ExpBaseConst*>(e->GetExp())->GetValue());
+        sprintf(buf,"mov 'd0,'[s0]");
         TempList* dst = new TempList;
         TempList* src = new TempList;
         dst->Insert(r,TempList::kTempList_Rear); 
