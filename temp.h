@@ -17,6 +17,15 @@ LabelPool::NewNamedLabel(""); ->Label
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ * temp/label utils
+ *
+ * Before use it, call TempLabel::Init() first.
+ *
+ * TempLabel::NewLabel()
+ *
+ * After used, call TempLabel::Exit(). 
+*/
 namespace tiger{
     
 class Temp{

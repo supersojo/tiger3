@@ -42,7 +42,7 @@ public:
         //delete m_exp;
     }
 private:
-    ExpBase* m_exp;/* ??? */
+    ExpBase* m_exp;/* managed by tree */
 };
 class TreeBaseNx:public TreeBase{
 public:
@@ -53,7 +53,7 @@ public:
         //delete m_statement;
     }
 private:
-    StatementBase* m_statement;/* ??? */
+    StatementBase* m_statement;/* managed by tree */
 };
 struct PatchNode{
     PatchNode(){
@@ -65,6 +65,7 @@ struct PatchNode{
     PatchNode* prev;
     PatchNode* next;
 };
+// label patch utils
 class PatchList{
 public:
     enum{
@@ -102,6 +103,8 @@ public:
         }
         m_size++;
     }
+    // do real patch work
+    // use label l to patch label node
     void DoPatch(Label* l){
         PatchNode* p;
         p = m_head;
@@ -110,6 +113,7 @@ public:
             p = p->next;
         }
     }
+    // patch labels count
     s32 Size(){return m_size;}
     ~PatchList(){
         PatchNode* p;
@@ -141,11 +145,14 @@ public:
         delete m_falses;
     }
 private:
-    StatementBase* m_statement;/* ??? */
+    StatementBase* m_statement;/* managed by tree */
     PatchList* m_trues;
     PatchList* m_falses;
 };
-/* function defination */
+/* 
+ * function defination 
+ * store function tree representation
+*/
 class Frag{
 public:
     Frag(){m_statement = 0;m_frame=0;}
@@ -191,7 +198,7 @@ public:
         delete m_tree;
     }
 private:
-    TypeBase* m_type;
+    TypeBase* m_type;// managed by type table, not here
     TreeBase*  m_tree;// ???
 };
 struct LitStringNode{
@@ -210,7 +217,10 @@ struct LitStringNode{
     LitStringNode* next;
     
 };
-/* hash table for label/string mapping */
+/* hash table for label/string mapping 
+ * 
+ * string vars allocated by c functions not tiger itself
+*/
 class LitStringList{
 public:
     enum{
@@ -241,35 +251,60 @@ private:
     LoggerStdio m_logger; 
 };
 class FragList;
+// translator absyn to tree
 class Translator{
 public:
     Translator();
+    
+    // exp translate
     ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp,Label* done_label);
+    
+    // var access translate
     ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label);
+    
+    // dec translate
     TreeBase*   TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
+    
+    // type translate
     TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
+    
     Level*      OuterMostLevel();
+    
+    // frame pointer
     Temp* FP(){
         if(m_fp==0)
             m_fp = TempLabel::NewTemp();
         return m_fp;
     }
+    
+    // traverse the tree
     void Traverse(TreeBase* tree);
+    
     ~Translator();
     
+    //traverse utils
     void TraverseEx(ExpBase* exp);
     void TraverseNx(StatementBase* statement);
     void TraverseCx(StatementBase* statement);
+    
+    // traverse function flag utils
     void TraverseFragList();
     
 private:
     void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
     TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
     void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
+    
+    // array or record 
     ExpBaseTy*     TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
     ExpBaseTy*     TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
+    
     FrameBase*     MakeNewFrame(FunDec* fundec);
+    
+    // for exp to let exp
     LetExp*        For2Let(ForExp* exp);
+    
+    
     void           ReleaseTree(TreeBase* tree){
         switch(tree->Kind()){
             case TreeBase::kTreeBase_Ex:
@@ -284,12 +319,12 @@ private:
         }
     }
     
-    LevelManager* m_level_manager;
-    LoggerStdio m_logger; 
+    LevelManager* m_level_manager; //level management
+    LoggerStdio m_logger; // log util
     Level* m_outer_most_level;
     
-    LitStringList* m_lit_string_list;
-    FragList* m_frag_list;
+    LitStringList* m_lit_string_list;// manage all literal strings
+    FragList* m_frag_list;// manage all function frags
     // frame pointer
     Temp* m_fp;
 };

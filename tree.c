@@ -17,7 +17,7 @@ void StatementJump::Dump(char *o){
         m_exp->Dump(e);
     if(m_list)
         m_list->Dump(l);
-    sprintf(o,"JUMP %s,%s",e,l);
+    sprintf(o,"JUMP(%s,%s)",e,l);
 }
 StatementCjump::~StatementCjump(){
         delete m_left;
@@ -34,7 +34,7 @@ void StatementMove::Dump(char *o){
         m_left->Dump(l);
     if(m_right)
         m_right->Dump(r);
-    sprintf(o,"MOV %s,%s",l,r);
+    sprintf(o,"MOV(%s,%s)",l,r);
 }
 StatementExp::~StatementExp(){
         delete m_exp;

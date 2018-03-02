@@ -3,9 +3,15 @@
 #define TREE_H
 
 #include "tiger_type.h"
-#include "temp.h"
-#include "absyn.h"
+#include "temp.h"  // label or temp used
+#include "absyn.h" // Oper used for convert to tree's representation 
 
+/*
+ * Intermedia Tree for tiger language
+ *
+ * We implement Clone()/Dump() on IR.
+ *
+*/
 namespace tiger{
 
 class ExpBase;
@@ -49,6 +55,10 @@ struct StatementBaseNode{
     StatementBaseNode* prev;
     StatementBaseNode* next;
 };
+/*
+ * when canonical tree build ok, we get a statement list without eseq/seq.
+ * 
+*/
 class StatementBaseList{
 public:
     enum{
@@ -145,7 +155,7 @@ public:
             m_left->Dump(l);
         if(m_right)
             m_right->Dump(r);
-        sprintf(o,"%s\n%s",l,r);
+        sprintf(o,"SEQ(%s,%s)",l,r);
     }
     ~StatementSeq(){
         delete m_left;
@@ -535,7 +545,7 @@ public:
         char e[1024]={0};
         p = m_head;
         s32 i_offset=0;
-        i_offset += sprintf(o+i_offset,"%s","(");
+        i_offset += sprintf(o+i_offset,"%s","[");
         while(p){
             if(p->m_exp)
                 p->m_exp->Dump(e);
@@ -544,7 +554,7 @@ public:
             if(p)
                 i_offset += sprintf(o+i_offset,"%s",",");
         }
-        i_offset += sprintf(o+i_offset,"%s",")");
+        i_offset += sprintf(o+i_offset,"%s","]");
     }
     ~ExpBaseList(){
         ExpBaseNode* p;
@@ -587,9 +597,9 @@ public:
         if(m_right)
             m_right->Dump(r);
         if(m_op==BinaryOp::kBinaryOp_Add)
-            i_offset += sprintf(o+i_offset,"%s %s,%s","ADD",l,r);
+            i_offset += sprintf(o+i_offset,"BINOP(%s,%s,%s)","ADD",l,r);
         if(m_op==BinaryOp::kBinaryOp_Sub)
-            i_offset += sprintf(o+i_offset,"%s %s,%s","SUB",l,r);
+            i_offset += sprintf(o+i_offset,"BINOP(%s,%s,%s)","SUB",l,r);
     }
     ~ExpBaseBinop(){
         delete m_left;
@@ -668,7 +678,7 @@ public:
             m_statement->Dump(s);
         if(m_exp)
             m_exp->Dump(e);
-        sprintf(o,"ESEQ(%s    %s)",s,e);
+        sprintf(o,"ESEQ(%s,%s)",s,e);
     }
     ~ExpBaseEseq(){
         delete m_statement;
@@ -739,7 +749,7 @@ public:
             m_exp->Dump(e);
         if(m_explist)
             m_explist->Dump(l);
-        sprintf(o,"CALL %s,%s",e,l);
+        sprintf(o,"CALL(%s,%s)",e,l);
     }
     ~ExpBaseCall(){
         delete m_exp;

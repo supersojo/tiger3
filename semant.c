@@ -1076,6 +1076,11 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     level->Frame()->GetRefillList()->Insert(exp_offset,ExpBaseList::kExpBaseList_Rear);
     al = level->Frame()->GetFormals();
     
+    
+    // no need, just allocate array space in heap not stack 
+    // just return the address 
+    // call c function to allocate array or record
+    // 
     exp_size = new ExpBaseTemp(dynamic_cast<AccessReg*>(al->Get(al->Size()-1))->GetTemp());
     
     tree = new TreeBaseEx(
