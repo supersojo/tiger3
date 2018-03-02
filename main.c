@@ -172,7 +172,10 @@ void test_typecheck(){
     ty=translator.TransExp(&venv,&tenv,translator.OuterMostLevel(),exp,0);
     
     translator.Traverse( ty->Tree() );
-    
+    // dump tree
+    char s[1024]={0};
+    tiger::TreeBase::UnEx(ty->Tree())->Dump(s);
+    printf("\n%s\n",s);
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
     {
         delete dynamic_cast<tiger::TreeBaseEx*>(ty->Tree())->GetExp();

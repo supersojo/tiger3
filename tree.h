@@ -30,6 +30,9 @@ public:
         n->m_kind = m_kind;
         return n;
     }
+    virtual void Dump(char *o){
+    
+    }
 private:
     s32 m_kind;
 };
@@ -135,7 +138,15 @@ public:
         n->m_right = m_right?m_right->Clone():0;
         return n;
     }
-
+    virtual void Dump(char *o){
+        char l[1024]={0};
+        char r[1024]={0};
+        if(m_left)
+            m_left->Dump(l);
+        if(m_right)
+            m_right->Dump(r);
+        sprintf(o,"%s\n%s",l,r);
+    }
     ~StatementSeq(){
         delete m_left;
         delete m_right;
@@ -153,6 +164,10 @@ public:
         StatementLabel* n = new StatementLabel;
         n->m_label = m_label;
         return n;
+    }
+    virtual void Dump(char *o){
+        
+        sprintf(o,"LABEL(%s)",m_label->Name());
     }
     ~StatementLabel(){
     }
@@ -240,6 +255,19 @@ public:
     s32 Size(){
         return m_size;
     }
+    void Dump(char* o){
+        ALabelNode* p;
+        p = m_head;
+        s32 i_offset=0;
+        i_offset += sprintf(o+i_offset,"%s","(");
+        while(p){
+            i_offset += sprintf(o+i_offset,"%s",p->m_label->Name());
+            p = p->next;;
+            if(p)
+                i_offset += sprintf(o+i_offset,"%s",",");
+        }
+        i_offset += sprintf(o+i_offset,"%s",")");
+    }
     ~LabelList(){
         ALabelNode* p;
         p = m_head;
@@ -263,7 +291,7 @@ public:
     ExpBase* GetExp(){return m_exp;}
     LabelList* GetList(){return m_list;}
     virtual StatementJump* Clone();
-
+    virtual void Dump(char *o);
     ~StatementJump();
 private:
     ExpBase* m_exp;
@@ -353,6 +381,9 @@ public:
     Label* GetTrueLabel(){return m_true;}
     Label* GetFalseLabel(){return m_false;}
     virtual StatementCjump* Clone();
+    virtual void Dump(char *o){
+        
+    }
     ~StatementCjump();
 private:
     s32 m_op;
@@ -373,6 +404,7 @@ public:
     ExpBase* Left(){return m_left;}
     ExpBase* Right(){return m_right;}
     virtual StatementMove* Clone();
+    virtual void Dump(char *o);
     ~StatementMove();
 private:
     ExpBase* m_left;
@@ -386,6 +418,7 @@ public:
     }
     ExpBase* GetExp(){return m_exp;}
     virtual StatementExp* Clone();
+    virtual void Dump(char *o);
     ~StatementExp();
 private:
     ExpBase* m_exp;
@@ -409,6 +442,8 @@ public:
         ExpBase* n = new ExpBase;
         n->m_kind = m_kind;
         return n;
+    }
+    virtual void Dump(char* o){
     }
     virtual ~ExpBase();
 private:
@@ -497,6 +532,22 @@ public:
         n->m_size = m_size;
         return n;
     }
+    void Dump(char* o){
+        ExpBaseNode* p;
+        char e[1024]={0};
+        p = m_head;
+        s32 i_offset=0;
+        i_offset += sprintf(o+i_offset,"%s","(");
+        while(p){
+            if(p->m_exp)
+                p->m_exp->Dump(e);
+            i_offset += sprintf(o+i_offset,"%s",e);
+            p = p->next;;
+            if(p)
+                i_offset += sprintf(o+i_offset,"%s",",");
+        }
+        i_offset += sprintf(o+i_offset,"%s",")");
+    }
     ~ExpBaseList(){
         ExpBaseNode* p;
         p = m_head;
@@ -529,6 +580,19 @@ public:
         n->m_right = m_right?m_right->Clone():0;
         return n;
     }
+    virtual void Dump(char *o){
+        s32 i_offset=0;
+        char l[1024]={0};
+        char r[1024]={0};
+        if(m_left)
+            m_left->Dump(l);
+        if(m_right)
+            m_right->Dump(r);
+        if(m_op==BinaryOp::kBinaryOp_Add)
+            i_offset += sprintf(o+i_offset,"%s %s,%s","ADD",l,r);
+        if(m_op==BinaryOp::kBinaryOp_Sub)
+            i_offset += sprintf(o+i_offset,"%s %s,%s","SUB",l,r);
+    }
     ~ExpBaseBinop(){
         delete m_left;
         delete m_right;
@@ -550,6 +614,13 @@ public:
         n->m_exp = m_exp?m_exp->Clone():0;
         return n;
     }
+    virtual void Dump(char *o){
+        s32 i_offset=0;
+        char e[1024]={0};
+        if(m_exp)
+            m_exp->Dump(e);
+        i_offset += sprintf(o+i_offset,"MEM(%s)",e);
+    }
     ~ExpBaseMem(){
         delete m_exp;
     }
@@ -567,6 +638,9 @@ public:
         ExpBaseTemp* n = new ExpBaseTemp;
         n->m_temp = m_temp;
         return n;
+    }
+    virtual void Dump(char *o){
+        sprintf(o,"TEMP(%s)",m_temp->Name());
     }
     ~ExpBaseTemp(){
     }
@@ -588,6 +662,16 @@ public:
         n->m_exp = m_exp?m_exp->Clone():0;
         return n;
     }
+    virtual void Dump(char *o){
+        s32 i_offset=0;
+        char s[1024]={0};
+        char e[1024]={0};
+        if(m_statement)
+            m_statement->Dump(s);
+        if(m_exp)
+            m_exp->Dump(e);
+        sprintf(o,"ESEQ(%s    %s)",s,e);
+    }
     ~ExpBaseEseq(){
         delete m_statement;
         delete m_exp;
@@ -608,6 +692,9 @@ public:
         n->m_label = m_label;
         return n;
     }
+    virtual void Dump(char *o){
+        sprintf(o,"NAME(%s)",m_label->Name());
+    }
     ~ExpBaseName(){
     }
 private:
@@ -623,6 +710,9 @@ public:
         ExpBaseConst* n = new ExpBaseConst;
         n->m_val = m_val;
         return n;
+    }
+    virtual void Dump(char *o){
+        sprintf(o,"CONST(%d)",m_val);
     }
     s32 GetValue(){return m_val;}
     void SetValue(s32 v){ m_val = v;}
@@ -643,6 +733,15 @@ public:
         n->m_exp = m_exp?m_exp->Clone():0;
         n->m_explist = m_explist?m_explist->Clone():0;
         return n;
+    }
+    virtual void Dump(char *o){
+        char e[1024]={0};
+        char l[1024]={0};
+        if(m_exp)
+            m_exp->Dump(e);
+        if(m_explist)
+            m_explist->Dump(l);
+        sprintf(o,"CALL %s,%s",e,l);
     }
     ~ExpBaseCall(){
         delete m_exp;
