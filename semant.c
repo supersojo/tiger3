@@ -151,6 +151,7 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
         {
             ExpBaseTy* p;
             TypeFieldNode* head;
+            TreeBase* tree;
             p = TransVar(venv,tenv,level,dynamic_cast<FieldVar*>(var)->GetVar(),done_label);
             if(p->Type()->Kind()!=TypeBase::kType_Name){
                 m_logger.W("name type needed");
@@ -160,15 +161,21 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
                 m_logger.W("record type needed");
             }
             head = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
+            s32 i_offset=0;// field offset in Record
             while(head){
                 if(head->m_field->Name()==tenv->MakeSymbol(dynamic_cast<FieldVar*>(var)->GetSym())){
+                    tree = new TreeBaseEx(
+                               new ExpBaseBinop( BinaryOp::kBinaryOp_Add, TreeBase::UnEx(p->Tree()), new ExpBaseConst(i_offset) )
+                           );
                     /* ok */
                     delete p;
-                    return new ExpBaseTy(head->m_field->Type(),0);
+                    return new ExpBaseTy( head->m_field->Type(), tree );
                 }
+                i_offset += head->m_field->Type()->Size();
                 head = head->next;
             }
             TIGER_ASSERT(0,"%s not found in record type",dynamic_cast<FieldVar*>(var)->GetSym()->Name());
+            
             break;
 
         }
@@ -1107,6 +1114,107 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     
     return new ExpBaseTy(p->Type(),tree);
 }
+ExpBaseTy* Translator::TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label)
+{
+    TIGER_ASSERT(dec->Kind()==Dec::kDec_Var,"need record decl");
+    TIGER_ASSERT(exp->Kind()==Exp::kExp_Record,"need record exp");
+    TreeBase* tree;
+    AccessList* al;
+    ExpBase* exp_offset;
+    ExpBase* exp_offset_shadow;
+    ExpBase* exp_size;
+    EnvEntryVar* p;
+    EFieldNode* head;
+    TypeFieldNode* n;
+    
+    exp_offset = new ExpBaseConst(level->Frame()->Size());//save the offset
+    level->Frame()->GetRefillList()->Insert(exp_offset,ExpBaseList::kExpBaseList_Rear);
+    
+    al = level->Frame()->GetFormals();
+    exp_size = new ExpBaseTemp(dynamic_cast<AccessReg*>(al->Get(al->Size()-1))->GetTemp());
+    
+    p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<RecordExp*>(exp)->Name())));
+    TIGER_ASSERT(p!=0,"type %s not found",dynamic_cast<RecordExp*>(exp)->Name()->Name());
+    TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type name is needed",dynamic_cast<RecordExp*>(exp)->Name()->Name());
+    
+    TIGER_ASSERT(dynamic_cast<TypeName*>(p->Type())->Type()->Kind()==TypeBase::kType_Record,"record type needed");
+    
+    /* id{} */
+    head = dynamic_cast<RecordExp*>(exp)->GetList()->GetHead();
+    if(head==0){
+        m_logger.D("record exp is {}");
+        return new ExpBaseTy(p->Type(),new TreeBaseEx(new ExpBaseConst(0)));
+    }
+    
+    n = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
+    
+    s32 i_size=0;
+    while(n){
+        //calc record size
+        i_size += n->m_field->Type()->Size();
+        n = n->next;
+    }
+    StatementBase* st;
+    st = new StatementMove( exp_size->Clone(),
+                new ExpBaseBinop( BinaryOp::kBinaryOp_Add, exp_size, new ExpBaseConst(i_size) )
+    );
+            
+    // base address of record
+    ExpBase* tmp;
+    
+    tmp = new ExpBaseBinop( BinaryOp::kBinaryOp_Sub,
+                new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp(FP()), exp_offset),
+                exp_size->Clone());
+                
+    s32 i_offset=0;
+    n = dynamic_cast<TypeRecord*>(dynamic_cast<TypeName*>(p->Type())->Type())->GetList()->GetHead();
+    while(head){
+        ExpBaseTy* a;
+        TIGER_ASSERT(n->m_field->Name()==tenv->MakeSymbol(head->m_efield->Name()),"member mismatch");
+        
+        a = TransExp(venv,tenv,level,head->m_efield->GetExp(),done_label);
+        
+        if(a->Type()->Kind()!=TypeBase::kType_Nil){
+            m_logger.D("expected type:%s",n->m_field->Type()->TypeString());
+            m_logger.D("provided type %s",a->Type()->TypeString());
+            TIGER_ASSERT(n->m_field->Type()==a->Type(),"type mismatch");
+        }
+        exp_offset_shadow = exp_offset->Clone();
+        level->Frame()->GetRefillList()->Insert(exp_offset_shadow,ExpBaseList::kExpBaseList_Rear);
+        st = new StatementSeq( 
+            st, 
+            new StatementMove(
+                new ExpBaseMem(
+                    new ExpBaseBinop( BinaryOp::kBinaryOp_Add,
+                        new ExpBaseBinop( BinaryOp::kBinaryOp_Sub,
+                            new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, 
+                                new ExpBaseTemp(FP()), exp_offset_shadow),
+                                exp_size->Clone() 
+                            ),
+                        new ExpBaseConst(i_offset)
+                        
+                    ) 
+                ),
+                TreeBase::UnEx(a->Tree())
+            )
+        );
+        
+        delete a;
+        
+        head = head->next;
+        n = n->next;
+        i_offset += n->m_field->Type()->Size();
+    }
+    // need init the record fields
+    tree = new TreeBaseEx(
+        new ExpBaseEseq(
+            st,
+            tmp
+        )
+    );
+                
+    return new ExpBaseTy(p->Type(),tree);
+}
 TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label)
 {
     switch(dec->Kind())
@@ -1117,6 +1225,8 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
             //if array exp
             if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Array){
                 t = TransArrayExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
+            }else if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Record){
+                t = TransRecordExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }else{
                 t = TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }

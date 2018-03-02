@@ -128,8 +128,8 @@ public:
         delete m_sym;
     }
 private:
-    Var* m_var;
-    Symbol* m_sym;
+    Var* m_var;//var 
+    Symbol* m_sym;//field
 };
 
 /* proto declaration */
