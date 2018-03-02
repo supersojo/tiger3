@@ -60,6 +60,15 @@ StatementCjump* StatementCjump::Clone(){
         n->m_false = m_false;
         return n;
 }
+void StatementCjump::Dump(char *o){
+    char l[1024]={0};
+    char r[1024]={0};
+    if(m_left)
+        m_left->Dump(l);
+    if(m_right)
+        m_right->Dump(r);
+    sprintf(o,"CJUMP OP %s,%s,%s,%s",l,r,m_true->Name(),m_false->Name());
+}
 StatementMove* StatementMove::Clone(){
         StatementMove* n = new StatementMove;
         n->m_left = m_left?m_left->Clone():0;
