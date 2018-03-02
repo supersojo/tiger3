@@ -189,7 +189,7 @@ void test_typecheck(){
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
     {
-        dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement()-Dump(s);
+        dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement()->Dump(s);
         delete dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement();
     }
     
