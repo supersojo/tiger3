@@ -1201,9 +1201,11 @@ ExpBaseTy* Translator::TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec
         
         delete a;
         
+        i_offset += n->m_field->Type()->Size();
+        
         head = head->next;
         n = n->next;
-        i_offset += n->m_field->Type()->Size();
+        
     }
     // need init the record fields
     tree = new TreeBaseEx(
