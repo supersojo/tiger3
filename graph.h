@@ -621,11 +621,14 @@ public:
         s32 i = 0;
         for(i=0;i<n->m_links->Size();i++){
             p = n->m_links->Get(i);
+            if(p->m_links)
             p->m_links->Remove(n);
         }
         Remove_(n);
     }
     void AddEdge(CGraphNode* from,CGraphNode* to){
+        if(from==to)
+            return;
         from->m_links->Insert(to,CGraphEdgeList::kCGraphEdgeList_Rear);
         to->m_links->Insert(from,CGraphEdgeList::kCGraphEdgeList_Rear);
     }
