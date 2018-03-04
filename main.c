@@ -149,8 +149,8 @@ void test_typecheck(){
     /* print(x:int)*/
     tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
-    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("int")));
-    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,0));
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print")));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;
@@ -193,7 +193,7 @@ void test_typecheck(){
         dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement()->Dump(t);
        
         //printf("\n%s\n",t);
-       #if 0 
+#if 1
         tiger::Canon canon;
         tiger::StatementBase* s;
         s = dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
@@ -202,8 +202,9 @@ void test_typecheck(){
         tiger::StatementBaseList* l;
         l = canon.Linearize( s );
         l->Dump(t);
-        //printf("%s\n",t);
-        
+        printf("%s\n",t);
+#endif
+#if 0
         // block
         tiger::CanonBlockList* cl;
         cl = canon.BasicBlocks(l);
@@ -247,8 +248,21 @@ void test_typecheck(){
     
     //printf("\n%s\n",t);
     
-    
-    translator.TraverseFragList();
+    {
+        tiger::FragList* fl;
+        tiger::StatementBase* s;
+        fl = translator.GetFragList();
+        s = fl->FindByLabelName("printboard")->GetStatement();
+        tiger::Canon canon;
+        
+        s = canon.Statementize( s );
+        // linearlize
+        tiger::StatementBaseList* l;
+        l = canon.Linearize( s );
+        l->Dump(t);
+        printf("%s\n",t);
+    }
+    //translator.TraverseFragList();
     
     delete ty;
     

@@ -280,7 +280,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             if(f->GetLevel()==0){
             //TBD: external function
             //fow now just return 
-            return new ExpBaseTy(f->Type(),new TreeBaseEx(new ExpBaseConst(0)));
+            return new ExpBaseTy(f->Type(),new TreeBaseEx( new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist ) ));
             }
             al = f->GetLevel()->Frame()->GetFormals();
             
@@ -1688,7 +1688,7 @@ void FragList::Insert(Label* l,Frag* frag)
     FragNode* p = m_tab[index];
     FragNode* n;
     while(p){
-        if(p->m_label==l)
+        if(strcmp(p->m_label->Name(),l->Name())==0)
             return;//already exist
         p = p->next;
     }
@@ -1706,10 +1706,28 @@ Frag* FragList::Find(Label* l)
     s32 index = hash(l);
     FragNode* p = m_tab[index];
     while(p){
-        if(p->m_label==l)
+        if(strcmp(p->m_label->Name(),l->Name())==0)
             return p->m_frag;
         p = p->next;
     }
+    //not found
+    return 0;
+}
+Frag* FragList::FindByLabelName(char* str)
+{
+    s32 index = 0;
+    FragNode* p;
+    for(index = 0; index < kFragList_Size; index++)
+    {
+        p = m_tab[index];
+        while(p){
+            if(strcmp(p->m_label->Name(),str)==0)
+                return p->m_frag;
+            p = p->next;
+        }
+    }
+    
+    
     //not found
     return 0;
 }

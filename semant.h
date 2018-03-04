@@ -163,7 +163,7 @@ public:
     StatementBase* GetStatement(){return m_statement;}
     FrameBase* Frame(){return m_frame;}
     ~Frag(){
-        delete m_statement;
+        //delete m_statement;
     }
     
 private:
@@ -293,6 +293,7 @@ public:
     void TraverseNx(StatementBase* statement);
     void TraverseCx(StatementBase* statement);
     
+    FragList* GetFragList(){return m_frag_list;}
     // traverse function flag utils
     void TraverseFragList();
     
@@ -346,6 +347,7 @@ public:
     ~FragList();
     void Insert(Label* l,Frag* frag);
     Frag* Find(Label* l);
+    Frag* FindByLabelName(char* str);
     s32 Size(){return m_size;}
     void Walk(Translator* trans) {
         FragNode* p;
