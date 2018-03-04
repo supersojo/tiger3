@@ -82,7 +82,7 @@ LetExp* Translator::For2Let(ForExp* exp)
     ExpNode* exp1 = new ExpNode;
     ExpNode* exp2 = new ExpNode;
     exp1->m_exp = exp->GetExp()->Clone();
-    TIGER_ASSERT(exp1->m_exp->Kind()==Exp::kExp_Assign,"m_exp is null!!");
+    //TIGER_ASSERT(exp1->m_exp->Kind()==Exp::kExp_Assign,"m_exp is null!!");
     exp2->m_exp = assign;
     exp1->next = exp2;
     exp2->prev = exp1;
@@ -103,14 +103,17 @@ ExpBaseTy*  Translator::TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var
             EnvEntryVar* t;
             t = dynamic_cast<EnvEntryVar*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<SimpleVar*>(var)->GetSymbol())));
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
+            //m_logger.D("name=%s",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             
             Level* alevel=0;
             TreeBaseEx* ex;
             ExpBase* tmp=0;/* used to calc static link */
             AccessFrame* af;
             AccessReg*   ar;
+            if(t->Access()==0)
+            m_logger.D("access is null");
             if(t->Access()->GetAccess()->Kind()==AccessBase::kAccess_Frame){
-                TIGER_ASSERT(t->Access()->GetLevel()!=level,"level must different!!");
+                //TIGER_ASSERT(t->Access()->GetLevel()!=level,"level must different!!");
                 af = dynamic_cast<AccessFrame*>(t->Access()->GetAccess());
                 //ex = new TreeBaseEx( new ExpBaseMem( new ExpBaseBinop(BinaryOp::kBinaryOp_Add,new ExpBaseTemp( FP() ),new ExpBaseConst(af->Offset()))) );
                 /*
@@ -274,6 +277,11 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             StatementBase* st=0;
             AccessList* al=0;
             s32 j=0;//0 for args start
+            if(f->GetLevel()==0){
+            //TBD: external function
+            //fow now just return 
+            return new ExpBaseTy(f->Type(),new TreeBaseEx(new ExpBaseConst(0)));
+            }
             al = f->GetLevel()->Frame()->GetFormals();
             
             /* function foo() */
@@ -384,7 +392,9 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             if(op->Kind()==Oper::kOper_Lt||
                op->Kind()==Oper::kOper_Le||
                op->Kind()==Oper::kOper_Gt||
-               op->Kind()==Oper::kOper_Ge){
+               op->Kind()==Oper::kOper_Ge||
+               op->Kind()==Oper::kOper_Eq||
+               op->Kind()==Oper::kOper_Neq){
                 TreeBaseCx* ex;
                 StatementBase* statement;
                 PatchList * ts = new PatchList;
@@ -570,8 +580,17 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             //Label *z = TempLabel::NewLabel();
             //Temp* tmp = TempLabel::NewTemp();
             a = TransExp(venv,tenv,level,if_exp,done_label);
-            dynamic_cast<TreeBaseCx*>( a->Tree() )->GetTrues()->DoPatch(t);
-            dynamic_cast<TreeBaseCx*>( a->Tree() )->GetFalses()->DoPatch(f);
+            TreeBaseCx* tc;
+            if(a->Tree()->Kind()==TreeBase::kTreeBase_Ex){
+                tc = TreeBase::UnCx( ( a->Tree() ) );
+            }else if(a->Tree()->Kind()==TreeBase::kTreeBase_Nx){
+                tc = TreeBase::UnCx( ( a->Tree() ) );
+            }else{
+                // TreeCx
+                tc = dynamic_cast<TreeBaseCx*>( a->Tree() );
+            }
+            tc->GetTrues()->DoPatch(t);
+            tc->GetFalses()->DoPatch(f);
             
                 
             b = TransExp(venv,tenv,level,then_exp,done_label);
@@ -692,7 +711,12 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             ExpBaseTy* b;
             ExpBaseTy* c;
             ExpBaseTy* d;
-            
+            /*
+            For "for statement", we will rewrite "for" to "let".
+            So before rewriting done, do not type checking, we will not alloc local var space for "for".
+            Null access will happen.
+            */
+        #if 0    
             var = dynamic_cast<ForExp*>(exp)->GetVar();
             lo_exp = dynamic_cast<ForExp*>(exp)->GetLo();
             hi_exp = dynamic_cast<ForExp*>(exp)->GetHi();
@@ -714,14 +738,14 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             
             venv->BeginScope(ScopeMaker::kScope_For);
             //tenv->BeginScope();
-            
+            m_logger.D("in for scope begin");
             venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0));
             
             d = TransExp(venv,tenv,level,body_exp,done_label);
             
             //tenv->EndScope();
             venv->EndScope();
-            
+            m_logger.D("in for scope end");
             // release what we don't use
             ReleaseTree( b->Tree() );
             ReleaseTree( c->Tree() );
@@ -730,6 +754,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             delete b;
             delete c;
             delete d;
+        #endif
             // type check ok
             LetExp* let_exp;
             let_exp = For2Let( dynamic_cast<ForExp*>(exp) );
@@ -1182,6 +1207,7 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     TIGER_ASSERT(exp->Kind()==Exp::kExp_Array,"need array exp");
     ExpBaseTy* sizeTy = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetSize(),done_label);
     ExpBaseTy* initTy = TransExp(venv,tenv,level,dynamic_cast<ArrayExp*>(exp)->GetInit(),done_label);
+#if 0
     //refill list
     // record all the expbase using frame->offset()
     // once has a new local need update the 
@@ -1209,7 +1235,7 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
                 exp_size->Clone())
         )
     );
-    
+   #endif 
     EnvEntryVar* p;
     p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayExp*>(exp)->Name())));
     TIGER_ASSERT(p->Type()->Kind()==TypeBase::kType_Name,"type %s not found",dynamic_cast<ArrayExp*>(exp)->Name()->Name());
@@ -1233,7 +1259,7 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     
     delete initTy;
     
-    return new ExpBaseTy(p->Type(),tree);
+    return new ExpBaseTy(p->Type(),new TreeBaseEx(new ExpBaseConst(0)));
 }
 ExpBaseTy* Translator::TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label)
 {

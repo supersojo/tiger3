@@ -126,9 +126,9 @@ void test_typecheck(){
     logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
     //logger.setModule("main");
     
-    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in c:=a+b end");
+    //tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in c:=a+b end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -193,7 +193,7 @@ void test_typecheck(){
         dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement()->Dump(t);
        
         //printf("\n%s\n",t);
-        
+       #if 0 
         tiger::Canon canon;
         tiger::StatementBase* s;
         s = dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
@@ -234,6 +234,7 @@ void test_typecheck(){
         FILE* f = fopen("tiger.S","w");
         cg->Output(col,il,f); //gen real assemble code
         fclose(f);
+#endif
         //delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
@@ -247,7 +248,7 @@ void test_typecheck(){
     //printf("\n%s\n",t);
     
     
-    //translator.TraverseFragList();
+    translator.TraverseFragList();
     
     delete ty;
     
