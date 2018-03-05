@@ -262,6 +262,7 @@ private:
                     return Seq( Reorder(exp_ref_list), s);
                 }
             default:
+                delete exp_ref_list;
                 return s;
         }
     }
