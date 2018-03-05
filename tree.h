@@ -299,6 +299,7 @@ public:
         m_list = list;
     }
     ExpBase* GetExp(){return m_exp;}
+    ExpBase** GetExpRef(){return &m_exp;}
     LabelList* GetList(){return m_list;}
     virtual StatementJump* Clone();
     virtual void Dump(char *o);
@@ -385,7 +386,9 @@ public:
         
     }
     ExpBase* Left(){return m_left;}
+    ExpBase** LeftRef(){return &m_left;}
     ExpBase* Right(){return m_right;}
+    ExpBase** RightRef(){return &m_right;}
     Label** GetATrueLabel(){return &m_true;}
     Label** GetAFalseLabel(){return &m_false;}
     Label* GetTrueLabel(){return m_true;}
@@ -410,7 +413,9 @@ public:
         m_right = r;
     }
     ExpBase* Left(){return m_left;}
+    ExpBase** LeftRef(){return &m_left;}
     ExpBase* Right(){return m_right;}
+    ExpBase** RightRef(){return &m_right;}
     virtual StatementMove* Clone();
     virtual void Dump(char *o);
     ~StatementMove();
@@ -425,6 +430,7 @@ public:
         m_exp = exp;
     }
     ExpBase* GetExp(){return m_exp;}
+    ExpBase** GetExpRef(){return &m_exp;}
     virtual StatementExp* Clone();
     virtual void Dump(char *o);
     ~StatementExp();
@@ -580,7 +586,9 @@ public:
         m_right = r;
     }
     ExpBase* Left(){return m_left;}
+    ExpBase** LeftRef(){return &m_left;}
     ExpBase* Right(){return m_right;}
+    ExpBase** RightRef(){return &m_right;}
     virtual ExpBaseBinop* Clone(){
         ExpBaseBinop* n = new ExpBaseBinop;
         n->m_op = m_op;
@@ -617,6 +625,7 @@ public:
         m_exp = exp;
     }
     ExpBase* GetExp(){return m_exp;}
+    ExpBase** GetExpRef(){return &m_exp;}
     virtual ExpBaseMem* Clone(){
         ExpBaseMem* n = new ExpBaseMem;
         n->m_exp = m_exp?m_exp->Clone():0;

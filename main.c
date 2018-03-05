@@ -9,6 +9,7 @@
 #include "semant.h"
 #include "escape.h"
 #include "tree.h"
+#include "canon.h"
 
 void test_StringSourceCodeStream()
 {
@@ -124,7 +125,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let type X={a:int} var b:=X{a=10} in b.a:=11 end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 in (a:=2;b:=3) end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -252,6 +253,32 @@ void test_litstringlist(){
     logger.D(list.Find(l1));
     tiger::TempLabel::Exit();
 }
+void test_canon(){
+    tiger::LoggerStdio logger;
+    logger.SetModule("canon");
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    tiger::Canon canon;
+    
+    tiger::StatementBase* s;
+    tiger::ExpBase* e;
+    
+    s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()),new tiger::ExpBaseConst(1));
+    e = new tiger::ExpBaseConst(2);
+    
+    e = new tiger::ExpBaseEseq(s,e);
+    s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()), e);
+    
+    tiger::Translator translator;
+    
+    char t[1024]={0};
+    s->Dump(t);
+    printf("\n%s\n",t);
+    
+    s = canon.Statementize( s );
+    
+    s->Dump(t);
+    printf("\n%s\n",t);
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -264,6 +291,7 @@ int main()
     //test_escape();
     //test_tree();
     //test_litstringlist();
-    test_typecheck();
+    //test_typecheck();
+    test_canon();
     return 0;
 }

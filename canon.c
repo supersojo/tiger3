@@ -4,7 +4,7 @@ namespace tiger{
 
 StatementBase*     Canon::Statementize(StatementBase* statement)
 {
-    return 0;
+    return DoStatement( statement );
 }
 
 StatementBaseList* Canon::Linearize(StatementBase* statement)

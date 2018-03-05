@@ -38,6 +38,8 @@ Level*      Translator::OuterMostLevel()
         
         m_level_manager->NewLevel(m_outer_most_level);
         
+        /*
+        // the out most don't need static linklist 
         AccessBase* access;
         AccessList* al;
         BoolList* bl;
@@ -46,10 +48,11 @@ Level*      Translator::OuterMostLevel()
         bl = m_outer_most_level->Frame()->GetEscapes();
         
         m_logger.D("~~~~~~for dynamic size vars ~~~");
-        access = m_outer_most_level->Frame()->AllocLocal(0/*false*/);
+        access = m_outer_most_level->Frame()->AllocLocal(0);
         access->Retain();//inc refcnt
         al->Insert(access,AccessList::kAccessList_Rear);
         bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
+        */
     }
     return m_outer_most_level;
 }
@@ -903,13 +906,16 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     m_logger.D("escapes size:%d",bl->Size());
     m_logger.D("New Frame End~~~");
     
+    /*
+    // allocate array in heap using external call malloc or free
+    // temp not need here
     // allocate a new temp store dynamical vars such as array and record
-    access = f->AllocLocal(0/*false*/);
+    access = f->AllocLocal(0);
     access->Retain();//inc refcnt
     al->Insert(access,AccessList::kAccessList_Rear);
         
     bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
-    
+    */
     return f;
 }
 
@@ -1081,6 +1087,8 @@ ExpBaseTy* Translator::TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec*
     // just return the address 
     // call c function to allocate array or record
     // 
+    // new ExBaseCall(new ExpBaseName("malloc"),new ExpBaseList(size))
+    // array's address in RV
     exp_size = new ExpBaseTemp(dynamic_cast<AccessReg*>(al->Get(al->Size()-1))->GetTemp());
     
     tree = new TreeBaseEx(
