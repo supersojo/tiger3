@@ -201,7 +201,7 @@ public:
         TypeFieldNode* p;
         p = m_record->GetHead();
         while(p){
-            i += p->m_field->Size();
+            i += p->m_field->Size();// maybe loop defined
             p = p->next;
         }
         return i;

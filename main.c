@@ -6,6 +6,7 @@
 #include "tiger_log.h"
 #include "tiger_assert.h"
 #include "types.h"
+#include "type_check.h"
 #include "semant.h"
 #include "escape.h"
 #include "tree.h"
@@ -119,6 +120,70 @@ void test_symtab(){
 
 }
 void test_typecheck(){
+    tiger::Exp* exp;
+    tiger::TypeCheckResult* ty;
+    
+    tiger::LoggerStdio logger;
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    //logger.setModule("main");
+    
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    //tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in c:=a+b end");
+    
+    /* generate sbstract syntax tree*/
+    tiger::parser::Parser parser(&stream);
+    parser.Parse(&exp);
+
+    tiger::SymTab venv,tenv;
+    /* init types */
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    
+    /* for each external function, it's impossible to access outer level's variable 
+    the outer most level do not need frame and actual list 
+    */
+    
+    /* internal functions */
+    /* print(x:int)*/
+    tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print")));
+    
+    /* getchar()*/
+    //tiger::TypeFieldNode* node;
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+
+    /* ord(s:string):int*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0));
+    
+    /* chr(i:int):string*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+    
+    // find escape 
+    //tiger::EscapeHelper escaper;
+    //escaper.FindEscape(exp);
+    
+    tiger::TypeChecker tc;
+    ty = tc.TypeCheck(&venv, &tenv, exp);
+    
+    delete ty;
+    
+    /* free */
+    delete exp;
+    
+    tiger::TempLabel::Exit();
+}
+void test_tree_gen(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
