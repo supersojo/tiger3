@@ -136,7 +136,7 @@ public:
         //delete m_array;
     }
 private:
-    TypeBase* m_array;/* memroy managed by type member, not type array */
+    TypeBase* m_array;/* memory managed by type member, not type array */
 };
 
 class TypeField{
@@ -247,7 +247,7 @@ public:
     }
 private:
     Symbol* m_name;/* memory managed by string hash table */
-    TypeBase* m_type;/* memroy managed by type member, not type record */
+    TypeBase* m_type;/* memory managed by type member, not type record */
 };
 /* Env
 The base env entry of all env entry types.

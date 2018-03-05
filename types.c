@@ -218,7 +218,7 @@ TypeBase*  SymTab::Type(Symbol* s)
     if(binding && binding->Kind()==EnvEntryBase::kEnvEntry_Var){
         return dynamic_cast<EnvEntryVar*>(binding)->Type();
     }
-    std::cout<<"wrong type "<<s->Name()<<std::endl;
+    m_logger.W("wrong type %s",s->Name());
     return 0;
 }
 
