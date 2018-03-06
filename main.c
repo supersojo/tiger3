@@ -267,7 +267,8 @@ void test_canon(){
     
     e = new tiger::ExpBaseEseq(s,e);
     s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()), e);
-    
+    e = new tiger::ExpBaseEseq( s, new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()) );
+    s = new tiger::StatementMove(e,new tiger::ExpBaseConst(4));
     tiger::Translator translator;
     
     char t[1024]={0};
