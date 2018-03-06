@@ -224,6 +224,7 @@ private:
         ExpBaseRefList* exp_ref_list = new ExpBaseRefList;
         switch(s->Kind()){
             case StatementBase::kStatement_Seq:
+                delete exp_ref_list;
                 return Seq( DoStatement(dynamic_cast<StatementSeq*>(s)->Left()), DoStatement(dynamic_cast<StatementSeq*>(s)->Right()) );
             case StatementBase::kStatement_Jump:
                 exp_ref_list->Insert( dynamic_cast<StatementJump*>(s)->GetExpRef(), ExpBaseRefList::kExpBaseRefList_Rear );
@@ -248,6 +249,7 @@ private:
                     exp_ref_list->Insert( dynamic_cast<StatementMove*>(s)->RightRef(), ExpBaseRefList::kExpBaseRefList_Rear );
                     return Seq( Reorder(exp_ref_list), s ); 
                 }else if(dynamic_cast<StatementMove*>(s)->Left()->Kind()==ExpBase::kExpBase_Eseq){
+                    delete exp_ref_list;
                     StatementBase* s1 = dynamic_cast<ExpBaseEseq*>(dynamic_cast<StatementMove*>(s)->Left())->GetStatement();
                     *(dynamic_cast<StatementMove*>(s)->LeftRef()) = dynamic_cast<ExpBaseEseq*>(dynamic_cast<StatementMove*>(s)->Left())->GetExp();
                     return DoStatement(new StatementSeq(s1,s));
@@ -292,6 +294,7 @@ private:
                 exp_ref_list->Insert(dynamic_cast<ExpBaseMem*>(e)->GetExpRef(),ExpBaseRefList::kExpBaseRefList_Rear);
                 return StatementExp_(Reorder(exp_ref_list),e);
             case ExpBase::kExpBase_Eseq:{
+                delete exp_ref_list;
                 m_logger.D("in eseq");
                 StatementExp_ tmp = DoExp(dynamic_cast<ExpBaseEseq*>(e)->GetExp());
                 return StatementExp_(Seq(

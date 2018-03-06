@@ -278,6 +278,7 @@ void test_canon(){
     
     s->Dump(t);
     printf("\n%s\n",t);
+    delete s;
 }
 int main()
 {
