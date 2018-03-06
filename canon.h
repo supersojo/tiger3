@@ -201,13 +201,16 @@ private:
         StatementExp_ tmp;
         StatementBase* s = 0;
         ExpBaseRefNode* p = 0;
+        ExpBase* e;
         if(exp_ref_list->Size()==0){
             delete exp_ref_list;
             return new StatementExp(new ExpBaseConst(0));
         }else{
             p = exp_ref_list->GetHead();
             while(p){
-                tmp = DoExp( *(p->m_exp_ref) );
+                e = *(p->m_exp_ref);
+                tmp = DoExp( e->Clone() );// clone what we changed 
+                delete e;
                 *(p->m_exp_ref) = tmp.e;
                 if(s==0){
                     s = tmp.s;

@@ -279,6 +279,7 @@ void test_canon(){
     s->Dump(t);
     printf("\n%s\n",t);
     delete s;
+    tiger::TempLabel::Exit();
 }
 int main()
 {
