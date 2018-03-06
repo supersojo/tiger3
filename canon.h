@@ -209,7 +209,8 @@ private:
             p = exp_ref_list->GetHead();
             while(p){
                 e = *(p->m_exp_ref);
-                tmp = DoExp( e->Clone() );// clone what we changed 
+                tmp = DoExp( e );// clone what we changed 
+                e->Clean();//release what we refer to
                 delete e;
                 *(p->m_exp_ref) = tmp.e;
                 if(s==0){
@@ -282,8 +283,8 @@ private:
         }
     }
     StatementBase* Seq(StatementBase* s1,StatementBase* s2){
-        if(IsNop(s1)) return s2;
-        if(IsNop(s2)) return s1;
+        if(IsNop(s1)) { delete s1; return s2; }
+    if(IsNop(s2)) { delete s2; return s1; }
         return new StatementSeq(s1,s2);
     }
     StatementExp_ DoExp(ExpBase* e){

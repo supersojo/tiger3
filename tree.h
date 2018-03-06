@@ -457,6 +457,8 @@ public:
         n->m_kind = m_kind;
         return n;
     }
+    virtual void Clean(){
+    }
     virtual void Dump(char* o){
     }
     virtual ~ExpBase();
@@ -609,6 +611,10 @@ public:
         if(m_op==BinaryOp::kBinaryOp_Sub)
             i_offset += sprintf(o+i_offset,"BINOP(%s,%s,%s)","SUB",l,r);
     }
+    virtual void Clean(){
+        m_left = 0;
+        m_right = 0;
+    }
     ~ExpBaseBinop(){
         delete m_left;
         delete m_right;
@@ -637,6 +643,9 @@ public:
         if(m_exp)
             m_exp->Dump(e);
         i_offset += sprintf(o+i_offset,"MEM(%s)",e);
+    }
+    virtual void Clean(){
+        m_exp = 0;
     }
     ~ExpBaseMem(){
         delete m_exp;
@@ -688,6 +697,10 @@ public:
         if(m_exp)
             m_exp->Dump(e);
         sprintf(o,"ESEQ(%s,%s)",s,e);
+    }
+    virtual void Clean(){
+        m_statement = 0;
+        m_exp = 0;
     }
     ~ExpBaseEseq(){
         delete m_statement;
@@ -759,6 +772,9 @@ public:
         if(m_explist)
             m_explist->Dump(l);
         sprintf(o,"CALL(%s,%s)",e,l);
+    }
+    virtual void Clean(){
+        m_exp = 0;
     }
     ~ExpBaseCall(){
         delete m_exp;
