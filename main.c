@@ -283,7 +283,7 @@ void test_canon(){
     l = canon.Linearize( s );
     l->Dump(t);
     printf("%s",t);
-    
+    delete l;
     tiger::TempLabel::Exit();
 }
 int main()

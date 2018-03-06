@@ -129,11 +129,10 @@ public:
         StatementBaseNode* p;
         p = m_head;
         while(p){
-            m_head = m_head->next;
             if(p->m_statement)
                 p->m_statement->Dump(s);
             i_offset += sprintf(i_offset+o,"%s\n",s);
-            p = m_head;
+            p = p->next;
         }
     }
     ~StatementBaseList(){
@@ -316,6 +315,7 @@ public:
     LabelList* GetList(){return m_list;}
     virtual StatementJump* Clone();
     virtual void Dump(char *o);
+    
     ~StatementJump();
 private:
     ExpBase* m_exp;
