@@ -123,6 +123,19 @@ public:
         m_size++;
     }
     s32 Size(){return m_size;}
+    void Dump(char* o){
+        s32 i_offset=0;
+        char s[1024]={0};
+        StatementBaseNode* p;
+        p = m_head;
+        while(p){
+            m_head = m_head->next;
+            if(p->m_statement)
+                p->m_statement->Dump(s);
+            i_offset += sprintf(i_offset+o,"%s\n",s);
+            p = m_head;
+        }
+    }
     ~StatementBaseList(){
         StatementBaseNode* p;
         p = m_head;

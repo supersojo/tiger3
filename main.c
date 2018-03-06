@@ -278,7 +278,12 @@ void test_canon(){
     
     s->Dump(t);
     printf("\n%s\n",t);
-    delete s;
+    
+    tiger::StatementBaseList* l;
+    l = canon.Linearize( s );
+    l->Dump(t);
+    printf("%s",t);
+    
     tiger::TempLabel::Exit();
 }
 int main()

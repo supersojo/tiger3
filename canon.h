@@ -188,6 +188,9 @@ public:
     
 private:
     LoggerStdio m_logger;
+    
+    void _Linearize(StatementBaseList* l,StatementBase* statement);
+    
     s32 IsNop(StatementBase* s){
         return ((s->Kind()==StatementBase::kStatement_Exp) &&
                    (dynamic_cast<StatementExp*>(s)->GetExp()->Kind()==ExpBase::kExpBase_Const));
@@ -204,7 +207,7 @@ private:
         ExpBase* e;
         if(exp_ref_list->Size()==0){
             delete exp_ref_list;
-            return new StatementExp(new ExpBaseConst(0));
+            return new StatementExp(new ExpBaseConst(0));// the dummy statementexp will be delete from Seq()
         }else{
             p = exp_ref_list->GetHead();
             while(p){
@@ -286,7 +289,7 @@ private:
     }
     StatementBase* Seq(StatementBase* s1,StatementBase* s2){
         if(IsNop(s1)) { delete s1; return s2; }
-    if(IsNop(s2)) { delete s2; return s1; }
+        if(IsNop(s2)) { delete s2; return s1; }
         return new StatementSeq(s1,s2);
     }
     StatementExp_ DoExp(ExpBase* e){
