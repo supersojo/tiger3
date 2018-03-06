@@ -210,8 +210,10 @@ private:
             while(p){
                 e = *(p->m_exp_ref);
                 tmp = DoExp( e );// clone what we changed 
-                e->Clean();//release what we refer to
-                delete e;
+                if(e->Kind()==ExpBase::kExpBase_Eseq){
+                    e->Clean();//release what we refer to
+                    delete e;
+                }
                 *(p->m_exp_ref) = tmp.e;
                 if(s==0){
                     s = tmp.s;
