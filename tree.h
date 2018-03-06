@@ -612,8 +612,8 @@ public:
             i_offset += sprintf(o+i_offset,"BINOP(%s,%s,%s)","SUB",l,r);
     }
     virtual void Clean(){
-        m_left = 0;
-        m_right = 0;
+        //m_left = 0;
+        //m_right = 0;
     }
     ~ExpBaseBinop(){
         delete m_left;
@@ -645,7 +645,7 @@ public:
         i_offset += sprintf(o+i_offset,"MEM(%s)",e);
     }
     virtual void Clean(){
-        m_exp = 0;
+        //m_exp = 0;
     }
     ~ExpBaseMem(){
         delete m_exp;
@@ -774,7 +774,7 @@ public:
         sprintf(o,"CALL(%s,%s)",e,l);
     }
     virtual void Clean(){
-        m_exp = 0;
+        //m_exp = 0;
     }
     ~ExpBaseCall(){
         delete m_exp;
