@@ -232,9 +232,17 @@ private:
     StatementBase* DoStatement(StatementBase* s){
         ExpBaseRefList* exp_ref_list = new ExpBaseRefList;
         switch(s->Kind()){
-            case StatementBase::kStatement_Seq:
+            case StatementBase::kStatement_Seq:{
+                StatementBase* tmp;
+                
                 delete exp_ref_list;
-                return Seq( DoStatement(dynamic_cast<StatementSeq*>(s)->Left()), DoStatement(dynamic_cast<StatementSeq*>(s)->Right()) );
+                
+                tmp =  Seq( DoStatement(dynamic_cast<StatementSeq*>(s)->Left()), DoStatement(dynamic_cast<StatementSeq*>(s)->Right()) );
+                s->Clean();//delete seq itself
+                delete s;
+                
+                return tmp;
+            }
             case StatementBase::kStatement_Jump:
                 exp_ref_list->Insert( dynamic_cast<StatementJump*>(s)->GetExpRef(), ExpBaseRefList::kExpBaseRefList_Rear );
                 return Seq( Reorder(exp_ref_list), s ); 
@@ -276,7 +284,7 @@ private:
                     exp_ref_list->Insert( dynamic_cast<StatementExp*>(s)->GetExpRef(), ExpBaseRefList::kExpBaseRefList_Rear );
                     return Seq( Reorder(exp_ref_list), s);
                 }
-            default:
+            default: //StatementLabel
                 delete exp_ref_list;
                 return s;
         }

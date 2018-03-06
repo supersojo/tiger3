@@ -36,6 +36,8 @@ public:
         n->m_kind = m_kind;
         return n;
     }
+    virtual void Clean(){
+    }
     virtual void Dump(char *o){
     
     }
@@ -168,6 +170,10 @@ public:
         if(m_right)
             m_right->Dump(r);
         sprintf(o,"SEQ(%s,%s)",l,r);
+    }
+    virtual void Clean(){
+        m_left = 0;
+        m_right = 0;
     }
     ~StatementSeq(){
         delete m_left;
