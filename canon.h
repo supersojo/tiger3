@@ -258,9 +258,13 @@ private:
                     exp_ref_list->Insert( dynamic_cast<StatementMove*>(s)->RightRef(), ExpBaseRefList::kExpBaseRefList_Rear );
                     return Seq( Reorder(exp_ref_list), s ); 
                 }else if(dynamic_cast<StatementMove*>(s)->Left()->Kind()==ExpBase::kExpBase_Eseq){
+                    ExpBase* tmp;
                     delete exp_ref_list;
                     StatementBase* s1 = dynamic_cast<ExpBaseEseq*>(dynamic_cast<StatementMove*>(s)->Left())->GetStatement();
+                    tmp = *(dynamic_cast<StatementMove*>(s)->LeftRef());
                     *(dynamic_cast<StatementMove*>(s)->LeftRef()) = dynamic_cast<ExpBaseEseq*>(dynamic_cast<StatementMove*>(s)->Left())->GetExp();
+                    tmp->Clean();//free s,e 's reference 
+                    delete tmp;// free eseq itself
                     return DoStatement(new StatementSeq(s1,s));
                 }
             }
