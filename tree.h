@@ -70,6 +70,21 @@ public:
     };
     StatementBaseList(){m_head = 0;m_size=0;}
     StatementBaseList(StatementBaseNode* head){m_head = head;}
+    StatementBaseNode* GetHead(){return m_head;}
+    StatementBase* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        StatementBaseNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p->m_statement;
+            
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
     StatementBaseList* Clone(){
         StatementBaseList* n = new StatementBaseList;
         StatementBaseNode* p = m_head;

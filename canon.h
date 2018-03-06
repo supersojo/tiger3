@@ -16,6 +16,11 @@ public:
     }
     StatementBaseList* GetStatementList(){return m_list;}
     Label* GetLabel(){return m_label;}
+    void UpdateLabel(Label* l){m_label = l;}
+    void Dump(char* o){
+        if(m_list)
+            m_list->Dump(o);
+    }
     ~CanonBlock(){
         delete m_list;
         // delete m_label; //managed by TempLabel
@@ -76,6 +81,19 @@ public:
             m_head = n;
         }
         m_size++;
+    }
+    void Dump(char* o){
+        CanonBlockNode* p;
+        s32 i_offset = 0;
+        p = m_head;
+        char t[1024]={0};
+        while(p){
+            if(p->m_block){
+                p->m_block->Dump(t);
+            }
+            i_offset += sprintf(i_offset+o,"%s",t);
+            p = p->next;
+        }
     }
     ~CanonBlockList(){
         CanonBlockNode* p;

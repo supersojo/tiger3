@@ -292,11 +292,22 @@ void test_canon(){
     s->Dump(t);
     printf("\n%s\n",t);
     
+    // linearlize
     tiger::StatementBaseList* l;
     l = canon.Linearize( s );
     l->Dump(t);
     printf("%s",t);
+    
+    // block
+    tiger::CanonBlockList* cl;
+    cl = canon.BasicBlocks(l);
+    cl->Dump(t);
+    printf("%s",t);
+    
+    
     delete l;
+    delete cl;
+    
     tiger::TempLabel::Exit();
 }
 int main()
