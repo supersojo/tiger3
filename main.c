@@ -261,7 +261,7 @@ void test_canon(){
     
     tiger::StatementBase* s;
     tiger::ExpBase* e;
-    
+    /*
     s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()),new tiger::ExpBaseConst(1));
     e = new tiger::ExpBaseConst(2);
     
@@ -269,6 +269,18 @@ void test_canon(){
     s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()), e);
     e = new tiger::ExpBaseEseq( s, new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()) );
     s = new tiger::StatementMove(e,new tiger::ExpBaseConst(4));
+    */
+    tiger::ExpBaseList* el1 = new tiger::ExpBaseList;
+    tiger::ExpBaseList* el2 = new tiger::ExpBaseList;
+    el1->Insert(new tiger::ExpBaseConst(11),tiger::ExpBaseList::kExpBaseList_Rear);
+    el2->Insert(new tiger::ExpBaseConst(12),tiger::ExpBaseList::kExpBaseList_Rear);
+    e = new tiger::ExpBaseBinop(  tiger::BinaryOp::kBinaryOp_Add, 
+            new tiger::ExpBaseCall(new tiger::ExpBaseName(tiger::TempLabel::NewNamedLabel("foo")),el1), 
+            new tiger::ExpBaseCall(new tiger::ExpBaseName(tiger::TempLabel::NewNamedLabel("bar")),el2)
+        );
+    
+    s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()),e);
+    
     tiger::Translator translator;
     
     char t[1024]={0};

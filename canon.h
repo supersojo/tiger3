@@ -212,6 +212,12 @@ private:
             p = exp_ref_list->GetHead();
             while(p){
                 e = *(p->m_exp_ref);
+                if( e->Kind() == ExpBase::kExpBase_Call){
+                    // rewrite call to eseq(mov,call)
+                    Temp* t = TempLabel::NewTemp();
+                    *(p->m_exp_ref) = new ExpBaseEseq(new StatementMove(new ExpBaseTemp(t),e),new ExpBaseTemp(t));
+                    e = *(p->m_exp_ref);
+                }
                 tmp = DoExp( e );// clone what we changed 
                 if(e->Kind()==ExpBase::kExpBase_Eseq){
                     e->Clean();//release what we refer to
