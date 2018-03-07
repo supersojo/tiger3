@@ -285,6 +285,7 @@ void test_tree_gen(){
     delete exp;
     tiger::TempLabel::Exit();
 }
+#if 0
 void test_code_gen(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
@@ -436,6 +437,7 @@ void test_code_gen(){
     /* free */
     delete exp;
 }
+#endif
 void test_escape()
 {
     tiger::Exp* exp;
@@ -513,7 +515,7 @@ void test_canon(){
     
     s = new tiger::StatementMove(new tiger::ExpBaseTemp(tiger::TempLabel::NewTemp()),e);
     
-    tiger::Translator translator;
+    tiger::TreeGenerator translator;
     
     char t[1024]={0};
     s->Dump(t);

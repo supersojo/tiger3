@@ -11,50 +11,6 @@
 
 namespace tiger{
 
-class TreeBaseCx;
-// tree representation
-class TreeBase{
-public:
-    enum{
-        kTreeBase_Ex,/* with value*/
-        kTreeBase_Nx,/* without value, such as while ... */
-        kTreeBase_Cx,/* condition exp */
-        kTreeBase_Invalid
-    };
-    TreeBase(){m_kind = kTreeBase_Invalid;}
-    TreeBase(s32 kind){m_kind = kind;}
-    
-    static ExpBase*       UnEx(TreeBase* tree);
-    static StatementBase* UnNx(TreeBase* tree);
-    static TreeBaseCx*    UnCx(TreeBase* tree);
-    
-    virtual ~TreeBase(){}
-    virtual s32 Kind(){return m_kind;}
-private:
-    s32 m_kind;
-};
-class TreeBaseEx:public TreeBase{
-public:
-    TreeBaseEx():TreeBase(kTreeBase_Ex){m_exp=0;}
-    TreeBaseEx(ExpBase* exp):TreeBase(kTreeBase_Ex){m_exp=exp;}
-    ExpBase* GetExp(){return m_exp;}
-    ~TreeBaseEx(){
-        //delete m_exp;
-    }
-private:
-    ExpBase* m_exp;/* managed by tree */
-};
-class TreeBaseNx:public TreeBase{
-public:
-    TreeBaseNx():TreeBase(kTreeBase_Nx){m_statement=0;}
-    TreeBaseNx(StatementBase* statement):TreeBase(kTreeBase_Nx){m_statement=statement;}
-    StatementBase* GetStatement(){return m_statement;}
-    ~TreeBaseNx(){
-        //delete m_statement;
-    }
-private:
-    StatementBase* m_statement;/* managed by tree */
-};
 struct PatchNode{
     PatchNode(){
         m_alabel = 0;
@@ -128,27 +84,7 @@ private:
     PatchNode* m_head;
     s32 m_size;
 };
-class TreeBaseCx:public TreeBase{
-public:
-    TreeBaseCx():TreeBase(kTreeBase_Cx){m_statement=0;}
-    TreeBaseCx(StatementBase* statement,PatchList* ts,PatchList* fs):TreeBase(kTreeBase_Cx){
-        m_statement=statement;
-        m_trues = ts;
-        m_falses = fs;
-    }
-    StatementBase* GetStatement(){return m_statement;}
-    PatchList* GetTrues(){return m_trues;}
-    PatchList* GetFalses(){return m_falses;}
-    ~TreeBaseCx(){
-        //delete m_statement;
-        delete m_trues;
-        delete m_falses;
-    }
-private:
-    StatementBase* m_statement;/* managed by tree */
-    PatchList* m_trues;
-    PatchList* m_falses;
-};
+
 /* 
  * function defination 
  * store function tree representation
@@ -185,22 +121,6 @@ struct FragNode{
     FragNode* next;
 };
 
-
-//used for type check
-class ExpBaseTy{
-public:
-    ExpBaseTy(){m_type=0;m_tree=0;}
-    ExpBaseTy(TypeBase* ty,TreeBase* tree){m_type=ty;m_tree = tree;}
-    TypeBase* Type(){return m_type;}
-    TreeBase* Tree(){return m_tree;}
-    ~ExpBaseTy(){
-        //delete m_type;
-        delete m_tree;
-    }
-private:
-    TypeBase* m_type;// managed by type table, not here
-    TreeBase*  m_tree;// ???
-};
 struct LitStringNode{
     LitStringNode(){
         m_label = 0;
@@ -250,93 +170,6 @@ private:
 
     LoggerStdio m_logger; 
 };
-class FragList;
-// translator absyn to tree
-class Translator{
-public:
-    Translator();
-    
-    // exp translate
-    ExpBaseTy*  TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp,Label* done_label);
-    
-    // var access translate
-    ExpBaseTy*  TransVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label);
-    
-    // dec translate
-    TreeBase*   TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
-    
-    // type translate
-    TypeBase*   TransTy(SymTab* tenv,Level* level,Ty* ty);
-    
-    Level*      OuterMostLevel();
-    
-    // frame pointer
-    Temp* FP(){
-        if(m_fp==0)
-            m_fp = TempLabel::NewTemp();
-        return m_fp;
-    }
-    Temp* SP(){
-        if(m_sp==0)
-            m_sp = TempLabel::NewTemp();
-        return m_sp;
-    }
-    
-    
-    // traverse the tree
-    void Traverse(TreeBase* tree);
-    
-    ~Translator();
-    
-    //traverse utils
-    void TraverseEx(ExpBase* exp);
-    void TraverseNx(StatementBase* statement);
-    void TraverseCx(StatementBase* statement);
-    
-    FragList* GetFragList(){return m_frag_list;}
-    // traverse function flag utils
-    void TraverseFragList();
-    
-private:
-    void           TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Label* done_label);
-    TypeFieldList* MakeFormalsList(SymTab* venv,SymTab* tenv,Level* level,FieldList* params);
-    void           TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec);
-    
-    // array or record 
-    ExpBaseTy*     TransArrayExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
-    ExpBaseTy*     TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
-    
-    FrameBase*     MakeNewFrame(FunDec* fundec);
-    FrameBase*     MakeExternalFrame();
-    
-    // for exp to let exp
-    LetExp*        For2Let(ForExp* exp);
-    
-    
-    void           ReleaseTree(TreeBase* tree){
-        switch(tree->Kind()){
-            case TreeBase::kTreeBase_Ex:
-                delete dynamic_cast<TreeBaseEx*>(tree)->GetExp();
-                break;
-            case TreeBase::kTreeBase_Nx:
-                delete dynamic_cast<TreeBaseNx*>(tree)->GetStatement();
-                break;
-            case TreeBase::kTreeBase_Cx:
-                delete dynamic_cast<TreeBaseCx*>(tree)->GetStatement();
-                break;
-        }
-    }
-    
-    LevelManager* m_level_manager; //level management
-    LoggerStdio m_logger; // log util
-    Level* m_outer_most_level;
-    
-    LitStringList* m_lit_string_list;// manage all literal strings
-    FragList* m_frag_list;// manage all function frags
-    // frame pointer
-    Temp* m_fp;
-    Temp* m_sp;
-};
 
 class FragList{
 public:
@@ -349,16 +182,6 @@ public:
     Frag* Find(Label* l);
     Frag* FindByLabelName(char* str);
     s32 Size(){return m_size;}
-    void Walk(Translator* trans) {
-        FragNode* p;
-        for(s32 i=0;i<kFragList_Size;i++){
-            p = m_tab[i];
-            while(p){
-                trans->TraverseNx( p->m_frag->GetStatement() );
-                p = p->next;
-            }
-        }
-    }
 private:
     void Clear(FragNode* head);
     s32 hash(Label* l){

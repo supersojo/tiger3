@@ -138,7 +138,6 @@ TreeGenResult*  TreeGenerator::TreeGenVar(SymTab* venv,SymTab* tenv,Level* level
             TIGER_ASSERT(t!=0,"var %s not found",dynamic_cast<SimpleVar*>(var)->GetSymbol()->Name());
             
             Level* alevel=0;
-            TreeBaseEx* ex;
             ExpBase* tmp=0;/* used to calc static link */
             AccessFrame* af;
             AccessReg*   ar;
@@ -909,7 +908,6 @@ TreeGenResult* TreeGenerator::TreeGenDec(SymTab* venv,SymTab* tenv,Level* level,
                 t = TreeGenExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }
 
-            TreeBase* tree;
             AccessFrame* af;
             AccessReg*   ar;
             VarAccess* access;
