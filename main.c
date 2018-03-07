@@ -193,6 +193,7 @@ void test_typecheck(){
 void test_tree_gen(){
     tiger::Exp* exp;
     tiger::TreeGenResult* tr;
+    tiger::StatementBase* s;
     
     tiger::LoggerStdio logger;
     logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
@@ -200,7 +201,7 @@ void test_tree_gen(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo(a:int)=0 in foo(1) end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in for i:=1 to 10 do a:=a+i end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -262,28 +263,43 @@ void test_tree_gen(){
     {
         tr->m_exp->Dump(t);
         printf("\n%s\n",t);
-        delete tr->m_exp;
+        //delete tr->m_exp;
+        s = new tiger::StatementExp(tr->m_exp);
     }
     if(tr->Kind()==tiger::TreeGenResult::kTreeGenResult_Nx)
     {
         tr->m_statement->Dump(t);
         printf("\n%s\n",t);
-        delete tr->m_statement;
+        //delete tr->m_statement;
+        s = tr->m_statement;
     }
-    
+    #if 0
     // function
     tiger::FragList* fl;
-    tiger::StatementBase* s;
+    
     fl = tg.GetFragList();
     s = fl->FindByLabelName("foo")->GetStatement();
     s->Dump(t);
     printf("\nfoo:\n%s\n",t);
-
+    #endif
+    
+    //canonical
+    tiger::Canon canon;
+    s = canon.Statementize( s );
+    s->Dump(t);
+    printf("\ncanonical:\n%s\n",t);
+    
+    // linearlize
+    tiger::StatementBaseList* l;
+    l = canon.Linearize( s );
+    l->Dump(t);
+    printf("\nlinearlize:\n%s\n",t);
+    
+    
     delete tr;
     
     /* free */
     delete exp;
-    tiger::TempLabel::Exit();
 }
 #if 0
 void test_code_gen(){
