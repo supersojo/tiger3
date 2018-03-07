@@ -1069,7 +1069,8 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                                           MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()),
                                           0, 
                                           alevel, 
-                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()),
+                                          1/*kind*/
                                         )
                        );
 
@@ -1081,7 +1082,8 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                                                                       tenv->Lookup( tenv->MakeSymbol(fundec_head->m_fundec->Type()) )
                                                                     )->Type(), 
                                           alevel, 
-                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()),
+                                          1/*kind*/
                                         )
                        );
         }
@@ -1129,8 +1131,11 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         }
         // process function body
         a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp(),done_label);
+        //update type info from body if no type in function head
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
+            // TBD: update type info
+            dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->SetType(a->Type());
         }else
         {
             m_logger.D("type kind %d",a->Type()->Kind());

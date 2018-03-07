@@ -585,7 +585,8 @@ void TypeChecker::TypeCheckFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
                                           MakeFormalsList(venv,tenv,fundec_head->m_fundec->GetList()),
                                           0, 
                                           0, 
-                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()),
+                                          0
                                         )
                        );
 
@@ -597,7 +598,8 @@ void TypeChecker::TypeCheckFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
                                                                       tenv->Lookup( tenv->MakeSymbol(fundec_head->m_fundec->Type()) )
                                                                     )->Type(), 
                                           0, 
-                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()),
+                                          0
                                         )
                        );
         }

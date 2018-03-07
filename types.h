@@ -131,7 +131,13 @@ public:
     TypeArray():TypeBase(kType_Array){m_array=0;}
     TypeArray(TypeBase* array):TypeBase(kType_Array){m_array = array;}
     TypeBase* Type(){return m_array;}
-    virtual s32 Size(){return m_array->Size();/*ugly code*/}
+    virtual s32 Size(){
+        /*
+        type b={x:int,y:string}
+        type a=array of b
+        */
+        return m_array->Size();/*ugly code*/
+    }
     ~TypeArray(){
         //delete m_array;
     }
@@ -148,7 +154,16 @@ public:
     }
     Symbol* Name(){return m_name;}
     TypeBase* Type(){return m_type;}
-    virtual s32 Size(){return m_type->Size();/*ugly code*/}
+    virtual s32 Size(){
+        /*
+        type x=array of int
+        type a={a:int,b:string,c:x [10] of 0}
+        
+        */
+        if(m_type->Kind()==TypeBase::kType_Name)// or else dead loop 
+            return 4;// only refer
+        return m_type->Size();/*ugly code*/
+    }
     ~TypeField(){
         //delete m_name;
         //delete m_type;
@@ -306,11 +321,21 @@ private:
 
 class EnvEntryFun:public EnvEntryBase{
 public:
-    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;}
-    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;}
+    enum{
+        kFunction_Internal,
+        kFunction_External,
+        kFunction_Invalid
+    };
+    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;m_kind = kFunction_Internal;}
+    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label,s32 kind):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;m_kind = kind;}
     TypeBase* Type(){return m_result;}
+    void SetType(TypeBase* ty){m_result = ty;}
     TypeFieldList* GetList(){return m_formals;}
     Level* GetLevel(){return m_level;}
+    void   SetLevel(Level* lev){
+        m_level = lev;
+    }
+    s32 Kind(){return m_kind;}
     Label* GetLabel(){return m_label;}
     ~EnvEntryFun(){
         if(m_formals)
@@ -323,6 +348,7 @@ private:
     
     Level* m_level;// managed by level manager
     Label*     m_label;/*managed by label pool*/
+    s32 m_kind;
     
 };
 

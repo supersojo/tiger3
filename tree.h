@@ -184,6 +184,13 @@ public:
             m_left->Dump(l);
         if(m_right)
             m_right->Dump(r);
+        /*
+        SEQ(
+           a,
+           b
+           )
+        
+        */
         sprintf(o,"SEQ(%s,%s)",l,r);
     }
     virtual void Clean(){

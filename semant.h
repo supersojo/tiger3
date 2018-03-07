@@ -163,7 +163,7 @@ public:
     StatementBase* GetStatement(){return m_statement;}
     FrameBase* Frame(){return m_frame;}
     ~Frag(){
-        //delete m_statement;
+        delete m_statement;
     }
     
 private:

@@ -14,6 +14,7 @@
 #include "assem.h"
 #include "graph.h"
 #include "regalloc.h"
+#include "tree_gen.h"
 
 void test_StringSourceCodeStream()
 {
@@ -151,23 +152,29 @@ void test_typecheck(){
     tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print")));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print"),1/*kind*/));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;
-    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0/*level*/,1/*kind*/));
 
     /* ord(s:string):int*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0,1/*kind*/));
+    
+    /* mymalloc(size:int):int*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("size"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("my_malloc"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0,1/*kind*/));
     
     /* chr(i:int):string*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
-    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0,1/*kind*/));
     
     // find escape 
     //tiger::EscapeHelper escaper;
@@ -184,6 +191,101 @@ void test_typecheck(){
     tiger::TempLabel::Exit();
 }
 void test_tree_gen(){
+    tiger::Exp* exp;
+    tiger::TreeGenResult* tr;
+    
+    tiger::LoggerStdio logger;
+    logger.SetLevel(tiger::LoggerBase::kLogger_Level_Error);
+    //logger.setModule("main");
+    
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo(a:int)=0 in foo(1) end");
+    
+    /* generate sbstract syntax tree*/
+    tiger::parser::Parser parser(&stream);
+    parser.Parse(&exp);
+
+    tiger::SymTab venv,tenv;
+    /* init types */
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    
+    
+    
+    /* for each external function, it's impossible to access outer level's variable 
+    the outer most level do not need frame and actual list 
+    */
+    
+    /* internal functions */
+    /* print(x:int)*/
+    tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print"),1));
+    
+    /* getchar()*/
+    //tiger::TypeFieldNode* node;
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0,1));
+
+    /* ord(s:string):int*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0,1));
+    
+    /* chr(i:int):string*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0,1));
+    
+    /* mymalloc(size:int):int*/
+    //tiger::TypeFieldNode* node;
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("size"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("my_malloc"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,tiger::TempLabel::NewNamedLabel("my_malloc"),1/*kind*/));
+    
+    // find escape 
+    tiger::EscapeHelper escaper;
+    escaper.FindEscape(exp);
+    
+    tiger::TreeGenerator tg;
+    tr = tg.TreeGen(&venv,&tenv,tg.OuterMostLevel(),exp,0);
+    
+    // dump tree
+    char t[1024]={0};
+    
+    if(tr->Kind()==tiger::TreeGenResult::kTreeGenResult_Ex)
+    {
+        tr->m_exp->Dump(t);
+        printf("\n%s\n",t);
+        delete tr->m_exp;
+    }
+    if(tr->Kind()==tiger::TreeGenResult::kTreeGenResult_Nx)
+    {
+        tr->m_statement->Dump(t);
+        printf("\n%s\n",t);
+        delete tr->m_statement;
+    }
+    
+    // function
+    tiger::FragList* fl;
+    tiger::StatementBase* s;
+    fl = tg.GetFragList();
+    s = fl->FindByLabelName("foo")->GetStatement();
+    s->Dump(t);
+    printf("\nfoo:\n%s\n",t);
+
+    delete tr;
+    
+    /* free */
+    delete exp;
+    tiger::TempLabel::Exit();
+}
+void test_code_gen(){
     tiger::Exp* exp;
     tiger::ExpBaseTy* ty;
     
@@ -215,23 +317,23 @@ void test_tree_gen(){
     tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print")));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print"),1));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;
-    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("getchar"),new tiger::EnvEntryFun(new tiger::TypeFieldList(0),tenv.Type(tenv.MakeSymbolFromString("string")),0,0,1));
 
     /* ord(s:string):int*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("s"),tenv.Type(tenv.MakeSymbolFromString("string")));
-    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("ord"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,0,1));
     
     /* chr(i:int):string*/
     //tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("i"),tenv.Type(tenv.MakeSymbolFromString("int")));
-    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0));
+    venv.Enter(venv.MakeSymbolFromString("chr"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("string")),0,0,1));
     
     // find escape 
     tiger::EscapeHelper escaper;
@@ -521,7 +623,8 @@ int main()
     //test_escape();
     //test_tree();
     //test_litstringlist();
-    test_typecheck();
+    //test_typecheck();
+    test_tree_gen();
     //test_canon();
     //test_liveness();
     return 0;
