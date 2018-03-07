@@ -10,6 +10,7 @@
 #include "escape.h"
 #include "tree.h"
 #include "canon.h"
+#include "assem.h"
 
 void test_StringSourceCodeStream()
 {
@@ -296,14 +297,20 @@ void test_canon(){
     tiger::StatementBaseList* l;
     l = canon.Linearize( s );
     l->Dump(t);
-    printf("%s",t);
+    printf("%s\n",t);
     
     // block
     tiger::CanonBlockList* cl;
     cl = canon.BasicBlocks(l);
     cl->Dump(t);
-    printf("%s",t);
+    printf("%s\n",t);
     
+    // assem
+    tiger::CodeGenerator* cg = new tiger::CodeGenerator;
+    tiger::InstrList* il;
+    il = cg->CodeGen(0,l);
+    il->Dump(t);
+    printf("%s\n",t);
     
     delete l;
     delete cl;

@@ -217,6 +217,84 @@ public:
 private:
     Label* m_label;/* managed by TempLabel */
 };
+struct ATempNode{
+    ATempNode(){
+        m_temp = 0;
+        prev = next = 0;
+    }
+    ~ATempNode(){
+        
+    }
+    
+    Temp* m_temp;
+    ATempNode* prev;
+    ATempNode* next;
+};
+class TempList{
+public:
+    enum{
+        kTempList_Rear,
+        kTempList_Front,
+        kTempList_Invalid
+    };
+    TempList(){m_head = 0;m_size = 0;}
+    ATempNode* GetHead(){return m_head;}
+    s32 Size(){return m_size;}
+    Temp* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        ATempNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p->m_temp;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
+    void Insert(Temp* t,s32 dir){
+        ATempNode* n;
+        ATempNode* p;
+        ATempNode* q;
+        
+        n = new ATempNode;
+        n->m_temp = t;
+        
+        if(dir==kTempList_Rear){
+            p = m_head;
+            q = m_head;
+            while(p){
+                q = p;
+                p = p->next;
+            }
+            if(q){
+                q->next = n;
+                n->prev = q;
+            }else{
+                m_head = n;
+            }
+        }
+        if(dir==kTempList_Front){
+            n->next = m_head;
+            if(m_head)
+                m_head->prev = n;
+            m_head = n;
+        }
+        m_size++;
+    }
+    ~TempList(){
+        ATempNode* p = m_head;
+        while(p){
+            m_head = m_head->next;
+            delete p;
+            p = m_head;
+        }
+    }
+private:
+    ATempNode* m_head;
+    s32 m_size;
+};
 struct ALabelNode{
     ALabelNode(){
         m_label = 0;
@@ -239,6 +317,20 @@ public:
     LabelList(){m_head=0;m_size=0;}
     LabelList(ALabelNode* head){m_head = head;}
     Label* GetHeadLabel(){return m_head->m_label;}
+    ALabelNode* GetHead(){return m_head;}
+    Label* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        ALabelNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p->m_label;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
     LabelList* Clone(){
         LabelList* n = new LabelList;
         ALabelNode* p = m_head;
@@ -527,6 +619,19 @@ public:
     ExpBaseList(){m_head = 0;m_size=0;m_type=0;}
     ExpBaseList(s32 type){m_head = 0;m_size=0;m_type=type;}
     ExpBaseNode* GetHead(){return m_head;}
+    ExpBase* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        ExpBaseNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p->m_exp;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
     void Insert(ExpBase* exp,s32 dir){
         ExpBaseNode* n;
         ExpBaseNode* p;

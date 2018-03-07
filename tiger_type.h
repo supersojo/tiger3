@@ -12,5 +12,11 @@ typedef unsigned int u32;
 
 typedef long long s64;
 typedef unsigned long long u64;
+
+/* type conversion macros */
+#define CAST(t,p) dynamic_cast<t>(p)
+
 #endif
+
+
 
