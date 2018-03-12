@@ -52,9 +52,11 @@ struct TempNode{
 class TempPool{
 public:
     Temp* NewTemp();
+    Temp* NewNamedTemp(char* name);
     TempPool();
     ~TempPool();
 private:
+    Temp* FindName(char* name);
     static char* m_name_prefix;
     static s32   m_next_id;
     TempNode* m_list;
@@ -87,6 +89,7 @@ public:
     Label* NewNamedLabel(char* name);
     ~LabelPool();
 private:
+    Label* FindName(char* name);
     static char* m_name_prefix;
     static s32   m_next_id;
     LabelNode* m_list;

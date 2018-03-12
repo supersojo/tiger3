@@ -126,7 +126,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 in (a:=2;b:=3) end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 function foo()=a:=1 in foo() end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -176,26 +176,58 @@ void test_typecheck(){
     translator.Traverse( ty->Tree() );
     
     // dump tree
-    char s[1024]={0};
+    char t[1024]={0};
     
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Ex)
     {
-        dynamic_cast<tiger::TreeBaseEx*>(ty->Tree())->GetExp()->Dump(s);
+        dynamic_cast<tiger::TreeBaseEx*>(ty->Tree())->GetExp()->Dump(t);
+        
+        
         delete dynamic_cast<tiger::TreeBaseEx*>(ty->Tree())->GetExp();
     }
     
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Nx)
     {
-        dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement()->Dump(s);
-        delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
+        dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement()->Dump(t);
+       
+        printf("\n%s\n",t);
+        
+        tiger::Canon canon;
+        tiger::StatementBase* s;
+        s = dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
+        s = canon.Statementize( s );
+        #if 0
+        // linearlize
+        tiger::StatementBaseList* l;
+        l = canon.Linearize( s );
+        l->Dump(t);
+        printf("%s\n",t);
+        
+        // block
+        tiger::CanonBlockList* cl;
+        cl = canon.BasicBlocks(l);
+        cl->Dump(t);
+        printf("%s\n",t);
+        
+        // assem
+        tiger::CodeGenerator* cg = new tiger::CodeGenerator;
+        tiger::InstrList* il;
+        il = cg->CodeGen(0,l);
+        il->Dump(t);
+        printf("%s\n",t);
+    #endif
+        
+        //delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
     {
-        dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement()->Dump(s);
+        dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement()->Dump(t);
+        
+        
         delete dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement();
     }
     
-    printf("\n%s\n",s);
+    printf("\n%s\n",t);
     
     
     translator.TraverseFragList();
@@ -330,7 +362,7 @@ int main()
     //test_escape();
     //test_tree();
     //test_litstringlist();
-    //test_typecheck();
-    test_canon();
+    test_typecheck();
+    //test_canon();
     return 0;
 }

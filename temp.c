@@ -25,10 +25,47 @@ Temp* TempPool::NewTemp()
     Temp* n;
     char buf[32];
     
+    
     sprintf(buf,"%s%03d",m_name_prefix,m_next_id);
     m_next_id++;
     
     n = new Temp(buf);
+    
+    p = new TempNode;
+    p->m_temp = n;
+    
+    p->next = m_list;
+    if(m_list)
+        m_list->prev = p;
+    
+    m_list = p;
+    
+    return n;
+}
+
+Temp* TempPool::FindName(char* name)
+{
+    TempNode* p;
+    p = m_list;
+    
+    while(p){
+        if(strcmp(p->m_temp->Name(),name)==0)
+            return p->m_temp;
+        p = p->next;
+    }
+    return 0;
+}
+
+Temp* TempPool::NewNamedTemp(char* name)
+{
+    TempNode* p;
+    Temp* n;
+
+    n = FindName(name);
+    if(n)
+        return n;
+    
+    n = new Temp(name);
     
     p = new TempNode;
     p->m_temp = n;
@@ -78,9 +115,25 @@ Label* LabelPool::NewLabel(){
     
     return n;
 }
+Label* LabelPool::FindName(char* name)
+{
+    LabelNode* p;
+    p = m_list;
+    
+    while(p){
+        if(strcmp(p->m_label->Name(),name)==0)
+            return p->m_label;
+        p = p->next;
+    }
+    return 0;
+}
 Label* LabelPool::NewNamedLabel(char* name){
     LabelNode* p;
     Label* n;
+    
+    n = FindName(name);
+    if(n)
+        return n;
     
     n = new Label(name);
     

@@ -4,6 +4,13 @@
 #include "frame.h"
 #include "tree.h"
 
+/*
+ FP -------->| local vars
+             | actual args
+             | static link    
+             | ret address
+             
+*/
 namespace tiger{
     
 Translator::Translator(){
@@ -18,7 +25,9 @@ Translator::Translator(){
     m_frag_list = new FragList;
     //frame pointer
     m_fp = 0;
+    m_sp = 0;
 }
+
 Translator::~Translator(){
     delete m_level_manager;
     
@@ -29,13 +38,17 @@ Translator::~Translator(){
     //free all temp label memory
     TempLabel::Exit();
 }
-
+/*
+the out most level representation
+no static link,but has frame ,can allocate stack frame vars
+*/
 Level*      Translator::OuterMostLevel()
 {
     if(m_outer_most_level==0)
     {
         m_outer_most_level = new Level(0, new FrameBase(FrameBase::kFrame_X86));
         
+        /* the out most level don't need static link and formal args */
         m_level_manager->NewLevel(m_outer_most_level);
         
         /*
@@ -265,8 +278,16 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             ExpBaseList* explist;
             explist = new ExpBaseList;
         
+            
             EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
             TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
+            
+            // tree code
+            StatementBase* st=0;
+            AccessList* al=0;
+            s32 j=0;//0 for args start
+            al = f->GetLevel()->Frame()->GetFormals();
+            
             /* function foo() */
             if(f->GetList()->GetHead()==0){
                 TIGER_ASSERT(dynamic_cast<CallExp*>(exp)->GetList()->GetHead()==0,"function actuals should be empty");
@@ -277,10 +298,28 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                         new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) ),
                         new ExpBaseCall( new ExpBaseName(f->GetLabel()), 0 )) );
                 */
+                // sp = fp-size
+                st = new StatementMove( new ExpBaseTemp( SP() ),
+                                         new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp( FP() ), 
+                                                             new ExpBaseConst( level->Frame()->Size() )
+                                                         )
+                                     );
+                // static link
+                st = new StatementSeq(st,
+                             new StatementMove( 
+                                 new ExpBaseMem(
+                                     new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( SP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(0))->Offset())) 
+                                 ), new ExpBaseTemp( FP() ) 
+                             )
+                     );
+                // fp = sp
+                st = new StatementSeq( st,
+                                       new StatementMove( new ExpBaseTemp( FP()), new ExpBaseTemp( SP() ) )
+                                     );
                 TreeBase* tree;
                 tree = new TreeBaseEx(
                     new ExpBaseEseq(
-                        new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) ),
+                        st,
                         new ExpBaseCall( new ExpBaseName(f->GetLabel()), 0 )) );
                 return new ExpBaseTy(f->Type(),tree);
             }
@@ -288,12 +327,13 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
             TIGER_ASSERT(p!=0,"%s formals is null",dynamic_cast<CallExp*>(exp)->Name());
             head = dynamic_cast<CallExp*>(exp)->GetList()->GetHead();
             TIGER_ASSERT(head!=0,"actuals is null");
-            StatementBase* st=0;
-            AccessList* al=0;
-            s32 j=1;//0 for static link
-            al = f->GetLevel()->Frame()->GetFormals();
-            //static link
-            st = new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0)) ), new ExpBaseTemp( FP() ) );
+
+            // sp = fp-size
+            st = new StatementMove( new ExpBaseTemp( SP() ),
+                                     new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp( FP() ), 
+                                                         new ExpBaseConst( level->Frame()->Size() )
+                                                     )
+                                 );
             while(head){
                 t = TransExp(venv,tenv,level,head->m_exp,done_label);
                 if(p->m_field->Type()!=t->Type()){
@@ -304,7 +344,7 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 if(al->Get(j)->Kind()==AccessBase::kAccess_Frame){
                     //dynamic_cast<AccessFrame*>(al->Get(j))->Offset()
                     st = new StatementSeq(st,
-                         new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(j))->Offset())) ), TreeBase::UnEx(t->Tree()) )
+                         new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( SP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(j))->Offset())) ), TreeBase::UnEx(t->Tree()) )
                     );
                 }else{
                     //dynamic_cast<AccessReg*>(al->Get(j))->GetTemp()
@@ -322,6 +362,14 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
                 p = p->next;
                 j++;
             }
+            // static link
+            st = new StatementSeq(st,
+                         new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( SP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(j))->Offset())) ), new ExpBaseTemp( FP() ) )
+                    );
+            // fp = sp
+            st = new StatementSeq( st,
+                                   new StatementMove( new ExpBaseTemp( FP()), new ExpBaseTemp( SP() ) )
+                                 );
             /*
             static list 
             f->GetLevel()->Frame()
@@ -875,16 +923,11 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     bl = f->GetEscapes();
     
     m_logger.D("New Frame Begin~~~");
-    /**for static linklist **/
-    access = f->AllocLocal(1/*true*/);
-    access->Retain();//inc refcnt
-    al->Insert(access,AccessList::kAccessList_Rear);
-    bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
-    
-    
+
     if(fundec==0)
         return f;
     
+    /** for formal args **/
     if(fundec->GetList()==0){
         //empty formals
         head = 0;
@@ -904,6 +947,14 @@ FrameBase* Translator::MakeNewFrame(FunDec* fundec)
     }
     m_logger.D("formals size:%d",al->Size());
     m_logger.D("escapes size:%d",bl->Size());
+    
+    
+    /**for static linklist **/
+    access = f->AllocLocal(1/*true*/);
+    access->Retain();//inc refcnt
+    al->Insert(access,AccessList::kAccessList_Rear);
+    bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
+    
     m_logger.D("New Frame End~~~");
     
     /*
@@ -1000,7 +1051,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                 i++;
             }
         }
-        
+        // process function body
         a = TransExp(venv,tenv,alevel,fundec_head->m_fundec->GetExp(),done_label);
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("function return type is null");
@@ -1013,7 +1064,10 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
             }
         }
         
-        // stack frame alevel->Frame()->Size()
+        // after process end of the function body 
+        // restore fp to it's parent 
+        // fp =  mem[fp+static link's address
+        // return to the parent's control path
         
         m_frag_list->Insert( dynamic_cast<EnvEntryFun*>( venv->Lookup( venv->MakeSymbol(fundec_head->m_fundec->Name()) ))->GetLabel(),
                              new Frag( TreeBase::UnNx(a->Tree()), alevel->Frame() ) );
@@ -1243,6 +1297,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
             }else if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Record){
                 t = TransRecordExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }else{
+                // simple var declaration
                 t = TransExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }
             // ExpBaseTy* t=TransArrayExp(venv,tenv,level,dec,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
@@ -1260,7 +1315,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
                 //ExpBaseBinop(Binop::SUB,)
                 //mul t1,w,
             //}
-            if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){
+            if(dynamic_cast<VarDec*>(dec)->GetSymbol()->GetEscape()==1){// it's a frame var
                 af = dynamic_cast<AccessFrame*>( level->Frame()->AllocLocal(1) );
                 access = new VarAccess(level,af);
                 // array address 
@@ -1268,6 +1323,7 @@ TreeBase* Translator::TransDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,L
                                                        new ExpBaseTemp(FP()), 
                                                        new ExpBaseConst(af->Offset()) ) ), TreeBase::UnEx(t->Tree()) );
             }else{
+                // register var
                 ar = dynamic_cast<AccessReg*>( level->Frame()->AllocLocal(0) );
                 access = new VarAccess(level,ar);
                 // array address 

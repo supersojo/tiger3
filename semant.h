@@ -276,6 +276,12 @@ public:
             m_fp = TempLabel::NewTemp();
         return m_fp;
     }
+    Temp* SP(){
+        if(m_sp==0)
+            m_sp = TempLabel::NewTemp();
+        return m_sp;
+    }
+    
     
     // traverse the tree
     void Traverse(TreeBase* tree);
@@ -327,6 +333,7 @@ private:
     FragList* m_frag_list;// manage all function frags
     // frame pointer
     Temp* m_fp;
+    Temp* m_sp;
 };
 
 class FragList{
