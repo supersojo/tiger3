@@ -122,14 +122,16 @@ public:
     void Dump(char* o){
         CanonBlockNode* p;
         s32 i_offset = 0;
+        s32 i = 0;
         p = m_head;
         char t[1024]={0};
         while(p){
             if(p->m_block){
                 p->m_block->Dump(t);
             }
-            i_offset += sprintf(i_offset+o,"%s",t);
+            i_offset += sprintf(i_offset+o,"%d:\n%s",i,t);
             p = p->next;
+            i++;
         }
     }
     ~CanonBlockList(){

@@ -298,7 +298,7 @@ public:
                 if(q->m_instr->Kind()==InstrBase::kInstr_Label){
                     if(q->next)
                         g->AddEdge(p,q->next);
-                    else
+                    else// the last instruction
                         g->AddEdge(p,q);
                 }else{
                     g->AddEdge(p,q);
@@ -542,8 +542,10 @@ public:
         CGraphNode* p;
         CGraphNode* q;
         
-        if(Has(n_->m_temp))
+        if(Has(n_->m_temp)){
+            delete n_;//free the more node
             return;
+        }
         n = n_;
         
         if(dir==kCGraph_Rear){
@@ -728,6 +730,10 @@ private:
 struct LivenessResult{
     CGraph*   m_graph;
     MoveList* m_list;
+    ~LivenessResult(){
+        delete m_graph;
+        delete m_list;
+    }
 };
 // liveness
 class Liveness{
@@ -830,8 +836,12 @@ public:
                     s32 k=0;
                     for(k=0;k<gn->m_out->Size();k++){
                         b = gn->m_out->Get(k);
-                        m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
-                        cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
+                        
+                        
+                        if(strcmp(a->Name(),b->Name())!=0){
+                            m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
+                            cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
+                        }
                     }
                     continue;
                 }
@@ -860,7 +870,7 @@ public:
     }
 private:
     LoggerStdio m_logger;
-    void Calc(Graph* g){
+    void Calc(Graph* g){//flow graph
         GraphNode* p = 0;
         while(1){
             s32 c = 0;

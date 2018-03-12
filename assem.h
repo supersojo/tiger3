@@ -1,26 +1,65 @@
 #ifndef ASSEM_H
 #define ASSEM_H
 
+#include <list>
 #include "assem.h"
 #include "frame.h"
 #include "tree.h"
+#include "tree_gen.h"
+/*
 
+ For each statement in statementlist
+ Select proper instruction for it
+ Here first select instruction then select reg
+ 
+ Generating format string
+ 
+ For example
+ 
+ LABEL(L005)  => L005:
+ MOV(TEMP(T002),CONST(1)) => "mov $1,%s"    
+ MOV(TEMP(T003),CONST(2)) => "mov $2,%s"
+ MOV(TEMP(T004),CONST(0)) => "mov $0,%s"
+ MOV(TEMP(T005),CONST(1)) => "mov $1,%s"
+ MOV(TEMP(T006),CONST(10))=> "mov $10,%s"
+ JUMP(NAME(L000),(L000))  => jmp L000
+ LABEL(L000)              => L000:
+ MOV(TEMP(T007),CONST(1)) => "mov $1,%s"
+ CJUMP OP TEMP(T005),TEMP(T006),L003,L004 => cmp %s,%s jle L003
+ LABEL(L004)                              =>L004:
+ MOV(TEMP(T007),CONST(0)) =>"mov $0,%s"
+ JUMP(NAME(L003),(L003))  => jmp L003
+ LABEL(L003)              => L003:
+ CJUMP OP TEMP(T007),CONST(1),L001,L002 =>cmp %s,$1 je L001
+ LABEL(L002)             =>L002:
+ JUMP(NAME(done),(done)) =>jmp done
+ LABEL(L001)             =>L001:
+ MOV(TEMP(T002),BINOP(ADD,TEMP(T002),TEMP(T005))) => add %s,%s
+ MOV(TEMP(T005),BINOP(ADD,TEMP(T005),CONST(1)))   =>add %s,%s
+ JUMP(NAME(L000),(L000)) => jmp L000
+                         => done:
+
+
+
+ mov
+*/
 namespace tiger{
 
+class TempMapList;
 class ColorList;
 class InstrBase{
 public:
     enum{
-        kInstr_Oper,
-        kInstr_Label,
-        kInstr_Move,
+        kInstr_Oper, // +,-,*/, etc
+        kInstr_Label,//label
+        kInstr_Move, //move
         kInstr_Invalid
     };
     InstrBase(){m_kind = kInstr_Invalid;}
     InstrBase(s32 kind){m_kind = kind;}
     virtual void Dump(char* o){
     }
-    virtual void Output(ColorList* cl,char* o){
+    virtual void Output(TempMapList* map,char* o){
         // parse m_str
     }
     virtual s32 Kind(){return m_kind;}
@@ -33,11 +72,11 @@ public:
     }
 private:
     s32 m_kind;
-    
 };
 
 class InstrOper : public InstrBase{
 public:
+
     InstrOper():InstrBase(kInstr_Oper){
         m_str = 0;
         m_dst = 0;
@@ -55,7 +94,11 @@ public:
             sprintf(o,"%s",m_str);
         }
         if(m_dst->Size()==0 && m_src->Size()!=0){
-            sprintf(o,m_str,m_src->Get(0)->Name());
+            s32 i = 0;
+            if(m_src->Size()==1)
+                sprintf(o,m_str,m_src->Get(0)->Name());
+            if(m_src->Size()==2)
+                sprintf(o,m_str,m_src->Get(0)->Name(),m_src->Get(1)->Name());
         }
         if(m_dst->Size()!=0 && m_src->Size()==0){
             sprintf(o,m_str,m_dst->Get(0)->Name());
@@ -64,7 +107,7 @@ public:
             sprintf(o,(const char*)m_str,m_src->Get(0)->Name(),m_dst->Get(0)->Name());
         }
     }
-    virtual void Output(ColorList* cl,char* o);
+    virtual void Output(TempMapList* map,char* o);
     TempList* Dst(){return m_dst;}
     TempList* Src(){return m_src;}
     void InstrStr(char* o){
@@ -103,7 +146,7 @@ public:
     virtual void Dump(char* o){
         sprintf(o,"%s",m_str);
     }
-    virtual void Output(ColorList* cl,char* o){
+    virtual void Output(TempMapList* map,char* o){
         // parse m_str
         sprintf(o,"%s",m_str);
     }
@@ -142,10 +185,10 @@ public:
             sprintf(o,m_str,m_src->Get(0)->Name(),m_dst->Get(0)->Name());
         }
     }
-    virtual void Output(ColorList* cl,char* o);
+    virtual void Output(TempMapList* map,char* o);
     TempList* Dst(){return m_dst;}
     TempList* Src(){return m_src;}
-    ~InstrMove(){
+    virtual ~InstrMove(){
         free(m_str);
         delete m_dst;
         delete m_src;
@@ -172,6 +215,10 @@ struct TempMapNode{
     TempMapNode* prev;
     TempMapNode* next;
 };
+/*
+TempMapList for register allocation.
+one map can over other map
+*/
 class TempMapList{
 public:
     TempMapList(){
@@ -181,6 +228,11 @@ public:
     TempMapList* LayerMap(TempMapList* over){
         m_top = over;
     }
+    /*
+    {t0->sp,t1->fp}<----{t2->r1,t3->r2}
+                             ||
+                             cur map
+    */
     void Enter(Temp* temp,char* str){
         TempMapNode* n;
         TempMapNode* p;
@@ -311,7 +363,7 @@ public:
             p = p->next;
         }
     }
-    void Output(ColorList* cl,char* o);
+    void Output(TempMapList* map,char* o);
     ~InstrList(){
         InstrNode* p = m_head;
         while(p){
@@ -324,16 +376,21 @@ private:
     InstrNode* m_head;
     s32 m_size;
 };
-
+// assembly language generator
 class CodeGenerator{
 public:
+    CodeGenerator(){
+        m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        m_logger.SetModule("code gen");
+        m_temp_map_list = 0;
+    }
     InstrList* CodeGen(FrameBase* f,StatementBaseList* l);
-    void Output(ColorList* list,InstrList* il,FILE* f){
+    void Output(TempMapList* map,InstrList* il,FILE* f){
         //
         //
         char buf[1024]={0};
         
-        il->Output(list,buf);
+        il->Output(map,buf);
         
         //prologue
         fprintf(f,"#\tcode generated by tiger compiler v0.1\n");
@@ -359,7 +416,11 @@ private:
     Temp* _MunchExpBaseConst(InstrList *il,ExpBaseConst *e);
     Temp* _MunchExpBaseTemp(InstrList *il,ExpBaseTemp *e);
     Temp* _MunchExpBaseCall(InstrList* il,ExpBaseCall *e);
+    TempList* _MunchArgs(ExpBaseList* el);
     void Munch(InstrList* il,FrameBase* f,StatementBaseList* l);
+    
+    LoggerStdio m_logger;
+    TempMapList* m_temp_map_list;
 };
 
 

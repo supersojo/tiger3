@@ -298,7 +298,7 @@ public:
         AccessBase* ret = 0;
         if(escape){
             ret = new AccessFrame(m_offset);
-            m_offset = m_offset - 4;
+            m_offset = m_offset + 4;
             m_size += 4;
             
             //update expbase in m_refill_list;

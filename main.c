@@ -201,7 +201,7 @@ void test_tree_gen(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in for i:=1 to 10 do a:=a+i end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo(a:int):int=0 in foo(123) end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -273,6 +273,7 @@ void test_tree_gen(){
         //delete tr->m_statement;
         s = tr->m_statement;
     }
+    s = tg.ProcessEntryExit(&venv,&tenv,tg.OuterMostLevel(),s);
     #if 0
     // function
     tiger::FragList* fl;
@@ -295,9 +296,57 @@ void test_tree_gen(){
     l->Dump(t);
     printf("\nlinearlize:\n%s\n",t);
     
+    tiger::CanonBlockList* cl;
+    cl = canon.BasicBlocks(l);
+    cl->Dump(t);
+    printf("\nblock:\n%s\n",t);
     
+    //trace schedule
+    tiger::StatementBaseList* sl;
+    sl = canon.TraceSchedule(cl);
+    sl->Dump(t);
+    printf("\ntrace:\n%s\n",t);
+    
+    delete l;
+    delete cl;
+    
+    tiger::CodeGenerator* cg = new tiger::CodeGenerator;
+    tiger::InstrList* il;
+    il = cg->CodeGen(0,sl);
+    delete sl;
+    il->Dump(t);
+    printf("%s\n",t);
+    
+    {// register allocation
+        // graph
+        tiger::FlowGraph* fg = new tiger::FlowGraph;
+        tiger::Graph* g = fg->AssemFlowGraph(il);
+        tiger::Liveness* ln = new tiger::Liveness;
+        tiger::LivenessResult* lr;
+        tiger::ColorList* col;
+        lr = ln->LivenessCalc(g);
+        delete lr;
+        delete fg;
+        delete g;
+        delete ln;
+    }
+    
+    FILE* f = fopen("tiger.S","w");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T003"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T004"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T005"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T006"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T007"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T008"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T009"),"%RAX");
+    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("RV"),"%RAX");
+    cg->Output(tg.TempMap(),il,f); //gen real assemble code
+    fclose(f);
+        
     delete tr;
     
+    delete il;
+    delete cg;
     /* free */
     delete exp;
 }

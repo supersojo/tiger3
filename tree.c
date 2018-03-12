@@ -63,11 +63,35 @@ StatementCjump* StatementCjump::Clone(){
 void StatementCjump::Dump(char *o){
     char l[1024]={0};
     char r[1024]={0};
+    char op_str[1024]={0};
     if(m_left)
         m_left->Dump(l);
     if(m_right)
         m_right->Dump(r);
-    sprintf(o,"CJUMP OP %s,%s,%s,%s",l,r,m_true->Name(),m_false->Name());
+    switch(m_op)
+    {
+        case RelationOp::kRelationOp_Eq:
+            sprintf(op_str,"Eq");
+            break;
+        case RelationOp::kRelationOp_Ne:
+            sprintf(op_str,"Ne");
+            break;
+        case RelationOp::kRelationOp_Lt:
+            sprintf(op_str,"Lt");
+            break;
+        case RelationOp::kRelationOp_Le:
+            sprintf(op_str,"Le");
+            break;
+        case RelationOp::kRelationOp_Gt:
+            sprintf(op_str,"Gt");
+            break;
+        case RelationOp::kRelationOp_Ge:
+            sprintf(op_str,"Ge");
+            break;
+        default:
+            sprintf(op_str,"OP?");
+    }
+    sprintf(o,"CJUMP %s %s,%s,%s,%s",op_str,l,r,m_true->Name(),m_false->Name());
 }
 StatementMove* StatementMove::Clone(){
         StatementMove* n = new StatementMove;

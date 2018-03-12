@@ -19,12 +19,19 @@ TreeGenerator::TreeGenerator()
     
     m_fp = TempLabel::NewTemp();
     m_sp  = TempLabel::NewTemp();
+    m_rv  = TempLabel::NewTemp();
+    
+    m_temp_map_list = new TempMapList;
+    m_temp_map_list->Enter(m_fp,"%RBP");
+    m_temp_map_list->Enter(m_sp,"%RSP");
+    m_temp_map_list->Enter(TempLabel::NewNamedTemp("RDI"),"%RDI");
 }
 TreeGenerator::~TreeGenerator()
 {
     delete m_lit_string_list;
     delete m_level_manager;
     delete m_frag_list;
+    delete m_temp_map_list;
     //free all temp label memory
     TempLabel::Exit();
 }
@@ -159,6 +166,9 @@ TreeGenResult*  TreeGenerator::TreeGenVar(SymTab* venv,SymTab* tenv,Level* level
                         );
                     }
                     alevel=alevel->Parent();
+                }
+                if(tmp==0){// in the same level
+                    tmp = new ExpBaseTemp( FP() );
                 }
                 return new TreeGenResult(t->Type(),
                     new ExpBaseMem(
@@ -302,7 +312,7 @@ TreeGenResult* TreeGenerator::TreeGenExpCall(SymTab* venv,SymTab*tenv,Level* lev
     // allocate frame
     st = new StatementMove( new ExpBaseTemp( SP() ),
                                  new ExpBaseBinop( BinaryOp::kBinaryOp_Sub, new ExpBaseTemp( FP() ), 
-                                                     new ExpBaseConst( level->Frame()->Size() )
+                                                     new ExpBaseConst( f->GetLevel()->Frame()->Size() )
                                                  )
                              );
     //  args
@@ -316,6 +326,15 @@ TreeGenResult* TreeGenerator::TreeGenExpCall(SymTab* venv,SymTab*tenv,Level* lev
             //dynamic_cast<AccessFrame*>(al->Get(j))->Offset()
             st = new StatementSeq(st,
                  new StatementMove( new ExpBaseMem(new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( SP() ), new ExpBaseConst(dynamic_cast<AccessFrame*>(al->Get(j))->Offset())) ), UnEx(t) )
+            );
+            // for x86_64
+            // rdi rsi rdx rcx r8 r9
+            st = new StatementSeq(
+                    st,
+                    new StatementMove(
+                        new ExpBaseTemp(TempLabel::NewNamedTemp("RDI")),
+                        UnEx(t)->Clone()
+                    )
             );
         }else{
             //dynamic_cast<AccessReg*>(al->Get(j))->GetTemp()
@@ -346,12 +365,23 @@ TreeGenResult* TreeGenerator::TreeGenExpCall(SymTab* venv,SymTab*tenv,Level* lev
     st = new StatementSeq( st,
                            new StatementMove( new ExpBaseTemp( FP()), new ExpBaseTemp( SP() ) )
                          );
-
+    // call
+    st = new StatementSeq(st,
+            new StatementExp(new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist )));
     
-    return new TreeGenResult( f->Type(), new ExpBaseEseq(
-                st,
-                new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist ))
-                );
+    //free frame
+    st = new StatementSeq(st,
+            new StatementMove( 
+                    new ExpBaseTemp( FP() ),
+                     new ExpBaseBinop( 
+                            BinaryOp::kBinaryOp_Add, 
+                            new ExpBaseTemp( FP() ), 
+                            new ExpBaseConst( f->GetLevel()->Frame()->Size() )
+                     )
+            )
+    );
+                             
+    return new TreeGenResult( f->Type(), st);
 }
 TreeGenResult* TreeGenerator::TreeGenExpOp(SymTab* venv,SymTab*tenv,Level* level,Exp* exp,Label* done_label)
 {
@@ -671,6 +701,7 @@ TreeGenResult* TreeGenerator::TreeGenExpIf(SymTab* venv,SymTab*tenv,Level* level
 
     Label *t = TempLabel::NewLabel();
     Label *f = TempLabel::NewLabel();
+    Label *end = TempLabel::NewLabel();
     
     // if 
     a = TreeGenExp(venv,tenv,level,if_exp,done_label);
@@ -684,13 +715,19 @@ TreeGenResult* TreeGenerator::TreeGenExpIf(SymTab* venv,SymTab*tenv,Level* level
     //then
     b = TreeGenExp(venv,tenv,level,then_exp,done_label);
 
+    LabelList* llist = new LabelList;
+    llist->Insert(end,LabelList::kLabelList_Rear);
+    
     statement = new StatementSeq(
-        new StatementSeq(
-            new StatementSeq( tr->m_statement, new StatementLabel(t)
-            ), 
-            UnNx(b)
-        ), 
-        new StatementLabel(f)
+                    new StatementSeq(
+                        new StatementSeq(
+                            new StatementSeq( tr->m_statement, new StatementLabel(t)
+                            ), 
+                            UnNx(b)
+                        ), 
+                        new StatementJump(new ExpBaseName(end),llist)
+                    ),
+                    new StatementLabel(f)
     );
     
     //else
@@ -698,6 +735,8 @@ TreeGenResult* TreeGenerator::TreeGenExpIf(SymTab* venv,SymTab*tenv,Level* level
         c = TreeGenExp(venv,tenv,level,else_exp,done_label);
         statement = new StatementSeq( statement, UnNx(c) );
     }
+    
+    statement = new StatementSeq( statement, new StatementLabel(end) );
     
     /* for Ex, we need free UnCx()'s memory */
     if(a->Kind()!=TreeGenResult::kTreeGenResult_Cx)
@@ -1080,25 +1119,31 @@ FrameBase* TreeGenerator::MakeNewFrame(FunDec* fundec)
     else{
         head = fundec->GetList()->GetHead();
     }
+    
+
     while(head){
 
-        access = f->AllocLocal(0/*false*/);
+        access = f->AllocLocal(1/*true*/);
         access->Retain();//inc refcnt
         al->Insert(access,AccessList::kAccessList_Rear);
         
-        bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
+        bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
+        
+        /* let function formal arg are all escape type,so all store in frame space */
+        head->m_field->Name()->SetEscape( 1 );
         
         head = head->next;
     }
     m_logger.D("formals size:%d",al->Size());
     m_logger.D("escapes size:%d",bl->Size());
     
-    
     /**for static linklist **/
     access = f->AllocLocal(1/*true*/);
     access->Retain();//inc refcnt
     al->Insert(access,AccessList::kAccessList_Rear);
     bl->Insert(BoolNode::kBool_True,BoolList::kBoolList_Rear);
+    
+    
     
     m_logger.D("New Frame End~~~");
     
@@ -1192,12 +1237,12 @@ void TreeGenerator::TreeGenFunctionDec(SymTab* venv,SymTab* tenv,Level* level,De
                 AccessReg*   ar=0;
                 if(head->m_field->Name()->GetEscape()==1){
                     af = dynamic_cast<AccessFrame*>( alevel->Frame()->GetFormals()->Get(i) );
-                    access = new VarAccess(level,af);
+                    access = new VarAccess(alevel,af);
                     // new ExpBaseName()
                 }else{
                     ar = dynamic_cast<AccessReg*>( alevel->Frame()->GetFormals()->Get(i) );
                     m_logger.D("----------------formal arg :%s",ar->GetTemp()->Name());
-                    access = new VarAccess(level,ar);
+                    access = new VarAccess(alevel,ar);
                 }
                 
                 venv->Enter( venv->MakeSymbol(head->m_field->Name()),
@@ -1393,6 +1438,37 @@ TreeGenResult* TreeGenerator::TreeGenExp(SymTab* venv,SymTab* tenv,Level* level,
     }
     m_logger.W("should not reach here %s,%d",__FILE__,__LINE__);
     return 0;
+}
+StatementBase* TreeGenerator::ProcessEntryExit(SymTab* venv,SymTab* tenv, Level* level,StatementBase* s)
+{
+    m_logger.D("frame size is:%d",level->Frame()->Size());
+    m_logger.D("Alloc space for out most level");
+    s = new StatementSeq(
+            new StatementMove(
+                new ExpBaseTemp(FP()),
+                new ExpBaseBinop(
+                    BinaryOp::kBinaryOp_Sub,
+                    new ExpBaseTemp(FP()),
+                    new ExpBaseConst(level->Frame()->Size())
+                )
+            ),
+            s
+       );
+    s = new StatementSeq(
+           s,
+           new StatementMove(
+                new ExpBaseTemp(FP()),
+                new ExpBaseBinop(
+                    BinaryOp::kBinaryOp_Add,
+                    new ExpBaseTemp(FP()),
+                    new ExpBaseConst(level->Frame()->Size())
+                )
+           )
+           
+    );
+    return new StatementSeq(s,
+      new StatementMove( new ExpBaseTemp(SP()), new ExpBaseTemp(FP()))
+    );
 }
     
 

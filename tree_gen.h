@@ -5,6 +5,7 @@
 #include "tiger_log.h"
 #include "tree.h"
 #include "semant.h"
+#include "assem.h"
 
 /*
  tree generating need type info.
@@ -77,6 +78,7 @@ struct TreeGenResult{
     TypeBase* m_type;
 };    
 // tree code generation
+class TempMapList;
 class TreeGenerator{
 public:
     TreeGenerator();
@@ -86,6 +88,8 @@ public:
     }
     Level* OuterMostLevel();
     FragList* GetFragList(){return m_frag_list;}
+    TempMapList* TempMap(){return m_temp_map_list;}
+    StatementBase* ProcessEntryExit(SymTab* venv,SymTab* tenv, Level* level,StatementBase* s);
     ~TreeGenerator();
 private:
     TreeGenResult* TreeGenExp(SymTab* venv,SymTab*tenv,Level* level,Exp* exp,Label* done_label);
@@ -127,8 +131,13 @@ private:
     
     Temp* FP(){return m_fp;}
     Temp* SP(){return m_sp;}
+    Temp* RV(){return m_rv;}
     Temp* m_fp;
     Temp* m_sp;
+    Temp* m_rv;
+    
+    
+    TempMapList* m_temp_map_list;
     
     Level* m_outer_most_level;
     
