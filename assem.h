@@ -19,10 +19,13 @@ public:
     InstrBase(s32 kind){m_kind = kind;}
     virtual void Dump(char* o){
     }
+    virtual s32 Kind(){return m_kind;}
     virtual TempList* Dst(){return 0;}
     virtual TempList* Src(){return 0;}
     virtual LabelList* Jump(){return 0;}
     virtual ~InstrBase(){
+    }
+    virtual void InstrStr(char* o){
     }
 private:
     s32 m_kind;
@@ -55,6 +58,15 @@ public:
     }
     TempList* Dst(){return m_dst;}
     TempList* Src(){return m_src;}
+    void InstrStr(char* o){
+        char* s = m_str;
+        while(*s!=' '){
+            *o = *s;
+            o++;
+            s++;
+        }
+        *o = '\0';
+    }
     LabelList* Jump(){return m_jump;}
     virtual ~InstrOper(){
         free(m_str);
@@ -78,11 +90,14 @@ public:
         m_str = strdup(str);
         m_label = l;
     }
+    Label* GetLabel(){return m_label;}
     virtual void Dump(char* o){
         sprintf(o,"%s",m_str);
     }
     virtual ~InstrLabel(){
         free(m_str);
+    }
+    virtual void InstrStr(char* o){
     }
 private:
     char* m_str;
@@ -116,6 +131,8 @@ public:
         free(m_str);
         delete m_dst;
         delete m_src;
+    }
+    virtual void InstrStr(char* o){
     }
 private:
     char* m_str;

@@ -11,6 +11,7 @@
 #include "tree.h"
 #include "canon.h"
 #include "assem.h"
+#include "graph.h"
 
 void test_StringSourceCodeStream()
 {
@@ -190,7 +191,7 @@ void test_typecheck(){
     {
         dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement()->Dump(t);
        
-        printf("\n%s\n",t);
+        //printf("\n%s\n",t);
         
         tiger::Canon canon;
         tiger::StatementBase* s;
@@ -200,19 +201,19 @@ void test_typecheck(){
         tiger::StatementBaseList* l;
         l = canon.Linearize( s );
         l->Dump(t);
-        printf("%s\n",t);
+        //printf("%s\n",t);
         
         // block
         tiger::CanonBlockList* cl;
         cl = canon.BasicBlocks(l);
         cl->Dump(t);
-        printf("%s\n",t);
+        //printf("%s\n",t);
         
         //trace schedule
         tiger::StatementBaseList* sl;
         sl = canon.TraceSchedule(cl);
         sl->Dump(t);
-        printf("%s\n",t);
+        //printf("%s\n",t);
         
         // assem
         tiger::CodeGenerator* cg = new tiger::CodeGenerator;
@@ -231,10 +232,10 @@ void test_typecheck(){
         delete dynamic_cast<tiger::TreeBaseCx*>(ty->Tree())->GetStatement();
     }
     
-    printf("\n%s\n",t);
+    //printf("\n%s\n",t);
     
     
-    translator.TraverseFragList();
+    //translator.TraverseFragList();
     
     delete ty;
     

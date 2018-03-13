@@ -240,6 +240,59 @@ public:
     TempList(){m_head = 0;m_size = 0;}
     ATempNode* GetHead(){return m_head;}
     s32 Size(){return m_size;}
+    s32 Merge(TempList* tl){
+        s32 ret = 0;
+        s32 i = 0;
+        for(i=0;i<tl->Size();i++){
+            if(Has( tl->Get(i) )){
+                ;
+            }else{
+                ret++;
+                Insert( tl->Get(i), kTempList_Rear );
+            }
+        }
+        return ret;
+    }
+    s32 Has(Temp* t){
+        ATempNode* p = m_head;
+        while(p){
+            if(p->m_temp == t)
+                return 1;
+            p = p->next;
+        }
+        return 0;
+    }
+    void Remove(Temp* t){
+        // n1->n2->n3
+        ATempNode* p;
+        ATempNode* q;//pointer to parent's of p
+        p = m_head;
+        q = 0;
+        while(p){
+            if(p->m_temp == t){
+                break;
+            }
+            q = p;
+            p = p->next;
+        }
+        // not found
+        if(p==0){
+            return;
+        }
+        // head
+        if(q==0){
+            m_head = m_head->next;
+            if(m_head)
+                m_head->prev = 0;
+            delete p;
+            return;
+        }
+        // mid
+        q->next = p->next;
+        if(p->next)
+            p->next->prev = q;
+        delete p;
+    }
     Temp* Get(s32 index){
         if(index>=m_size)
             return 0;

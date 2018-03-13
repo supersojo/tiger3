@@ -191,6 +191,25 @@ void CodeGenerator::_MunchStatementJump(InstrList* il,StatementJump *s){
     il->Insert( new InstrOper( buf, dst, src, s->GetList()->Clone() ), InstrList::kInstrList_Rear);
 }
 void CodeGenerator::_MunchStatementCjump(InstrList* il,StatementCjump *s){
+    char buf[1024]={0};
+    
+    sprintf(buf,"cmp s0',s1'");
+    TempList* dst = new TempList;
+    TempList* src = new TempList;
+    
+    
+    src->Insert(_MunchExpBase(il,s->Left()),TempList::kTempList_Rear);
+    src->Insert(_MunchExpBase(il,s->Right()),TempList::kTempList_Rear);
+    
+    il->Insert( new InstrOper( buf, dst, src, 0), InstrList::kInstrList_Rear);
+    
+    sprintf(buf,"je %s",s->GetTrueLabel()->Name());
+    dst = new TempList; 
+    src = new TempList;
+    LabelList* ll = new LabelList;
+    ll->Insert(s->GetTrueLabel(),LabelList::kLabelList_Rear);
+    il->Insert( new InstrOper( buf, dst, src, ll), InstrList::kInstrList_Rear);
+    
 }
 void CodeGenerator::Munch(InstrList* il,FrameBase* f,StatementBaseList* l){
     if(l->Size()==0)
