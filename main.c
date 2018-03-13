@@ -360,6 +360,68 @@ void test_canon(){
     delete cg; 
     tiger::TempLabel::Exit();
 }
+void test_liveness()
+{
+    tiger::InstrList* il;
+    tiger::InstrBase* instr;
+    tiger::TempList* dst;
+    tiger::TempList* src;
+    il = new tiger::InstrList;
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    dst->Insert(tiger::TempLabel::NewNamedTemp("a"),tiger::TempList::kTempList_Rear);
+    instr = new tiger::InstrMove("move d0',0",dst,src);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    instr = new tiger::InstrLabel("loop:",tiger::TempLabel::NewNamedLabel("loop"));
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    dst->Insert(tiger::TempLabel::NewNamedTemp("b"),tiger::TempList::kTempList_Rear);
+    src->Insert(tiger::TempLabel::NewNamedTemp("a"),tiger::TempList::kTempList_Rear);
+    instr = new tiger::InstrOper("add d0',s0,1",dst,src,0);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    dst->Insert(tiger::TempLabel::NewNamedTemp("c"),tiger::TempList::kTempList_Rear);
+    src->Insert(tiger::TempLabel::NewNamedTemp("c"),tiger::TempList::kTempList_Rear);
+    src->Insert(tiger::TempLabel::NewNamedTemp("b"),tiger::TempList::kTempList_Rear);
+    instr = new tiger::InstrOper("add d0',s0',s1'",dst,src,0);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    dst->Insert(tiger::TempLabel::NewNamedTemp("a"),tiger::TempList::kTempList_Rear);
+    src->Insert(tiger::TempLabel::NewNamedTemp("b"),tiger::TempList::kTempList_Rear);
+    instr = new tiger::InstrOper("add d0',s0',2",dst,src,0);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    tiger::LabelList* ll = new tiger::LabelList;
+    ll->Insert(tiger::TempLabel::NewNamedLabel("loop"),tiger::LabelList::kLabelList_Rear);
+    instr = new tiger::InstrOper("jmp loop",dst,src,ll);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    dst = new tiger::TempList;
+    src = new tiger::TempList;
+    src->Insert(tiger::TempLabel::NewNamedTemp("c"),tiger::TempList::kTempList_Rear);
+    instr = new tiger::InstrOper("inc s0",dst,src,0);
+    il->Insert(instr,tiger::InstrList::kInstrList_Rear);
+    
+    tiger::FlowGraph* fg = new tiger::FlowGraph;
+    tiger::Graph* g = fg->AssemFlowGraph(il);
+    tiger::Liveness* ln = new tiger::Liveness;
+    ln->LivenessCalc(g);
+    
+    tiger::TempLabel::Exit();
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -374,5 +436,6 @@ int main()
     //test_litstringlist();
     test_typecheck();
     //test_canon();
+    //test_liveness();
     return 0;
 }

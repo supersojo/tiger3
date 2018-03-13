@@ -284,7 +284,10 @@ public:
                 //add edge
                 p->m_instr->InstrStr(b);
                 if(strcmp(b,"jmp")==0){
-                    g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
+                    if(g->GetByLabel(ll->Get(0))->next==0)// real instr
+                        g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
+                    else// no real instr
+                        g->AddEdge( p, g->GetByLabel(ll->Get(0))->next );
                 }else{
                     // condition branch
                     g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
@@ -292,7 +295,14 @@ public:
                 }
                 
              }else{
-                g->AddEdge(p,q);
+                if(q->m_instr->Kind()==InstrBase::kInstr_Label){
+                    if(q->next)
+                        g->AddEdge(p,q->next);
+                    else
+                        g->AddEdge(p,q);
+                }else{
+                    g->AddEdge(p,q);
+                }
              }
         }
         
@@ -584,6 +594,34 @@ public:
             }
         }
         
+    }
+    CGraph* Build(Graph* g){
+        CGraph* cg = new CGraph;
+        CGraphNode* cgn;
+        GraphNode* gn;
+        TempList* tl;
+        s32 i = 0;
+        // addnode
+        for(i=0;i<g->Size();i++){
+            gn = g->Get(i);
+            tl = gn->m_instr->Dst();
+            s32 j = 0;
+            for(j=0;j<tl->Size();j++){
+                cgn = new CGraphNode;
+                cgn->m_temp = tl->Get(j);
+                cg->AddNode( cgn );
+            }
+            tl = gn->m_instr->Src();
+            for(j=0;j<tl->Size();j++){
+                cgn = new CGraphNode;
+                cgn->m_temp = tl->Get(j);
+                cg->AddNode( cgn );
+            }
+        }
+        // addedge
+        // TBD:
+        
+        return cg;
     }
 private:
     LoggerStdio m_logger;
