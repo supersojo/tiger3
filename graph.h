@@ -574,8 +574,13 @@ public:
                 continue;
             s32 j = 0;
             m_logger.D("node %d:",i);
+            m_logger.D("\tin:");
             for(j=0;j<gn->m_in->Size();j++){
-                m_logger.D("\t%s",gn->m_in->Get(j)->Name() );
+                m_logger.D("\t\t%s",gn->m_in->Get(j)->Name() );
+            }
+            m_logger.D("\tout:");
+            for(j=0;j<gn->m_out->Size();j++){
+                m_logger.D("\t\t%s",gn->m_out->Get(j)->Name() );
             }
         }
         
