@@ -201,7 +201,7 @@ void test_tree_gen(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let function foo(a:int):int=0 in foo(123) end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let in for a:=11 to 20 do if a>10 then printint(a) end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -226,6 +226,13 @@ void test_tree_gen(){
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("string")));
     venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("print"),1));
+    
+    /*
+    printint(x:int)
+    */
+    node = new tiger::TypeFieldNode;
+    node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("int")));
+    venv.Enter(venv.MakeSymbolFromString("printint"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,tiger::TempLabel::NewNamedLabel("printint"),1));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;
@@ -256,6 +263,8 @@ void test_tree_gen(){
     tiger::TreeGenerator tg;
     tr = tg.TreeGen(&venv,&tenv,tg.OuterMostLevel(),exp,0);
     
+    tg.ProceeExternalFunctions(&venv,&tenv);
+    
     // dump tree
     char t[1024]={0};
     
@@ -273,6 +282,8 @@ void test_tree_gen(){
         //delete tr->m_statement;
         s = tr->m_statement;
     }
+    // only call ProcessEntryExit for outmost code
+    // for function, just view change
     s = tg.ProcessEntryExit(&venv,&tenv,tg.OuterMostLevel(),s);
     #if 0
     // function
@@ -283,7 +294,7 @@ void test_tree_gen(){
     s->Dump(t);
     printf("\nfoo:\n%s\n",t);
     #endif
-    
+    //s = tg.ProcessEntryExit(&venv,&tenv,tg.OuterMostLevel(),s);
     //canonical
     tiger::Canon canon;
     s = canon.Statementize( s );
@@ -307,46 +318,41 @@ void test_tree_gen(){
     sl->Dump(t);
     printf("\ntrace:\n%s\n",t);
     
-    delete l;
-    delete cl;
+    //delete l;
+    //delete cl;
     
     tiger::CodeGenerator* cg = new tiger::CodeGenerator;
     tiger::InstrList* il;
     il = cg->CodeGen(0,sl);
-    delete sl;
+    //delete sl;
     il->Dump(t);
     printf("%s\n",t);
     
-    {// register allocation
-        // graph
-        tiger::FlowGraph* fg = new tiger::FlowGraph;
-        tiger::Graph* g = fg->AssemFlowGraph(il);
-        tiger::Liveness* ln = new tiger::Liveness;
-        tiger::LivenessResult* lr;
-        tiger::ColorList* col;
-        lr = ln->LivenessCalc(g);
-        delete lr;
-        delete fg;
-        delete g;
-        delete ln;
-    }
+    // register allocation
+    // graph
+    tiger::FlowGraph* fg = new tiger::FlowGraph;
+    tiger::Graph* g = fg->AssemFlowGraph(il);
+    tiger::Liveness* ln = new tiger::Liveness;
+    tiger::LivenessResult* lr;
+    tiger::ColorList* col;
+    lr = ln->LivenessCalc(g);
+    
+    
+    
     
     FILE* f = fopen("tiger.S","w");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T003"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T004"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T005"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T006"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T007"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T008"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("T009"),"%RAX");
-    tg.TempMap()->Enter(tiger::TempLabel::NewNamedTemp("RV"),"%RAX");
+    RegAlloc(tg.TempMap(),lr,0,il);
     cg->Output(tg.TempMap(),il,f); //gen real assemble code
     fclose(f);
         
-    delete tr;
+    //delete fg;
+    //delete g;
+    //delete ln;
     
-    delete il;
-    delete cg;
+    //delete tr;
+    //delete lr;
+    //delete il;
+    //delete cg;
     /* free */
     delete exp;
 }

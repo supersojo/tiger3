@@ -170,7 +170,12 @@ public:
         kGraph_Front,
         kGraph_Invalid
     };
-    Graph(){m_head = 0;m_size=0;}
+    Graph(){
+        m_head = 0;
+        m_size=0;
+        m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        m_logger.SetModule("liveness");
+    }
     s32 Size(){return m_size;}
     void Insert(GraphNode* n_,s32 dir){
         GraphNode* n;
@@ -232,7 +237,8 @@ public:
         GraphNode* p = m_head;
         while(p){
             if(p->m_instr->Kind()==InstrBase::kInstr_Label){
-                if(dynamic_cast<InstrLabel*>(p->m_instr)->GetLabel() == l)
+                //m_logger.D("get by label %s %s",dynamic_cast<InstrLabel*>(p->m_instr)->GetLabel()->Name(),l->Name());
+                if(strcmp(dynamic_cast<InstrLabel*>(p->m_instr)->GetLabel()->Name(),l->Name())==0)
                     return p;
             }
             p = p->next;
@@ -251,6 +257,7 @@ public:
 private:
     GraphNode* m_head;
     s32 m_size;
+    LoggerStdio m_logger;
 };
 class FlowGraph{
 public:
@@ -258,6 +265,7 @@ public:
         InstrBase* instr;
         GraphNode* gn;
         Graph* g = new Graph;
+        /* 1 node */
         if(il->Size()==1){
             instr = il->Get(0);
             gn = new GraphNode;
@@ -265,8 +273,10 @@ public:
             g->AddNode(gn);
             return g;
         }
+        /* more than 2 nodes */
         GraphNode*p,*q;
         s32 i = 0;
+        /* one node per instr include InstrLabel */
         for(i=0;i<il->Size();i++){
              p = new GraphNode;
              p->m_instr = il->Get(i);
@@ -280,27 +290,41 @@ public:
              p = g->Get(i);
              q = g->Get(i+1);
              ll = p->m_instr->Jump();
+             /* process jump and cjump */
              if(ll!=0){
                 //add edge
                 p->m_instr->InstrStr(b);
                 if(strcmp(b,"jmp")==0){
-                    if(g->GetByLabel(ll->Get(0))->next==0)// real instr
-                        g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
-                    else// no real instr
+                    if(strcmp(ll->Get(0)->Name(),"done")==0){//done label 
+                        continue;
+                    }
+                    //
+                    if(g->GetByLabel(ll->Get(0))->next)
                         g->AddEdge( p, g->GetByLabel(ll->Get(0))->next );
                 }else{
                     // condition branch
-                    g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
-                    g->AddEdge( p, q );//false brance
+                    if(g->GetByLabel(ll->Get(0))->next==0)
+                        ;//g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
+                    else{// real instr 
+                        g->AddEdge( p, g->GetByLabel(ll->Get(0))->next );
+                        TIGER_ASSERT(g->GetByLabel(ll->Get(0))->next->m_instr->Kind()!=InstrBase::kInstr_Label,"label instr should not be here");
+                    }
+                        
+                    if(q->m_instr->Kind()==InstrBase::kInstr_Label){
+                        g->AddEdge( p, q->next );//false brance
+                        TIGER_ASSERT(q->next->m_instr->Kind()!=InstrBase::kInstr_Label,"label instr should not be here");
+                    }else{
+                        g->AddEdge( p, q);
+                    }
                 }
                 
-             }else{
+             }else{// label instr
                 if(q->m_instr->Kind()==InstrBase::kInstr_Label){
                     if(q->next)
                         g->AddEdge(p,q->next);
                     else// the last instruction
-                        g->AddEdge(p,q);
-                }else{
+                        ;//g->AddEdge(p,q);
+                }else{// move or oper instr
                     g->AddEdge(p,q);
                 }
              }
@@ -309,13 +333,30 @@ public:
         // process the last one
         p = q;
         ll = p->m_instr->Jump();
-        if(ll!=0){
-            if(strcmp(ll->Get(0)->Name(),"done")==0){
-                //eof
+        if(ll!=0)
+        {
+            //add edge
+            p->m_instr->InstrStr(b);
+            if(strcmp(b,"jmp")==0){
+                if(strcmp(ll->Get(0)->Name(),"done")==0){//done label 
+                    ;//eof
+                }else{
+                    if(g->GetByLabel(ll->Get(0))->next)
+                        g->AddEdge( p, g->GetByLabel(ll->Get(0))->next );
+                }
             }else{
-                g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
+                // condition branch
+                if(g->GetByLabel(ll->Get(0))->next==0)
+                    ;//g->AddEdge( p, g->GetByLabel(ll->Get(0)) );
+                else{// real instr 
+                    g->AddEdge( p, g->GetByLabel(ll->Get(0))->next );
+                    TIGER_ASSERT(g->GetByLabel(ll->Get(0))->next->m_instr->Kind()!=InstrBase::kInstr_Label,"label instr should not be here");
+                }
             }
-        }else{
+            
+        }
+        else// mov or label or oper
+        {
             ;
         }
         
@@ -455,6 +496,7 @@ private:
 };
 struct CGraphNode{
     CGraphNode(){
+        m_color = -1;
         m_temp = 0;
         m_links = new CGraphEdgeList;
         prev = next = 0;
@@ -477,6 +519,7 @@ struct CGraphNode{
     
     CGraphNode* prev;
     CGraphNode* next;
+    s32 m_color;
 };
 class CGraph{
 public:
@@ -747,6 +790,7 @@ public:
         GraphNode* gn;
         Calc(g);
         ////////////////
+        #if 0
         m_logger.D("Show liveness:");
         s32 i = 0;
         for(i=0;i<g->Size();i++){
@@ -764,6 +808,7 @@ public:
                 m_logger.D("\t\t%s",gn->m_out->Get(j)->Name() );
             }
         }
+        #endif
         //////////////////
         
         
@@ -816,7 +861,7 @@ public:
                     for(k=0;k<gn->m_out->Size();k++){
                         b = gn->m_out->Get(k);
                         if(a!=b){
-                            m_logger.D("cg add edge for non move %s--%s",a->Name(),b->Name());
+                            //m_logger.D("cg add edge for non move %s--%s",a->Name(),b->Name());
                             cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
                         }
                     }
@@ -839,7 +884,7 @@ public:
                         
                         
                         if(strcmp(a->Name(),b->Name())!=0){
-                            m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
+                            //m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
                             cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
                         }
                     }
@@ -848,12 +893,12 @@ public:
                 mn->m_dst = cg->GetByTemp(a);
                 mn->m_src = cg->GetByTemp(c);
                 ml->Insert(mn,MoveList::kMoveList_Rear);
-                m_logger.D("move list add %s--%s",a->Name(),c->Name());
+                //m_logger.D("move list add %s--%s",a->Name(),c->Name());
                 s32 j=0;
                 for(j=0;j<gn->m_out->Size();j++){
                     b = gn->m_out->Get(j);
                     if(strcmp(b->Name(),c->Name())!=0){
-                        m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
+                        //m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
                         cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
                     }
                 }
@@ -863,7 +908,7 @@ public:
         for(i=0;i<cg->Size();i++)
         {
             cgn = cg->Get(i);
-            m_logger.D("cg node %s  degree %d",cgn->m_temp->Name(),cgn->m_links->Size()); 
+            //m_logger.D("cg node %s  degree %d",cgn->m_temp->Name(),cgn->m_links->Size()); 
         }
         lr->m_graph = cg;
         lr->m_list = ml;

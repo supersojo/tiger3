@@ -112,7 +112,7 @@ struct FragNode{
         prev = next = 0;
     }
     ~FragNode(){
-        delete m_frag;
+        //delete m_frag;
     }
     /* members */
     Label* m_label;/* key */

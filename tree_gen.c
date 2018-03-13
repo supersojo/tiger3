@@ -246,7 +246,7 @@ void TreeGenerator::ProceeExternalFunctions(SymTab* venv,SymTab* tenv)
     TypeFieldNode* head;
     Level* alevel;
     //for all external function, create level for them
-    EnvEntryFun* p = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbolFromString("print")));
+    EnvEntryFun* p = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbolFromString("printint")));
     head = p->GetList()->GetHead();
     
     FrameBase* f;
@@ -368,6 +368,7 @@ TreeGenResult* TreeGenerator::TreeGenExpCall(SymTab* venv,SymTab*tenv,Level* lev
     // call
     st = new StatementSeq(st,
             new StatementExp(new ExpBaseCall( new ExpBaseName(f->GetLabel()), explist )));
+    
     
     //free frame
     st = new StatementSeq(st,
@@ -1439,6 +1440,9 @@ TreeGenResult* TreeGenerator::TreeGenExp(SymTab* venv,SymTab* tenv,Level* level,
     m_logger.W("should not reach here %s,%d",__FILE__,__LINE__);
     return 0;
 }
+/*
+only out most code call this
+*/
 StatementBase* TreeGenerator::ProcessEntryExit(SymTab* venv,SymTab* tenv, Level* level,StatementBase* s)
 {
     m_logger.D("frame size is:%d",level->Frame()->Size());
@@ -1470,6 +1474,5 @@ StatementBase* TreeGenerator::ProcessEntryExit(SymTab* venv,SymTab* tenv, Level*
       new StatementMove( new ExpBaseTemp(SP()), new ExpBaseTemp(FP()))
     );
 }
-    
 
 }//namespace tiger

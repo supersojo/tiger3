@@ -9,7 +9,10 @@ void InstrOper::Output(TempMapList* map,char* o){
         sprintf(o,"%s",m_str);
     }
     if(m_dst->Size()==0 && m_src->Size()!=0){
-        sprintf(o,m_str, map->Look( m_src->Get(0) ) );
+        if(m_src->Size()==1)
+            sprintf(o,m_str, map->Look( m_src->Get(0) ) );
+        if(m_src->Size()==2)
+                sprintf(o,m_str,map->Look( m_src->Get(0) ),map->Look( m_src->Get(1) ));
     }
     if(m_dst->Size()!=0 && m_src->Size()==0){
         sprintf(o,m_str, map->Look( m_dst->Get(0) ));
@@ -31,7 +34,8 @@ void InstrMove::Output(TempMapList* map,char* o){
     }
     if(m_dst->Size()!=0 && m_src->Size()!=0){
         // non meaning move instruction
-        sprintf(o,(const char*)m_str,map->Look( m_src->Get(0) ),map->Look( m_dst->Get(0) ));
+        if(strcmp(map->Look( m_src->Get(0) ),map->Look( m_dst->Get(0) ))!=0)
+            sprintf(o,(const char*)m_str,map->Look( m_src->Get(0) ),map->Look( m_dst->Get(0) ));
     }
 }
 void InstrList::Output(TempMapList* map,char* o)
@@ -43,7 +47,6 @@ void InstrList::Output(TempMapList* map,char* o)
         memset(s,0,1024);
         if(p->m_instr)
             p->m_instr->Output(map,s);
-        printf("=%s=\n",s);
         if(*s)
             i_offset += sprintf(i_offset+o,"%s\n",s);
         p = p->next;
@@ -72,6 +75,77 @@ TempList* CodeGenerator::_MunchArgs(ExpBaseList* el)
     }
     return tl;
 }
+void CodeGenerator::_SaveRegs(InstrList* il)
+{
+    char buf[1024]={0};
+    
+    TempList* dst = new TempList;
+    TempList* src = new TempList;
+    
+    sprintf(buf,"push %RAX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"push %RBX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"push %RCX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"push %RDX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"push %RDI");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"push %RSI");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+}
+void CodeGenerator::_RestoreRegs(InstrList* il)
+{
+    char buf[1024]={0};
+    
+    TempList* dst = new TempList;
+    TempList* src = new TempList;
+    
+    
+    sprintf(buf,"pop %RSI");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"pop %RDI");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"pop %RDX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"pop %RCX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"pop %RBX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    dst = new TempList;
+    src = new TempList;
+    sprintf(buf,"pop %RAX");
+    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+}
 Temp* CodeGenerator::_MunchExpBaseCall(InstrList* il,ExpBaseCall *e){
     Temp* r = TempLabel::NewTemp();
     ExpBaseList* el = e->GetList();
@@ -81,9 +155,14 @@ Temp* CodeGenerator::_MunchExpBaseCall(InstrList* il,ExpBaseCall *e){
     TempList* dst = new TempList;
     TempList* src = _MunchArgs(el);
     
+    _SaveRegs(il);
+    
     sprintf(buf,"call %s",dynamic_cast<ExpBaseName*>(e->GetExp())->GetLabel()->Name());
 
     il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    
+    _RestoreRegs(il);
+    
     // return value's temp
     return TempLabel::NewNamedTemp("RV");
 }
@@ -175,7 +254,7 @@ Temp* CodeGenerator::_MunchExpBaseBinop(InstrList* il, ExpBaseBinop *e){
 Temp* CodeGenerator::_MunchExpBaseConst(InstrList* il, ExpBaseConst *e){
     Temp* r = TempLabel::NewTemp();
     char buf[1024]={0};
-    sprintf(buf,"movq $%d,%%%%%%s",e->GetValue());
+    sprintf(buf,"movq $%d,%s",e->GetValue(),"%s");
     TempList* dst = new TempList;
     TempList* src = new TempList;
     dst->Insert(r,TempList::kTempList_Rear);
@@ -353,7 +432,7 @@ void CodeGenerator::_MunchStatementJump(InstrList* il,StatementJump *s){
 void CodeGenerator::_MunchStatementCjump(InstrList* il,StatementCjump *s){
     char buf[1024]={0};
     
-    sprintf(buf,"%s","cmp %s,%s");
+    //sprintf(buf,"%s","cmp %s,%s");
     TempList* dst = new TempList;
     TempList* src = new TempList;
     
@@ -365,20 +444,25 @@ void CodeGenerator::_MunchStatementCjump(InstrList* il,StatementCjump *s){
     }
     else if(s->Left()->Kind()!=ExpBase::kExpBase_Const && s->Right()->Kind()==ExpBase::kExpBase_Const)
     {
-        sprintf(buf,"cmp %s,$%d","%s",dynamic_cast<ExpBaseConst*>(s->Right())->GetValue());
+        sprintf(buf,"cmp $%d,%s",dynamic_cast<ExpBaseConst*>(s->Right())->GetValue(),"%s");
         src->Insert(_MunchExpBase(il,s->Left()),TempList::kTempList_Rear);
         il->Insert( new InstrOper( buf, dst, src, 0), InstrList::kInstrList_Rear);
     }else if(s->Left()->Kind()!=ExpBase::kExpBase_Const && s->Right()->Kind()!=ExpBase::kExpBase_Const){
+        memset(buf,0,1024);
         sprintf(buf,"%s","cmp %s,%s");
-        src->Insert(_MunchExpBase(il,s->Left()),TempList::kTempList_Rear);
         src->Insert(_MunchExpBase(il,s->Right()),TempList::kTempList_Rear);
+        src->Insert(_MunchExpBase(il,s->Left()),TempList::kTempList_Rear);
         il->Insert( new InstrOper( buf, dst, src, 0), InstrList::kInstrList_Rear);
     }else{
         sprintf(buf,"cmp $%d,$%d",dynamic_cast<ExpBaseConst*>(s->Left())->GetValue(),dynamic_cast<ExpBaseConst*>(s->Right())->GetValue());
         il->Insert( new InstrOper( buf, dst, src, 0), InstrList::kInstrList_Rear);
     }
-
-    sprintf(buf,"je %s",s->GetTrueLabel()->Name());
+    if(s->Op()==RelationOp::kRelationOp_Le)
+        sprintf(buf,"jle %s",s->GetTrueLabel()->Name());
+    if(s->Op()==RelationOp::kRelationOp_Eq)
+        sprintf(buf,"je %s",s->GetTrueLabel()->Name());
+    if(s->Op()==RelationOp::kRelationOp_Gt)
+        sprintf(buf,"jg %s",s->GetTrueLabel()->Name());
     dst = new TempList; 
     src = new TempList;
     LabelList* ll = new LabelList;

@@ -573,6 +573,7 @@ public:
         m_false = f;
         
     }
+    s32 Op(){return m_op;}
     ExpBase* Left(){return m_left;}
     ExpBase** LeftRef(){return &m_left;}
     ExpBase* Right(){return m_right;}

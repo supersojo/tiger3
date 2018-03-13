@@ -90,6 +90,7 @@ public:
     FragList* GetFragList(){return m_frag_list;}
     TempMapList* TempMap(){return m_temp_map_list;}
     StatementBase* ProcessEntryExit(SymTab* venv,SymTab* tenv, Level* level,StatementBase* s);
+    void ProceeExternalFunctions(SymTab* venv,SymTab* tenv);
     ~TreeGenerator();
 private:
     TreeGenResult* TreeGenExp(SymTab* venv,SymTab*tenv,Level* level,Exp* exp,Label* done_label);
@@ -124,7 +125,7 @@ private:
     
     
     
-    void ProceeExternalFunctions(SymTab* venv,SymTab* tenv);
+    
     
     
     LevelManager* m_level_manager; //level management

@@ -322,7 +322,7 @@ private:
                     Get_Call_Rlist(exp_ref_list,dynamic_cast<StatementMove*>(s)->Right());
                     return Seq( Reorder(exp_ref_list), s ); 
                 }else if(dynamic_cast<StatementMove*>(s)->Left()->Kind()==ExpBase::kExpBase_Temp){
-                    m_logger.D("in move");
+                    //m_logger.D("in move");
                     exp_ref_list->Insert( dynamic_cast<StatementMove*>(s)->RightRef(), ExpBaseRefList::kExpBaseRefList_Rear );
                     return Seq( Reorder(exp_ref_list), s ); 
                 }else if(dynamic_cast<StatementMove*>(s)->Left()->Kind()==ExpBase::kExpBase_Mem){
@@ -381,7 +381,7 @@ private:
                 return StatementExp_(Reorder(exp_ref_list),e);
             case ExpBase::kExpBase_Eseq:{
                 delete exp_ref_list;
-                m_logger.D("in eseq");
+                //m_logger.D("in eseq");
                 StatementExp_ tmp = DoExp(dynamic_cast<ExpBaseEseq*>(e)->GetExp());
                 return StatementExp_(Seq(
                                         DoStatement(dynamic_cast<ExpBaseEseq*>(e)->GetStatement()),
