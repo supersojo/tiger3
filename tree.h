@@ -285,6 +285,7 @@ public:
             if(m_head)
                 m_head->prev = 0;
             delete p;
+            m_size--;
             return;
         }
         // mid
@@ -292,6 +293,7 @@ public:
         if(p->next)
             p->next->prev = q;
         delete p;
+        m_size--;
     }
     Temp* Get(s32 index){
         if(index>=m_size)

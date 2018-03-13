@@ -78,6 +78,7 @@ public:
             if(m_head)
                 m_head->prev = 0;
             delete p;
+            m_size--;
             return;
         }
         // mid
@@ -85,6 +86,7 @@ public:
         if(p->next)
             p->next->prev = q;
         delete p;
+        m_size--;
     }
     void Insert(GraphNode* n_,s32 dir){
         EdgeNode* n;
@@ -417,6 +419,7 @@ public:
             if(m_head)
                 m_head->prev = 0;
             delete p;
+            m_size--;
             return;
         }
         // mid
@@ -424,6 +427,7 @@ public:
         if(p->next)
             p->next->prev = q;
         delete p;
+        m_size--;
     }
     ~CGraphEdgeList(){
         CGraphEdgeNode* p = m_head;
