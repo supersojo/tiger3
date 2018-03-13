@@ -3,6 +3,7 @@
 
 #include "tiger_type.h"
 #include "tiger_assert.h"
+#include "tiger_log.h"
 #include "assem.h"
 
 namespace tiger{
@@ -249,7 +250,7 @@ private:
     GraphNode* m_head;
     s32 m_size;
 };
-class FLowGraph{
+class FlowGraph{
 public:
     Graph* AssemFlowGraph(InstrList* il){
         InstrBase* instr;
@@ -554,11 +555,29 @@ private:
 // liveness
 class Liveness{
 public:
+    Liveness(){
+        m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
+        m_logger.SetModule("liveness");
+    }
     void LivenessCalc(Graph* g){
-        
+        GraphNode* gn;
         Calc(g);
+        m_logger.D("Show liveness:");
+        s32 i = 0;
+        for(i=0;i<g->Size();i++){
+            gn = g->Get(i);
+            if(gn->m_instr->Kind()==InstrBase::kInstr_Label)
+                continue;
+            s32 j = 0;
+            m_logger.D("node %d:",i);
+            for(j=0;j<gn->m_in->Size();j++){
+                m_logger.D("\t%s",gn->m_in->Get(j)->Name() );
+            }
+        }
+        
     }
 private:
+    LoggerStdio m_logger;
     void Calc(Graph* g){
         GraphNode* p = 0;
         while(1){
@@ -575,6 +594,11 @@ private:
     }
     s32 Merge(GraphNode* n,TempList *in,TempList *out, TempList *use, TempList* def){
         s32 ret = 0;
+        
+        //skip label
+        if(n->m_instr->Kind()==InstrBase::kInstr_Label){
+            return 0;
+        }
         ret += in->Merge(use);
         {
             TempList* tmp = new TempList;

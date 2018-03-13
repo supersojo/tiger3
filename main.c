@@ -222,6 +222,11 @@ void test_typecheck(){
         il->Dump(t);
         printf("%s\n",t);
         
+        // graph
+        tiger::FlowGraph* fg = new tiger::FlowGraph;
+        tiger::Graph* g = fg->AssemFlowGraph(il);
+        tiger::Liveness* ln = new tiger::Liveness;
+        ln->LivenessCalc(g);
         //delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
