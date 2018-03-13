@@ -19,6 +19,9 @@ public:
     InstrBase(s32 kind){m_kind = kind;}
     virtual void Dump(char* o){
     }
+    virtual TempList* Dst(){return 0;}
+    virtual TempList* Src(){return 0;}
+    virtual LabelList* Jump(){return 0;}
     virtual ~InstrBase(){
     }
 private:
@@ -50,6 +53,9 @@ public:
             i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
         }
     }
+    TempList* Dst(){return m_dst;}
+    TempList* Src(){return m_src;}
+    LabelList* Jump(){return m_jump;}
     virtual ~InstrOper(){
         free(m_str);
         delete m_dst;
@@ -66,15 +72,20 @@ class InstrLabel : public InstrBase{
 public:
     InstrLabel():InstrBase(kInstr_Label){
         m_label = 0;
+        m_str = 0;
     }
-    InstrLabel(Label* l):InstrBase(kInstr_Label){
+    InstrLabel(char* str,Label* l):InstrBase(kInstr_Label){
+        m_str = strdup(str);
         m_label = l;
     }
     virtual void Dump(char* o){
+        sprintf(o,"%s",m_str);
     }
     virtual ~InstrLabel(){
+        free(m_str);
     }
 private:
+    char* m_str;
     Label* m_label;
 };
 class InstrMove : public InstrBase{
@@ -99,6 +110,8 @@ public:
             i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
         }
     }
+    TempList* Dst(){return m_dst;}
+    TempList* Src(){return m_src;}
     ~InstrMove(){
         free(m_str);
         delete m_dst;
@@ -208,6 +221,7 @@ public:
         m_size = 0;
     }
     InstrNode* GetHead(){return m_head;}
+    s32 Size(){return m_size;}
     InstrBase* Get(s32 index){
         if(index>=m_size)
             return 0;
@@ -282,6 +296,7 @@ public:
 private:
     void _MunchStatement(InstrList* il,StatementBase *s);
     void _MunchStatementMove(InstrList* il,StatementMove *s);
+    void _MunchStatementExp(InstrList* il,StatementExp *s);
     void _MunchStatementJump(InstrList* il,StatementJump *s);
     void _MunchStatementCjump(InstrList* il,StatementCjump *s);
     Temp* _MunchExpBase(InstrList *il,ExpBase *e);

@@ -95,9 +95,51 @@ CanonBlockList* Canon::BasicBlocks(StatementBaseList* list)
     return cl;
 }
 
+void Canon::CopyCanonBlock(CanonBlockList* list,CanonBlock* cb,StatementBaseList* sl)
+{
+    CanonBlock* p;
+    StatementBaseList* tmp;
+    s32 i = 0;
+    StatementBase* s = 0;
+    if(cb->IsMarked())
+        return;
+    //mark
+    cb->Mark();
+    //copy
+    tmp = cb->GetStatementList();
+    for(i=0;i<tmp->Size();i++){
+        s = tmp->Get(i);
+        sl->Insert(s->Clone(),StatementBaseList::kStatementBaseList_Rear);
+    }
+    //process success
+    if(s->Kind()==StatementBase::kStatement_Jump){
+        // the basic block should jump to end, but we have no end block with "done"
+        if(strcmp(dynamic_cast<StatementJump*>(s)->GetList()->Get(0)->Name(),"done")==0)
+            return;
+        p = list->GetByLabel( dynamic_cast<StatementJump*>(s)->GetList()->Get(0) );
+        
+        CopyCanonBlock(list, p, sl);
+    }
+    if(s->Kind()==StatementBase::kStatement_Cjump){
+        p = list->GetByLabel( dynamic_cast<StatementCjump*>(s)->GetFalseLabel() );
+        CopyCanonBlock(list, p, sl);
+    }
+    
+}
 StatementBaseList* Canon::TraceSchedule(CanonBlockList* list)
 {
-    return 0;
+    CanonBlock* p;
+    CanonBlock* q;
+    StatementBaseList* tmp;
+    StatementBase* s;
+    StatementBaseList* sl = new StatementBaseList;
+    s32 i = 0;
+    for(i=0;i<list->Size();i++){
+
+        CopyCanonBlock(list,list->Get(i),sl);
+
+    }
+    return sl;
 }
 
 }//namespace tiger

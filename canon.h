@@ -9,14 +9,26 @@ namespace tiger{
 
 class CanonBlock{
 public:
-    CanonBlock(){m_list=0;m_label=0;}
+    enum{
+        kCanonBlock_Free,
+        kCanonBlock_Marked,
+        kCanonBlock_Invalid
+    };
+    CanonBlock(){m_list=0;m_label=0;m_flag=kCanonBlock_Free;}
     CanonBlock(StatementBaseList* list,Label* label){
         m_list = list;
         m_label = label;
+        m_flag = kCanonBlock_Free;
     }
     StatementBaseList* GetStatementList(){return m_list;}
     Label* GetLabel(){return m_label;}
     void UpdateLabel(Label* l){m_label = l;}
+    void Mark(){
+        m_flag = kCanonBlock_Marked;
+    }
+    s32 IsMarked(){
+        return (m_flag==kCanonBlock_Marked);
+    }
     void Dump(char* o){
         if(m_list)
             m_list->Dump(o);
@@ -28,6 +40,7 @@ public:
 private:
     StatementBaseList* m_list;
     Label* m_label;
+    s32 m_flag;
 };
 struct CanonBlockNode{
     CanonBlockNode(){
@@ -52,6 +65,30 @@ public:
     CanonBlockList(){m_head = 0;m_size=0;}
     CanonBlockNode* GetHead(){return m_head;}
     s32 Size(){return m_size;}
+    CanonBlock* GetByLabel(Label* l){
+        CanonBlockNode* p = m_head;
+        while(p){
+            //strcmp
+            if( strcmp(p->m_block->GetLabel()->Name(),l->Name())==0 ){
+                return p->m_block;
+            }
+            p = p->next;
+        }
+        return 0;
+    }
+    CanonBlock* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        CanonBlockNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p->m_block;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
     void Insert(CanonBlock* block,s32 dir){
         CanonBlockNode* n;
         CanonBlockNode* p;
@@ -206,6 +243,8 @@ public:
     
 private:
     LoggerStdio m_logger;
+    
+    void CopyCanonBlock(CanonBlockList* list,CanonBlock* cb,StatementBaseList* sl);
     
     void _Linearize(StatementBaseList* l,StatementBase* statement);
     

@@ -126,7 +126,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 function foo()=a:=1 in foo() end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 var b:=0 function foo():int=(a:=1;2) in b:=foo() end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -208,10 +208,16 @@ void test_typecheck(){
         cl->Dump(t);
         printf("%s\n",t);
         
+        //trace schedule
+        tiger::StatementBaseList* sl;
+        sl = canon.TraceSchedule(cl);
+        sl->Dump(t);
+        printf("%s\n",t);
+        
         // assem
         tiger::CodeGenerator* cg = new tiger::CodeGenerator;
         tiger::InstrList* il;
-        il = cg->CodeGen(0,l);
+        il = cg->CodeGen(0,sl);
         il->Dump(t);
         printf("%s\n",t);
         

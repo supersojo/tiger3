@@ -40,8 +40,8 @@ Temp* CodeGenerator::_MunchExpBaseCall(InstrList* il,ExpBaseCall *e){
     src = new TempList;
 
     il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
-    // mov 'd0,'s0
-    return TempLabel::NewTemp();
+    // return value's temp
+    return TempLabel::NewNamedTemp("rax");
 }
 Temp* CodeGenerator::_MunchExpBaseMem(InstrList* il, ExpBaseMem *e){
     if(e->GetExp()->Kind()==ExpBase::kExpBase_Temp){
@@ -132,6 +132,21 @@ void CodeGenerator::_MunchStatement(InstrList* il,StatementBase *s){
     {
         _MunchStatementCjump(il,dynamic_cast<StatementCjump*>(s));
     }
+    if( s->Kind()==StatementBase::kStatement_Exp )
+    {
+        _MunchStatementExp(il,dynamic_cast<StatementExp*>(s));
+    }
+    if( s->Kind()==StatementBase::kStatement_Label )
+    {
+        char buf[1024]={0};
+        sprintf(buf,"%s:",dynamic_cast<StatementLabel*>(s)->GetLabel()->Name());
+        
+        il->Insert( new InstrLabel(buf,dynamic_cast<StatementLabel*>(s)->GetLabel()), InstrList::kInstrList_Rear);
+    }
+}
+void CodeGenerator::_MunchStatementExp(InstrList* il,StatementExp *s){
+    //no need return value from _MunchExpBase
+    _MunchExpBase(il,s->GetExp());
 }
 void CodeGenerator::_MunchStatementMove(InstrList* il,StatementMove *s){
     if( s->Left()->Kind()==ExpBase::kExpBase_Mem )
@@ -168,6 +183,12 @@ void CodeGenerator::_MunchStatementMove(InstrList* il,StatementMove *s){
     }
 }
 void CodeGenerator::_MunchStatementJump(InstrList* il,StatementJump *s){
+    char buf[1024]={0};
+    TempList* dst = new TempList;
+    TempList* src = new TempList;
+    sprintf(buf,"jmp %s",s->GetList()->Get(0)->Name());
+    
+    il->Insert( new InstrOper( buf, dst, src, s->GetList()->Clone() ), InstrList::kInstrList_Rear);
 }
 void CodeGenerator::_MunchStatementCjump(InstrList* il,StatementCjump *s){
 }

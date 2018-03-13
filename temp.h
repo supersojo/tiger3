@@ -118,6 +118,11 @@ public:
             Init();
         return m_temp_pool->NewTemp();
     }
+    static Temp* NewNamedTemp(char* name){
+        if(m_initialized==0)
+            Init();
+        return m_temp_pool->NewNamedTemp(name);
+    }
     static Label* NewLabel(){
         if(m_initialized==0)
             Init();
