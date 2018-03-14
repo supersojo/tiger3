@@ -327,6 +327,7 @@ public:
 };
 //collision graph
 class CGraphNode;
+class CGraph;
 struct CGraphEdgeNode{
     CGraphEdgeNode(){
         m_node = 0;
@@ -439,6 +440,7 @@ public:
         delete p;
         m_size--;
     }
+    CGraphEdgeList* Clone(CGraph* g);
     ~CGraphEdgeList(){
         CGraphEdgeNode* p = m_head;
         while(p){
@@ -459,6 +461,12 @@ struct CGraphNode{
     }
     ~CGraphNode(){
         delete m_links;
+    }
+    CGraphNode* Clone(){
+        CGraphNode* n = new CGraphNode;
+        n->m_temp = m_temp;
+        //n->m_links = m_links->Clone();
+        return n;
     }
     // members
     Temp* m_temp;
@@ -492,20 +500,47 @@ public:
         }
         return 0;
     }
-    CGraphNode* GetByTemp(Temp* t){
+    CGraph* Clone(){
+        CGraph* n = new CGraph;
         CGraphNode* p = m_head;
+        CGraphNode* q = 0;
+        CGraphNode* newhead=0;
+        //clone nodes
         while(p){
-            if(p->m_temp == t)
-                return p;
+            CGraphNode* t = p->Clone();
+            if(newhead==0)
+                newhead = t;
+            if(q==0)
+                q = t;
+            else
+            {
+                q->next = t;
+                t->prev = q;
+                q = t;
+            }
             p = p->next;
         }
-        return 0;
+        n->m_head = newhead;
+        n->m_size = m_size;
+        // clone edges 
+        p = m_head;
+        q = n->m_head;
+        while(p){
+            q->m_links = p->m_links->Clone(n);
+            p = p->next;
+            q = q->next;
+        }
+        
+        return n;
     }
+    CGraphNode* GetByTemp(Temp* t);
     void Insert(CGraphNode* n_,s32 dir){
         CGraphNode* n;
         CGraphNode* p;
         CGraphNode* q;
         
+        if(Has(n_->m_temp))
+            return;
         n = n_;
         
         if(dir==kCGraph_Rear){
@@ -533,7 +568,7 @@ public:
     s32 Has(Temp* t){
         CGraphNode* p = m_head;
         while(p){
-            if(p->m_temp == t)
+            if(strcmp(p->m_temp->Name(),t->Name())==0)
                 return 1;
             p = p->next;
         }
@@ -542,6 +577,49 @@ public:
     }
     void AddNode(CGraphNode* n){
         Insert(n,kCGraph_Rear);
+    }
+    void Remove_(CGraphNode* n){
+        // n1->n2->n3
+        CGraphNode* p;
+        CGraphNode* q;//pointer to parent's of p
+        p = m_head;
+        q = 0;
+        while(p){
+            if(p == n){
+                break;
+            }
+            q = p;
+            p = p->next;
+        }
+        // not found
+        if(p==0){
+            return;
+        }
+        // head
+        if(q==0){
+            m_head = m_head->next;
+            if(m_head)
+                m_head->prev = 0;
+            delete p;
+            m_size--;
+            return;
+        }
+        // mid
+        q->next = p->next;
+        if(p->next)
+            p->next->prev = q;
+        delete p;
+        m_size--;
+    }
+    void RemoveNode(CGraphNode* n){//only detach from graph
+        //remove edges
+        CGraphNode* p;
+        s32 i = 0;
+        for(i=0;i<n->m_links->Size();i++){
+            p = n->m_links->Get(i);
+            p->m_links->Remove(n);
+        }
+        Remove_(n);
     }
     void AddEdge(CGraphNode* from,CGraphNode* to){
         from->m_links->Insert(to,CGraphEdgeList::kCGraphEdgeList_Rear);
@@ -757,6 +835,12 @@ public:
                     }
                 }
             }
+        }
+        ////// show degree of cg
+        for(i=0;i<cg->Size();i++)
+        {
+            cgn = cg->Get(i);
+            m_logger.D("cg node %s  degree %d",cgn->m_temp->Name(),cgn->m_links->Size()); 
         }
         lr->m_graph = cg;
         lr->m_list = ml;

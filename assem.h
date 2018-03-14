@@ -306,10 +306,26 @@ private:
     s32 m_size;
 };
 
-
 class CodeGenerator{
 public:
     InstrList* CodeGen(FrameBase* f,StatementBaseList* l);
+    void Output(TempMapList* list,InstrList* il,FILE* f){
+        //prologue
+        fprintf(f,".globl _tiger_entry\n");
+        fprintf(f,"_tiger_entry:\n");
+        
+        
+        fprintf(f,"L000:\n");
+        fprintf(f,"mov $0,%%eax\n");
+        fprintf(f,"mov %%eax,%%ebx\n");
+        fprintf(f,"mov $1,%%ecx\n");
+        fprintf(f,"mov %%ecx,%%ebx\n");
+        fprintf(f,"jmp done\n");
+        
+        //epilogue
+        fprintf(f,"done:\n");
+        fprintf(f,"jmp _tiger_resume\n");
+    }
 private:
     void _MunchStatement(InstrList* il,StatementBase *s);
     void _MunchStatementMove(InstrList* il,StatementMove *s);

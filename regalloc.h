@@ -4,8 +4,10 @@
 #include "tiger_assert.h"
 #include "assem.h"
 #include "frame.h"
+#include "graph.h"
 
 namespace tiger{
-s32 RegAlloc(FrameBase* f,InstrList* il);
+
+TempMapList* RegAlloc(LivenessResult* lr,FrameBase* f,InstrList* il);
 }//namespace tiger
 #endif

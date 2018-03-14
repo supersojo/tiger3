@@ -1,11 +1,18 @@
 TARGET = main
-SRCS = $(wildcard *.c)
+SRCS = $(filter-out runtime.c,$(wildcard *.c))
 OBJS = $(SRCS:.c=.o)
 DEPS = $(SRCS:.c=.d)
 
 .PHONY: all deps clean
 
 all: deps $(TARGET)
+tiger:runtime.c
+	@echo compiling tiger
+	@./main
+	@x86_64-w64-mingw32-gcc -c tiger.S -o tiger.o
+	@x86_64-w64-mingw32-gcc -c runtime.c -o runtime.o
+	@x86_64-w64-mingw32-gcc  tiger.o runtime.o -o tiger
+	@echo linking tiger
 
 $(TARGET): $(DEPS) $(OBJS) $(SRCS)
 	@x86_64-w64-mingw32-g++ $(OBJS) -static -o $@
@@ -24,5 +31,7 @@ deps: $(DEPS)
 
 clean:
 	rm -f main
+	rm -f tiger
 	rm -f *.d
 	rm -f *.o
+	rm -f *.S

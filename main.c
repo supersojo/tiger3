@@ -12,6 +12,7 @@
 #include "canon.h"
 #include "assem.h"
 #include "graph.h"
+#include "regalloc.h"
 
 void test_StringSourceCodeStream()
 {
@@ -127,7 +128,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 var b:=0 function foo():int=(a:=1;2) in b:=foo() end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=0 in a:=1 end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -226,7 +227,12 @@ void test_typecheck(){
         tiger::FlowGraph* fg = new tiger::FlowGraph;
         tiger::Graph* g = fg->AssemFlowGraph(il);
         tiger::Liveness* ln = new tiger::Liveness;
-        ln->LivenessCalc(g);
+        tiger::LivenessResult* lr;
+        lr = ln->LivenessCalc(g);
+        tiger::RegAlloc(lr,0,il);
+        FILE* f = fopen("tiger.S","w");
+        cg->Output(0,il,f); //gen real assemble code
+        fclose(f);
         //delete dynamic_cast<tiger::TreeBaseNx*>(ty->Tree())->GetStatement();
     }
     if(ty->Tree()->Kind()==tiger::TreeBase::kTreeBase_Cx)
