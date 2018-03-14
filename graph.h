@@ -566,6 +566,84 @@ private:
     CGraphNode* m_head;
     s32 m_size;
 };
+struct MoveNode{
+    MoveNode(){
+        m_dst = m_src = 0;
+        prev = next = 0;
+    }
+    CGraphNode* m_dst;
+    CGraphNode* m_src;
+    MoveNode* prev;
+    MoveNode* next;
+};
+class MoveList{
+public:
+    enum{
+        kMoveList_Rear,
+        kMoveList_Front,
+        kMoveList_Invalid
+    };
+    MoveList(){m_head=0;m_size=0;}
+    MoveNode* GetHead(){return m_head;}
+    MoveNode* Get(s32 index){
+        if(index>=m_size)
+            return 0;
+        s32 i = 0;
+        MoveNode* p = m_head;
+        while(p){
+            if(i==index)
+                return p;
+            p = p->next;
+            i++;
+        }
+        return 0;
+    }
+    void Insert(MoveNode* n_,s32 dir){
+        MoveNode* n;
+        MoveNode* p;
+        MoveNode* q;
+        
+        n = n_;
+        
+        if(dir==kMoveList_Rear){
+            p = m_head;
+            q = m_head;
+            while(p){
+                q = p;
+                p = p->next;
+            }
+            if(q){
+                q->next = n;
+                n->prev = q;
+            }else{
+                m_head = n;
+            }
+        }
+        if(dir==kMoveList_Front){
+            n->next = m_head;
+            if(m_head)
+                m_head->prev = n;
+            m_head = n;
+        }
+        m_size++;
+    }
+    ~MoveList(){
+        MoveNode* p = m_head;
+        while(p){
+            m_head = m_head->next;
+            delete p;
+            p = m_head;
+        }
+    }
+private:
+    MoveNode* m_head;
+    s32 m_size;
+};
+// liveness result
+struct LivenessResult{
+    CGraph*   m_graph;
+    MoveList* m_list;
+};
 // liveness
 class Liveness{
 public:
@@ -573,9 +651,11 @@ public:
         m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
         m_logger.SetModule("liveness");
     }
-    void LivenessCalc(Graph* g){
+    LivenessResult* LivenessCalc(Graph* g){
+        LivenessResult* lr = new LivenessResult;
         GraphNode* gn;
         Calc(g);
+        ////////////////
         m_logger.D("Show liveness:");
         s32 i = 0;
         for(i=0;i<g->Size();i++){
@@ -593,9 +673,16 @@ public:
                 m_logger.D("\t\t%s",gn->m_out->Get(j)->Name() );
             }
         }
+        //////////////////
+        
+        
+        Build(lr,g);
+        
+        return lr;
         
     }
-    CGraph* Build(Graph* g){
+    void Build(LivenessResult* lr,Graph* g){
+        MoveList* ml = new MoveList;
         CGraph* cg = new CGraph;
         CGraphNode* cgn;
         GraphNode* gn;
@@ -604,6 +691,8 @@ public:
         // addnode
         for(i=0;i<g->Size();i++){
             gn = g->Get(i);
+            if(gn->m_instr->Kind()==InstrBase::kInstr_Label)
+                continue;
             tl = gn->m_instr->Dst();
             s32 j = 0;
             for(j=0;j<tl->Size();j++){
@@ -618,10 +707,59 @@ public:
                 cg->AddNode( cgn );
             }
         }
+        
         // addedge
         // TBD:
-        
-        return cg;
+        for(i=0;i<g->Size();i++){
+            gn = g->Get(i);
+            if(gn->m_instr->Kind()==InstrBase::kInstr_Label)
+                continue;
+            // for non move
+            if(gn->m_instr->Kind()==InstrBase::kInstr_Oper){
+                s32 j=0;
+                Temp* a;
+                for(j=0;j<gn->m_instr->Dst()->Size();j++){
+                    a = gn->m_instr->Dst()->Get(j);
+                    s32 k=0;
+                    Temp* b;
+                    for(k=0;k<gn->m_out->Size();k++){
+                        b = gn->m_out->Get(k);
+                        if(a!=b){
+                            m_logger.D("cg add edge for non move %s--%s",a->Name(),b->Name());
+                            cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
+                        }
+                    }
+                }
+            }
+            //for move
+            if(gn->m_instr->Kind()==InstrBase::kInstr_Move){
+                //TBD
+                Temp* a;
+                Temp* c;
+                Temp* b;
+                MoveNode* mn = new MoveNode;
+                a = gn->m_instr->Dst()->Get(0);
+                c = gn->m_instr->Src()->Get(0);
+                if(c==0){// Src is empty. it's [ move dst,0 ] type
+                    delete mn;
+                    continue;
+                }
+                mn->m_dst = cg->GetByTemp(a);
+                mn->m_src = cg->GetByTemp(c);
+                ml->Insert(mn,MoveList::kMoveList_Rear);
+                m_logger.D("move list add %s--%s",a->Name(),c->Name());
+                s32 j=0;
+                for(j=0;j<gn->m_out->Size();j++){
+                    b = gn->m_out->Get(j);
+                    if(b!=c){
+                        m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
+                        cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
+                    }
+                }
+            }
+        }
+        lr->m_graph = cg;
+        lr->m_list = ml;
     }
 private:
     LoggerStdio m_logger;
