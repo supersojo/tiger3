@@ -306,6 +306,7 @@ private:
     ExpBaseTy*     TransRecordExp(SymTab* venv,SymTab* tenv,Level* level,Dec* dec,Exp* exp,Label* done_label);
     
     FrameBase*     MakeNewFrame(FunDec* fundec);
+    FrameBase*     MakeExternalFrame();
     
     // for exp to let exp
     LetExp*        For2Let(ForExp* exp);

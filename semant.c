@@ -898,6 +898,48 @@ TypeFieldList* Translator::MakeFormalsList(SymTab* venv,SymTab* tenv,Level* leve
     
 }
 
+FrameBase* Translator::MakeExternalFrame()
+{
+    FieldNode* head = 0;
+    FrameBase* f;
+    
+    AccessBase* access;
+    AccessList* al;
+    BoolList* bl;
+    f = new FrameBase(FrameBase::kFrame_X86);
+    al = f->GetFormals();
+    bl = f->GetEscapes();
+    
+    m_logger.D("New External Frame Begin~~~");
+
+    
+    /** for formal args **/
+
+    access = f->AllocLocal(0/*false*/);
+    access->Retain();//inc refcnt
+    al->Insert(access,AccessList::kAccessList_Rear);
+    
+    bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
+
+    m_logger.D("formals size:%d",al->Size());
+    m_logger.D("escapes size:%d",bl->Size());
+    
+    
+    
+    m_logger.D("New External Frame End~~~");
+    
+    /*
+    // allocate array in heap using external call malloc or free
+    // temp not need here
+    // allocate a new temp store dynamical vars such as array and record
+    access = f->AllocLocal(0);
+    access->Retain();//inc refcnt
+    al->Insert(access,AccessList::kAccessList_Rear);
+        
+    bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
+    */
+    return f;
+}
 FrameBase* Translator::MakeNewFrame(FunDec* fundec)
 {
     FieldNode* head = 0;

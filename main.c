@@ -128,7 +128,7 @@ void test_typecheck(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in (c:=a+b;print(c)) end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 var b:=2 var c:=0 in c:=a+b end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -150,7 +150,7 @@ void test_typecheck(){
     tiger::TypeFieldNode* node;
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("x"),tenv.Type(tenv.MakeSymbolFromString("int")));
-    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0,0));
+    venv.Enter(venv.MakeSymbolFromString("print"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),0,0/*level*/,0));
     
     /* getchar()*/
     //tiger::TypeFieldNode* node;

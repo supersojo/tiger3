@@ -23,7 +23,7 @@ void InstrOper::Output(ColorList* cl,char* o){
         sprintf(o,m_str, regs[ cl->GetByTemp( m_dst->Get(0) )->m_color ]);
     }
     if(m_dst->Size()!=0 && m_src->Size()!=0){
-        sprintf(o,(const char*)m_str,regs[ cl->GetByTemp( m_src->Get(0) )->m_color ],regs[ cl->GetByTemp( m_dst->Get(0) )->m_color ]);
+        sprintf(o,m_str,regs[ cl->GetByTemp( m_src->Get(0) )->m_color ],regs[ cl->GetByTemp( m_dst->Get(0) )->m_color ]);
     }
 }
 void InstrMove::Output(ColorList* cl,char* o){
@@ -153,7 +153,7 @@ Temp* CodeGenerator::_MunchExpBaseBinop(InstrList* il, ExpBaseBinop *e){
     dst->Insert(r,TempList::kTempList_Rear);  
     //src->Insert(_MunchExpBase(il,e->Left()),TempList::kTempList_Rear);    
     //src->Insert(_MunchExpBase(il,e->Right()),TempList::kTempList_Rear);        
-    il->Insert(new InstrOper(buf,dst,src,0), InstrList::kInstrList_Rear);
+    il->Insert(new InstrMove(buf,dst,src), InstrList::kInstrList_Rear);
     
     sprintf(buf,"add %%%%%%s,%%%%%%s");
     dst = new TempList;
