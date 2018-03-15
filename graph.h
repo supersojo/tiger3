@@ -827,6 +827,12 @@ public:
                 c = gn->m_instr->Src()->Get(0);
                 if(c==0){// Src is empty. it's [ move dst,0 ] type
                     delete mn;
+                    s32 k=0;
+                    for(k=0;k<gn->m_out->Size();k++){
+                        b = gn->m_out->Get(k);
+                        m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
+                        cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
+                    }
                     continue;
                 }
                 mn->m_dst = cg->GetByTemp(a);
@@ -836,7 +842,7 @@ public:
                 s32 j=0;
                 for(j=0;j<gn->m_out->Size();j++){
                     b = gn->m_out->Get(j);
-                    if(b!=c){
+                    if(strcmp(b->Name(),c->Name())!=0){
                         m_logger.D("cg add edge for move %s--%s",a->Name(),b->Name());
                         cg->AddEdge( cg->GetByTemp(a), cg->GetByTemp(b) );
                     }

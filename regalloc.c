@@ -10,7 +10,7 @@ void Color_(ColorNode* cn,ColorList* cl,CGraph* cg){
     m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
     m_logger.SetModule("color");
     s32 i = 0;
-    s32 color[5] = {0};
+    s32 color[7] = {0};
     s32 c = 0;
     if(cn->m_color!=0)
         return;
@@ -18,11 +18,11 @@ void Color_(ColorNode* cn,ColorList* cl,CGraph* cg){
         if(cl->GetByTemp( cg->GetByTemp(cn->m_temp)->m_links->Get(i)->m_temp )->m_color!=0)
             color[cl->GetByTemp( cg->GetByTemp(cn->m_temp)->m_links->Get(i)->m_temp )->m_color]=1;
     }
-    for(i=1;i<5;i++)
+    for(i=1;i<7;i++)
         if(color[i]==0){
             break;
         }
-    if(i==5)
+    if(i==7)
         i=1;
     m_logger.D("color %s %d",cn->m_temp->Name(),i);
     cn->m_color = i;
@@ -38,7 +38,7 @@ ColorList* Color(TempList* list,CGraph* cg){
     ColorList* cl = new ColorList;
     s32 i = 0;
     s32 c = 0;
-    s32 color[5] = {0};
+    s32 color[7] = {0};
     for(i=0;i<list->Size();i++){
         m_logger.D("%s into color list",list->Get(i)->Name());
         cl->Insert( list->Get(i), ColorList::kColorList_Rear);
@@ -50,7 +50,7 @@ ColorList* Color(TempList* list,CGraph* cg){
         if(cg->GetByTemp( cl->Get(i)->m_temp )->Degree()!=0)
             color[ cl->Get(i)->m_color ] = 1; 
     }
-    for(i=1;i<5;i++)
+    for(i=1;i<7;i++)
         if(color[i]==0){
             c = i;
             break;

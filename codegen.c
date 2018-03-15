@@ -11,7 +11,9 @@ void InstrOper::Output(ColorList* cl,char* o){
         "eax",
         "ebx",
         "ecx",
-        "edx"
+        "edx",
+        "edi",
+        "esi"
     };
     if(m_dst->Size()==0 && m_src->Size()==0){
         sprintf(o,"%s",m_str);
@@ -33,7 +35,9 @@ void InstrMove::Output(ColorList* cl,char* o){
         "eax",
         "ebx",
         "ecx",
-        "edx"
+        "edx",
+        "edi",
+        "esi"
     };
     if(m_dst->Size()==0 && m_src->Size()==0){
         sprintf(o,"%s",m_str);
@@ -57,10 +61,12 @@ void InstrList::Output(ColorList* cl,char* o)
     s32 i_offset = 0;
     char s[1024]={0};
     while(p){
+        memset(s,0,1024);
         if(p->m_instr)
             p->m_instr->Output(cl,s);
         printf("=%s=\n",s);
-        i_offset += sprintf(i_offset+o,"%s\n",s);
+        if(*s)
+            i_offset += sprintf(i_offset+o,"%s\n",s);
         p = p->next;
     }
 }
