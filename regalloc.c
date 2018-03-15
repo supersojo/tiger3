@@ -2,96 +2,7 @@
 #include "tiger_log.h"
 
 namespace tiger{
-struct ColorNode{
-    ColorNode()
-    {
-        m_temp = 0;
-        m_color = 0;
-        prev = next = 0;
-    }
-    Temp* m_temp;
-    s32   m_color;
-    ColorNode* prev;
-    ColorNode* next;
-};
-class ColorList{
-public:
-    enum{
-        kColorList_Rear,
-        kColorList_Front,
-        kColorList_Invalid
-    };
-    ColorList(){
-        m_head = 0;
-        m_size = 0;
-    }
-    s32 Size(){return m_size;}
-    ColorNode* Get(s32 index){
-        if(index>=m_size)
-            return 0;
-        s32 i = 0;
-        ColorNode* p = m_head;
-        while(p){
-            if(i==index)
-                return p;
-            p = p->next;
-            i++;
-        }
-        return 0;
-    }
-    void Insert(Temp* t,s32 dir){
-        ColorNode* n;
-        ColorNode* p;
-        ColorNode* q;
-        
-        n = new ColorNode;
-        n->m_temp = t;
-        if(dir==kColorList_Rear){
-            p = m_head;
-            q = m_head;
-            while(p){
-                q = p;
-                p = p->next;
-            }
-            if(q){
-                q->next = n;
-                n->prev = q;
-            }else{
-                m_head = n;
-            }
-        }
-        if(dir==kColorList_Front)
-        {
-            n->next = m_head;
-            if(m_head)
-            {
-                m_head->prev = n;
-            }
-            m_head = n;
-        }
-        m_size++;
-    }
-    ColorNode* GetByTemp(Temp* t){
-        ColorNode* p = m_head;
-        while(p){
-            if(strcmp(t->Name(),p->m_temp->Name())==0)
-                return p;
-            p = p->next;
-        }
-        return 0;
-    }
-    ~ColorList(){
-        ColorNode* p = m_head;
-        while(p){
-            m_head = m_head->next;
-            delete p;
-            p = m_head;
-        }
-    }
-private:
-    ColorNode* m_head;
-    s32 m_size;
-};
+
 
 
 void Color_(ColorNode* cn,ColorList* cl,CGraph* cg){
@@ -120,12 +31,14 @@ void Color_(ColorNode* cn,ColorList* cl,CGraph* cg){
             Color_(cl->GetByTemp( cg->GetByTemp(cn->m_temp)->m_links->Get(i)->m_temp ),cl,cg);
     }
 }
-void Color(TempList* list,CGraph* cg){
+ColorList* Color(TempList* list,CGraph* cg){
     LoggerStdio m_logger;
     m_logger.SetLevel(LoggerBase::kLogger_Level_Error);
     m_logger.SetModule("color");
     ColorList* cl = new ColorList;
     s32 i = 0;
+    s32 c = 0;
+    s32 color[5] = {0};
     for(i=0;i<list->Size();i++){
         m_logger.D("%s into color list",list->Get(i)->Name());
         cl->Insert( list->Get(i), ColorList::kColorList_Rear);
@@ -133,8 +46,23 @@ void Color(TempList* list,CGraph* cg){
     for(i=0;i<cl->Size();i++){
         Color_(cl->Get(i),cl,cg);
     }
+    for(i=0;i<cl->Size();i++){
+        if(cg->GetByTemp( cl->Get(i)->m_temp )->Degree()!=0)
+            color[ cl->Get(i)->m_color ] = 1; 
+    }
+    for(i=1;i<5;i++)
+        if(color[i]==0){
+            c = i;
+            break;
+        }
+    for(i=0;i<cl->Size();i++){
+        if(cg->GetByTemp( cl->Get(i)->m_temp )->Degree()==0)
+            cl->Get(i)->m_color = c; 
+    }
+    //all degree==0 's node use one color
+    return cl;
 }
-TempMapList* RegAlloc(LivenessResult* lr,FrameBase* f,InstrList* il){
+ColorList* RegAlloc(LivenessResult* lr,FrameBase* f,InstrList* il){
     // use collision graph to coloring
     // only for k-coloring 
     // Temp* ---- s32  
@@ -162,9 +90,8 @@ TempMapList* RegAlloc(LivenessResult* lr,FrameBase* f,InstrList* il){
         if(cg->Size()==0)
             break;
     }
-    Color(q,cg_bak);
     
-    return 0;
+    return Color(q,cg_bak);
 }
 
 
