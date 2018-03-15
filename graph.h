@@ -462,6 +462,9 @@ struct CGraphNode{
     ~CGraphNode(){
         delete m_links;
     }
+    s32 Degree(){
+        return m_links->Size();
+    }
     CGraphNode* Clone(){
         CGraphNode* n = new CGraphNode;
         n->m_temp = m_temp;
@@ -568,6 +571,7 @@ public:
     s32 Has(Temp* t){
         CGraphNode* p = m_head;
         while(p){
+            //TBD
             if(strcmp(p->m_temp->Name(),t->Name())==0)
                 return 1;
             p = p->next;

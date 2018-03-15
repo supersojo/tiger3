@@ -9,5 +9,6 @@
 namespace tiger{
 
 TempMapList* RegAlloc(LivenessResult* lr,FrameBase* f,InstrList* il);
+
 }//namespace tiger
 #endif

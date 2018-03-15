@@ -56,6 +56,9 @@ public:
             i_offset += sprintf(i_offset+o," src(%s)",m_src->Get(0)->Name());
         }
     }
+    virtual void Output(char* o){
+        // parse m_str
+    }
     TempList* Dst(){return m_dst;}
     TempList* Src(){return m_src;}
     void InstrStr(char* o){

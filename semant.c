@@ -53,18 +53,6 @@ Level*      Translator::OuterMostLevel()
         
         /*
         // the out most don't need static linklist 
-        AccessBase* access;
-        AccessList* al;
-        BoolList* bl;
-        
-        al = m_outer_most_level->Frame()->GetFormals();
-        bl = m_outer_most_level->Frame()->GetEscapes();
-        
-        m_logger.D("~~~~~~for dynamic size vars ~~~");
-        access = m_outer_most_level->Frame()->AllocLocal(0);
-        access->Retain();//inc refcnt
-        al->Insert(access,AccessList::kAccessList_Rear);
-        bl->Insert(BoolNode::kBool_False,BoolList::kBoolList_Rear);
         */
     }
     return m_outer_most_level;
@@ -579,8 +567,8 @@ ExpBaseTy*  Translator::TransExp(SymTab* venv,SymTab* tenv,Level* level,Exp* exp
         
             Label *t = TempLabel::NewLabel();
             Label *f = TempLabel::NewLabel();
-            Label *z = TempLabel::NewLabel();
-            Temp* tmp = TempLabel::NewTemp();
+            //Label *z = TempLabel::NewLabel();
+            //Temp* tmp = TempLabel::NewTemp();
             a = TransExp(venv,tenv,level,if_exp,done_label);
             dynamic_cast<TreeBaseCx*>( a->Tree() )->GetTrues()->DoPatch(t);
             dynamic_cast<TreeBaseCx*>( a->Tree() )->GetFalses()->DoPatch(f);
@@ -1009,10 +997,26 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         m_level_manager->NewLevel(alevel);
         if(fundec_head->m_fundec->Type()==0){
             m_logger.D("empty function return type ");
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), 0, alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
+            venv->Enter( venv->MakeSymbol(fundec_head->m_fundec->Name()),
+                         new EnvEntryFun( 
+                                          MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()),
+                                          0, 
+                                          alevel, 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                        )
+                       );
 
         }else{
-            venv->Enter(venv->MakeSymbol(fundec_head->m_fundec->Name()),new EnvEntryFun( MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(fundec_head->m_fundec->Type())))->Type(), alevel, TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) ));
+            venv->Enter( venv->MakeSymbol(fundec_head->m_fundec->Name()),
+                         new EnvEntryFun( 
+                                          MakeFormalsList(venv,tenv,level,fundec_head->m_fundec->GetList()), 
+                                          dynamic_cast<EnvEntryVar*>( 
+                                                                      tenv->Lookup( tenv->MakeSymbol(fundec_head->m_fundec->Type()) )
+                                                                    )->Type(), 
+                                          alevel, 
+                                          TempLabel::NewNamedLabel(fundec_head->m_fundec->Name()->Name()) 
+                                        )
+                       );
         }
         fundec_head = fundec_head->next;
     }
@@ -1031,7 +1035,7 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         
         venv->BeginScope(ScopeMaker::kScope_Fun);
         if(fundec_head->m_fundec->GetList()!=0){
-            s32 i=1;//0 for static link
+            s32 i=0;//last formal arg for static link
             while(head){
                 VarAccess* access = 0;
                 AccessFrame* af=0;
@@ -1046,7 +1050,12 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
                     access = new VarAccess(level,ar);
                 }
                 
-                venv->Enter(venv->MakeSymbol(head->m_field->Name()),new EnvEntryVar( dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), EnvEntryVar::kEnvEntryVar_For_Value, access ) );
+                venv->Enter( venv->MakeSymbol(head->m_field->Name()),
+                             new EnvEntryVar( 
+                                              dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), 
+                                              EnvEntryVar::kEnvEntryVar_For_Value, access 
+                                            ) 
+                           );
                 head = head->next;
                 i++;
             }
@@ -1077,8 +1086,6 @@ void Translator::TransFunctionDec(SymTab* venv,SymTab* tenv,Level* level,Dec* de
         
         fundec_head = fundec_head->next;
     }
-    
-    
 }
 void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
 {
@@ -1096,7 +1103,12 @@ void Translator::TransTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* dec)
             //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
         }
         //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
-        tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),new EnvEntryVar(new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),EnvEntryVar::kEnvEntryVar_For_Type, 0) );
+        tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),
+                     new EnvEntryVar( 
+                                      new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),
+                                      EnvEntryVar::kEnvEntryVar_For_Type, 0
+                                    ) 
+                   );
         head = head->next;
     }
     /* process bodys of decs*/
