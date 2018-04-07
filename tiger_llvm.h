@@ -4,6 +4,7 @@
 #include "absyn.h"
 #include "tiger_assert.h"
 #include "types.h"
+#include "symtab.h"
 
 #include <list>
 
@@ -12,6 +13,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
+#include "irgencontext.h"
 /*
  generate llvm ir for tiger's AST
  
@@ -141,21 +143,7 @@ private:
     s32 m_fun_kind;
     std::list<Symbol*> m_escape_list;//for escape
 };
-class IRGenContext{
-public:
-    IRGenContext(llvm::LLVMContext* c,llvm::IRBuilder<>* b,llvm::Module* m){
-        m_llvm_context = c;
-        m_builder = b;
-        m_module = m;
-    }
-    llvm::LLVMContext* C()const{return m_llvm_context;}
-    llvm::IRBuilder<>* B()const{return m_builder;}
-    llvm::Module*      M()const{return m_module;}
-private:
-    llvm::LLVMContext* m_llvm_context;
-    llvm::IRBuilder<>* m_builder;
-    llvm::Module*      m_module;
-};
+
 class IRGen{
 public:
     IRGen(){

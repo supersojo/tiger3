@@ -8,47 +8,15 @@
 #include "absyn.h" //Symbol
 #include "frame.h" //?
 
+#include <llvm/IR/Type.h>
+#include "irgencontext.h"
+namespace llvm{
+class Type;
+}
+
 namespace tiger{
 
-/*
-All occur of a string in source make only the same symbol.
-All the strings in source stores in a table.
-Type env has such a table, Value env also has such a table.
-For example, the string "a" may be a variable,so a symbol represent "a" in venv table,
-if "a" may also be a type, so a symbol represnt "a" in tenv table.
-*/
-struct SymNameHashTableNode{
-    SymNameHashTableNode(){
-        m_name = 0;
-        m_symbol = 0;
-        prev = 0;
-        next = 0;
-    }
-    ~SymNameHashTableNode(){
-        if(m_name)
-            free(m_name);
-        if(m_symbol)
-            delete m_symbol;
-    }
-    char* m_name;
-    Symbol* m_symbol;
-    SymNameHashTableNode* prev;
-    SymNameHashTableNode* next;
-};
-class SymNameHashTable{
-public:
-    enum{
-        kSymNameHashTable_Size=32,
-        kSymNameHashTable_Invalid
-    };
-    SymNameHashTable();
-    Symbol* MakeSymbol(Symbol*);
-    ~SymNameHashTable();
-private:
-    s32 hash(char* s);
-    void Clean();
-    SymNameHashTableNode** m_tab;
-};
+
 /* type used in tiger 
 TypeBase is the ancestor of all types in tiger.
 Be care about the type's deletion.
@@ -64,15 +32,21 @@ public:
     enum{
         kType_Int,
         kType_String,
-        kType_Nil,
-        kType_Void,
+        kType_Nil,//internal
+        kType_Void,//internal
         kType_Array,
         kType_Record,
         kType_Name,
         kType_Invalid
     };
-    TypeBase(){m_kind = kType_Invalid;}
-    TypeBase(s32 kind){m_kind = kind;}
+    TypeBase(){
+        m_kind = kType_Invalid;
+        m_llvm_type = nullptr;
+    }
+    TypeBase(s32 kind){
+        m_kind = kind;
+        m_llvm_type = nullptr;
+    }
     virtual s32 Kind(){return m_kind;}
     bool Equal(TypeBase* o){
         return (m_kind==o->Kind());
@@ -97,26 +71,26 @@ public:
                 return "invalid";
         }
     }
-    //llvm::Type* GetLLVMType(){return m_llvm_type;}
-    //void SetLLVMType(llvm::Type* ty){m_llvm_type = ty;}
+    llvm::Type* GetLLVMType(){return m_llvm_type;}
+    void SetLLVMType(llvm::Type* ty){m_llvm_type = ty;}
     virtual s32 Size(){return 0;}
     virtual ~TypeBase(){}
 private:
     s32 m_kind;
-    //llvm::Type* m_llvm_type;
+    llvm::Type* m_llvm_type;
 };
 
 class TypeInt:public TypeBase{
 public:
     TypeInt():TypeBase(kType_Int){
-        //SetLLVMType( (llvm::Type*)llvm::Type::getInt32Ty(*g_llvm_context) );
+        SetLLVMType( (llvm::Type*)llvm::Type::getInt32Ty( *(IRGenContext::Get()->C())) );
     }
     virtual s32 Size(){return 4;/*ugly code*/}
 };
 class TypeString:public TypeBase{
 public:
     TypeString():TypeBase(kType_String){
-        //SetLLVMType( llvm::PointerType::get(llvm::Type::getInt8Ty(*g_llvm_context)) );
+        //SetLLVMType( llvm::PointerType::getUnqual(llvm::Type::getInt8Ty( *(IRGenContext::Get()->C()))) );
     }
     virtual s32 Size(){return 4;/*ugly code*/}
 };
@@ -141,6 +115,15 @@ class TypeArray:public TypeBase{
 public:
     TypeArray():TypeBase(kType_Array){
         m_array=0;
+        
+        llvm::Type* tys[]={
+            llvm::Type::getInt32Ty( *(IRGenContext::Get()->C()) ),
+            llvm::PointerType::getUnqual( m_array->GetLLVMType() )
+        };
+        llvm::Type* ty = llvm::StructType::create(
+            tys
+        );
+        SetLLVMType(ty);
     }
     TypeArray(TypeBase* array):TypeBase(kType_Array){
         m_array = array;
@@ -158,6 +141,7 @@ public:
     }
 private:
     TypeBase* m_array;/* memory managed by type member, not type array */
+    
 };
 
 class TypeField{
@@ -179,7 +163,7 @@ public:
             return 4;// only refer
         return m_type->Size();/*ugly code*/
     }
-    ~TypeField(){
+    virtual ~TypeField(){
         //delete m_name;
         //delete m_type;
     }
@@ -223,8 +207,50 @@ private:
 
 class TypeRecord:public TypeBase{
 public:
-    TypeRecord():TypeBase(kType_Record){m_record=0;}
-    TypeRecord(TypeFieldList* record):TypeBase(kType_Record){m_record = record;}
+    TypeRecord():TypeBase(kType_Record){
+        m_record=0;
+    }
+    TypeRecord(TypeFieldList* record):TypeBase(kType_Record){
+        m_record = record;
+        /*
+        type a={
+        x:int,
+        y:a
+        }
+        
+        aTy={
+            x:int,
+            y:aTy
+        }
+        */
+        TypeFieldNode* p;
+        p = m_record->GetHead();
+        std::vector<llvm::Type*> tys;
+        while(p){
+            
+            if(p->m_field->Type()->Kind()==TypeBase::kType_Record)
+            {
+                tys.push_back(llvm::PointerType::getUnqual( p->m_field->Type()->GetLLVMType() ));
+                
+            }
+            else
+            {
+                tys.push_back( p->m_field->Type()->GetLLVMType() );
+            }
+            
+            p = p->next;
+        }
+        
+        /*
+        std::vector<Type*> fields;
+        for(auto f : m_record->getlist())
+            fields.Insert(f->Type()->GetLLVMType())
+        StructType(
+        
+        )
+        
+        */
+    }
     TypeFieldList* GetList(){return m_record;}
     virtual s32 Size(){
         s32 i=0;
@@ -247,6 +273,7 @@ public:
     TypeName(Symbol* name,TypeBase* ty):TypeBase(kType_Name){
         m_name = name;
         m_type = ty;
+        //SetLLVMType(ty->GetLLVMType());
     }
     Symbol* Name(){return m_name;}
     TypeBase* Type(){return m_type;}
@@ -279,248 +306,7 @@ private:
     Symbol* m_name;/* memory managed by string hash table */
     TypeBase* m_type;/* memory managed by type member, not type record */
 };
-/* Env
-The base env entry of all env entry types.
-*/
-class EnvEntryBase{
-public:
-    enum{
-      kEnvEntry_Var,/* type environment always uses this kind */
-      kEnvEntry_Fun,
-      kEnvEntry_Escape,/* for escape calculating */
-      kEnvEntry_Invalid
-    };
-    EnvEntryBase(){m_kind=kEnvEntry_Invalid;}
-    EnvEntryBase(s32 kind){m_kind = kind;}
-    virtual s32 Kind(){return m_kind;}
-    virtual ~EnvEntryBase(){}
-private:
-    s32 m_kind;
-};
-/*
-Type binding maybe used in type env or value env.
-We use intent to distinguish them.
-For value binding,when delete such entry we should not delete the type of value'bingding, because many value maybe refer to the same type.
-*/
-class EnvEntryVar:public EnvEntryBase{
-public:
-    enum{
-        kEnvEntryVar_For_Type,/* used in type environment*/
-        kEnvEntryVar_For_Value,/* value environment*/
-        kEnvEntryVar_Invalid/* invalid */
-    };
-    EnvEntryVar():EnvEntryBase(kEnvEntry_Var){m_type=0;m_intent = kEnvEntryVar_Invalid;}
-    EnvEntryVar(TypeBase* ty,s32 intent,VarAccess* access):EnvEntryBase(kEnvEntry_Var){m_type=ty;m_intent = intent;m_access=access;}
-    s32 Intent(){return m_intent;}
-    VarAccess* Access(){return m_access;}
-    TypeBase* Type(){return m_type;}
-    void      Update(TypeBase* n){
-        TypeName*p = dynamic_cast<TypeName*>(m_type);
-        p->Update(n);
 
-    }
-    ~EnvEntryVar(){
-        if(m_intent==kEnvEntryVar_For_Type){
-            delete m_type;
-        }
-        if(m_intent==kEnvEntryVar_For_Value){
-            delete m_access;
-        }
-    }
-private:
-    TypeBase* m_type;
-    s32 m_intent;
-    /* access info */
-    VarAccess* m_access;
-};
-
-class EnvEntryFun:public EnvEntryBase{
-public:
-    enum{
-        kFunction_Internal,
-        kFunction_External,
-        kFunction_Invalid
-    };
-    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;m_fun_kind = kFunction_Internal;}
-    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label,s32 kind):EnvEntryBase(kEnvEntry_Fun){
-        m_formals=formals;
-        m_result=result;
-        m_level=level;
-        m_label=label;
-        m_fun_kind = kind;
-        m_level->SetEnvEntry(dynamic_cast<EnvEntryBase*>(this));//associate
-    }
-    TypeBase* Type(){return m_result;}
-    void SetType(TypeBase* ty){m_result = ty;}
-    TypeFieldList* GetList(){return m_formals;}
-    Level* GetLevel(){return m_level;}
-    void   SetLevel(Level* lev){
-        m_level = lev;
-    }
-    s32 FunKind(){return m_fun_kind;}
-    Label* GetLabel(){return m_label;}
-    ~EnvEntryFun(){
-        if(m_formals)
-            delete m_formals;
-        //delete m_result;
-    }
-private:
-    TypeFieldList* m_formals;
-    TypeBase* m_result;/* memory managed by tenv table */
-    
-    Level* m_level;// managed by level manager
-    Label*     m_label;/*managed by label pool*/
-    s32 m_fun_kind;
-    
-};
-
-class EnvEntryEscape:public EnvEntryBase{
-public:
-    EnvEntryEscape():EnvEntryBase(kEnvEntry_Escape){m_depth=0;m_escape_refer=0;}
-    EnvEntryEscape(s32 depth,s32* escape_refer):EnvEntryBase(kEnvEntry_Escape){m_depth=depth;m_escape_refer=escape_refer;}
-    s32 GetEscape(){return *m_escape_refer;}
-    s32 Depth(){return m_depth;}
-    void SetEscape(s32 escape){*m_escape_refer = escape;}
-    ~EnvEntryEscape(){
-
-    }
-private:
-    s32  m_depth;
-    s32* m_escape_refer;/* refer to symbol's escape in absyn.h*/
-    
-};
-
-class SymTabEntry{
-public:    
-    SymTabEntry(){
-        m_name = 0;
-        m_binding = 0;
-    }
-    SymTabEntry(Symbol* name,EnvEntryBase* binding){
-        m_name = name;
-        m_binding = binding;
-    }
-    Symbol* GetSymbol(){return m_name;}
-    EnvEntryBase* GetEnvEntryBase(){return m_binding;}
-    ~SymTabEntry(){
-        //delete m_name;
-        delete m_binding;
-    }
-private:
-    Symbol* m_name;/* var or fun name or type name. memory managed by string hash table */
-    EnvEntryBase* m_binding;
-};
-
-struct SymTabEntryNode{
-
-    SymTabEntryNode(){
-        m_entry = 0;
-        prev = next = 0;
-    }
-    ~SymTabEntryNode(){
-        delete m_entry;
-    }
-    /* members */
-    SymTabEntry* m_entry;
-    SymTabEntryNode* prev;
-    SymTabEntryNode* next;
-};
-struct SimpleStackNode{
-    SimpleStackNode(){
-        m_name = 0;
-        next = 0;
-    }
-    ~SimpleStackNode(){
-    }
-    Symbol* m_name;
-    SimpleStackNode* next;
-};
-class SimpleStack{
-public:
-    SimpleStack(){m_top = 0;}
-    void Push(Symbol* name){
-        SimpleStackNode* n;
-        n = new SimpleStackNode;
-        n->m_name = name;
-        n->next = m_top;
-        m_top = n;
-    }
-    Symbol* Pop(){
-        Symbol* ret;
-        SimpleStackNode* p;
-        p = m_top;
-        if(m_top){
-            m_top = m_top->next;
-        }
-        if(p){
-            ret = p->m_name;
-            delete p;
-            return ret;
-        }else
-            return 0;
-    }
-    ~SimpleStack(){
-        SimpleStackNode*p;
-        p = m_top;
-        while(p){
-            m_top = m_top->next;
-            delete p;
-            p = m_top;
-        }
-    }
-private:
-    SimpleStackNode* m_top;
-};
-class ScopeMaker{
-friend class SymTab;
-public:
-    enum{
-        kScope_Let,
-        kScope_Fun,
-        kScope_For,
-        kScope_While,
-        kScope_Invalid
-    };
-    ScopeMaker(){m_kind = kScope_Invalid; m_next = 0;}
-    ScopeMaker(s32 kind){m_kind = kind; m_next = 0;}
-    s32 Kind(){return m_kind;}
-private:
-    s32 m_kind;
-    ScopeMaker* m_next;
-};
-class SymTab{
-public:
-    enum{
-        kSymTab_Size=32,
-        kSymTab_Invalid
-    };
-    SymTab();
-    void Erase(Symbol* name);
-    void BeginScope(s32 scope_kind);
-    void EndScope();
-    s32 Scope(){
-        if(m_scope_list) 
-            return m_scope_list->Kind();
-        return ScopeMaker::kScope_Invalid;
-    }
-    void Enter(Symbol* key,EnvEntryBase* value);
-    EnvEntryBase* Lookup(Symbol* key);
-    void Update(Symbol*s,TypeBase* t);
-    Symbol* MakeSymbol(Symbol* s);
-    Symbol* MakeSymbolFromString(char* s);
-    /* helper for types */
-    TypeBase*  Type(Symbol* s);
-    ~SymTab();
-private:
-    SymTabEntryNode** m_tab;
-    SimpleStack* m_stack;
-    s32 hash(Symbol* key);
-    void Clean();
-    Symbol* m_marker;
-    SymNameHashTable* m_sym_name_mapping;
-    LoggerStdio m_logger;
-    ScopeMaker* m_scope_list;
-};
 
 }//namespace tiger
 

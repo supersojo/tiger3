@@ -1,6 +1,7 @@
 #include "tree_gen.h"
 #include "tiger_assert.h"
-
+#include "irgencontext.h"
+#include <vector>
 namespace tiger{
 
 TreeGenerator::TreeGenerator()
@@ -265,6 +266,7 @@ TreeGenResult*  TreeGenerator::TreeGenVar(SymTab* venv,SymTab* tenv,Level* level
 }
 void TreeGenerator::ProceeExternalFunctions(SymTab* venv,SymTab* tenv)
 {
+    #if 0
     TypeFieldNode* head;
     Level* alevel;
     //for all external function, create level for them
@@ -295,6 +297,7 @@ void TreeGenerator::ProceeExternalFunctions(SymTab* venv,SymTab* tenv)
     alevel = new Level(OuterMostLevel(),f);
     m_level_manager->NewLevel(alevel);
     p->SetLevel( alevel );
+    #endif
 }
 Level*      TreeGenerator::OuterMostLevel()
 {
@@ -966,7 +969,14 @@ TreeGenResult* TreeGenerator::TreeGenDec(SymTab* venv,SymTab* tenv,Level* level,
             
             if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Array){
                 //array
-                // var a=intarry [12] of [1]
+                // var a=intarray [12] of [1]
+                /*
+                intarray {int,int*}
+                Alloca(GetLLVMType())
+                CreateGEp %a,0,0 <==dim
+                CreateGEP %a,0,1 <ptr of element
+                Alloca(GetSubType()->GetLLVMType(),size)
+                */
                 t = TreeGenExpArray(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }else if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Record){
                 //record
@@ -1055,8 +1065,12 @@ TypeBase* TreeGenerator::TreeGenTy(SymTab* tenv,Level* level,Ty* ty)
         case Ty::kTy_Record:
         {
             /*
+            type a={x:int,y:a}
+            */
+            /*
             type a = {a:int,b:string}
             (Field("a","int"),Field("b","string"))
+            create StructType first then set body for recursion
             */
             FieldNode* head;
             TypeFieldNode* n=0,*ret=0,*cur=0;
@@ -1345,10 +1359,10 @@ void TreeGenerator::TreeGenTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* d
             //TIGER_ASSERT(0,"Type %s redefined",head->m_nametypair->Name()->Name());
         }
         */
-        //m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
+        m_logger.D("New type with %s",head->m_nametypair->Name()->Name());
         tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),
                      new EnvEntryVar( 
-                                      new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),
+                                      new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0/*TypeBase**/),
                                       EnvEntryVar::kEnvEntryVar_For_Type, (VarAccess*)0
                                     ) 
                    );
@@ -1359,7 +1373,9 @@ void TreeGenerator::TreeGenTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* d
     while(head){
         /*
         gen type infor from absyn
+        TypeName TypeArray TypeRecord
         */
+        m_logger.D("New type 111");
         TypeBase* t = TreeGenTy(tenv,level,head->m_nametypair->Type());
         if(t->Kind()!=TypeBase::kType_Name){
             /*
@@ -1367,6 +1383,19 @@ void TreeGenerator::TreeGenTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* d
             When type "a" insert tenv, it's type is dummy TypeName.Now we get real type so refill it here.
             */
             dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())))->Update(t);
+            /*
+            type a={x:int,y:a}
+            st = StructType::create()
+            a->SetLLVMType(st);
+            t is TypeRecord
+            for a:fields
+                a is basic 
+                tys.push(a)
+                else
+                    tys.push(ptr(a))
+                st.setbody();
+            
+            */
         }
         else{
             /*
@@ -1386,6 +1415,74 @@ void TreeGenerator::TreeGenTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* d
         }
         head = head->next;
     }
+    /* gen LLVMType for TypeName TypeArray TypeRecord */
+    head = dynamic_cast<TypeDec*>(dec)->GetList()->GetHead();
+    while(head){
+        EnvEntryVar* t = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_nametypair->Name())));
+        if(t->Type()->Kind()==TypeBase::kType_Name)
+        {
+            m_logger.D("New type 222");
+            if( dynamic_cast<TypeName*>(t->Type())->Type()->Kind()==TypeBase::kType_Record)
+            {
+                /*
+                type x = array of y
+                type a = {x:int,y:a}
+                */
+                llvm::StructType* st = llvm::StructType::create( *(IRGenContext::Get()->C()) );
+                t->Type()->SetLLVMType(st);
+                TypeRecord* tr = dynamic_cast<TypeRecord*>( dynamic_cast<TypeName*>(t->Type())->Type());
+                TypeFieldNode* p;
+                p = tr->GetList()->GetHead();
+                std::vector<llvm::Type*> tys;
+                while(p){
+                    if(p->m_field->Type()->Kind()==TypeBase::kType_Name){
+                        tys.push_back(llvm::PointerType::getUnqual( p->m_field->Type()->GetLLVMType() ));
+                    }else{
+                        tys.push_back( p->m_field->Type()->GetLLVMType() );
+                    }
+                    p = p->next;
+                }
+                st->setBody(tys);
+                st->dump();
+                
+            }
+            if( dynamic_cast<TypeName*>(t->Type())->Type()->Kind()==TypeBase::kType_Array)
+            {
+                /*
+                type a=array of x
+                */
+                llvm::StructType* st = llvm::StructType::create( *(IRGenContext::Get()->C()) );
+                t->Type()->SetLLVMType(st);
+                TypeArray* ta = dynamic_cast<TypeArray*>( dynamic_cast<TypeName*>(t->Type())->Type());
+                llvm::Type* tys[]={
+                    llvm::Type::getInt32Ty( *(IRGenContext::Get()->C()) ),
+                    llvm::PointerType::getUnqual(ta->Type()->GetLLVMType())
+                };
+                st->setBody(tys);
+                st->dump();
+                
+            }
+            if( dynamic_cast<TypeName*>(t->Type())->Type()->Kind()==TypeBase::kType_Int)
+            {
+                /*
+                type a=int
+                */
+                t->Type()->SetLLVMType( dynamic_cast<TypeInt*>( dynamic_cast<TypeName*>(t->Type())->Type())->GetLLVMType() );
+                t->Type()->GetLLVMType()->dump();
+            }
+            if( dynamic_cast<TypeName*>(t->Type())->Type()->Kind()==TypeBase::kType_Name)
+            {
+                /*
+                type a=b
+                */
+                t->Type()->SetLLVMType( dynamic_cast<TypeName*>( dynamic_cast<TypeName*>(t->Type())->Type())->GetLLVMType() );
+                t->Type()->GetLLVMType()->dump();
+            }
+        }
+        head = head->next;
+        
+    }
+    
 }
 /*
  level for escape variable access

@@ -202,7 +202,7 @@ void test_tree_gen(){
     
     //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
     //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
-    tiger::scanner::StringSourceCodeStream stream((char*)"let in for a:=11 to 20 do if a>10 then printint(a) end");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let type a={x:int,y:int} in end");
     
     /* generate sbstract syntax tree*/
     tiger::parser::Parser parser(&stream);
@@ -216,7 +216,7 @@ void test_tree_gen(){
     tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
     
     
-    
+
     /* for each external function, it's impossible to access outer level's variable 
     the outer most level do not need frame and actual list 
     */
@@ -256,14 +256,16 @@ void test_tree_gen(){
     node = new tiger::TypeFieldNode;
     node->m_field = new tiger::TypeField(tenv.MakeSymbolFromString("size"),tenv.Type(tenv.MakeSymbolFromString("int")));
     venv.Enter(venv.MakeSymbolFromString("my_malloc"),new tiger::EnvEntryFun(new tiger::TypeFieldList(node),tenv.Type(tenv.MakeSymbolFromString("int")),0,tiger::TempLabel::NewNamedLabel("my_malloc"),1/*kind*/));
-    
+
     // find escape 
+    #if 0
     tiger::EscapeHelper escaper;
     escaper.FindEscape(exp);
-    
+    #endif
     tiger::TreeGenerator tg;
     tr = tg.TreeGen(&venv,&tenv,tg.OuterMostLevel(),exp,0);
     
+    #if 0
     tg.ProceeExternalFunctions(&venv,&tenv);
     
     // dump tree
@@ -355,6 +357,7 @@ void test_tree_gen(){
     //delete il;
     //delete cg;
     /* free */
+    #endif
     delete exp;
 }
 #if 0
@@ -721,9 +724,9 @@ int main()
     //test_tree();
     //test_litstringlist();
     //test_typecheck();
-    //test_tree_gen();
+    test_tree_gen();
     //test_canon();
     //test_liveness();
-    test_llvm();
+    //test_llvm();
     return 0;
 }

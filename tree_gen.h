@@ -6,6 +6,7 @@
 #include "tree.h"
 #include "semant.h"
 #include "assem.h"
+#include "symtab.h"
 
 /*
  tree generating need type info.

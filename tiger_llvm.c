@@ -4,10 +4,7 @@ namespace tiger{
 
 void IRGen::Init()
 {
-    llvm::LLVMContext* c = new llvm::LLVMContext;
-    llvm::IRBuilder<>* b = new llvm::IRBuilder<>(*c);
-    llvm::Module* m = new llvm::Module("theModule",*c);
-    m_context = new IRGenContext(c,b,m);
+    m_context = IRGenContext::Get();
 }
 Level* IRGen::OutmostLevel()
 {

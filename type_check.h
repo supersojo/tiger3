@@ -5,6 +5,7 @@
 #include "tiger_type.h"
 #include "tiger_log.h"
 #include "types.h"
+#include "symtab.h"
 
 namespace tiger{
     
