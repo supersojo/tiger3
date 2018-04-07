@@ -135,6 +135,18 @@ TreeGenResult* TreeGenerator::UnCx(TreeGenResult* tr)
         return tr;
     }
 }
+/*
+var a=intarray [10] of 0
+a[1]:=0
+
+
+
+   subscriptvar
+    |     |
+simplevar exp
+|         |
+a        [1]
+*/
 TreeGenResult*  TreeGenerator::TreeGenVar(SymTab* venv,SymTab* tenv,Level* level,Var* var,Label* done_label)
 {
     switch(var->Kind()){
@@ -154,6 +166,16 @@ TreeGenResult*  TreeGenerator::TreeGenVar(SymTab* venv,SymTab* tenv,Level* level
                 alevel = level;
                 TIGER_ASSERT(alevel!=0,"level is null!!");
                 while(alevel!=t->Access()->GetLevel()){
+                    /*
+                    escape access
+                    level->GetEnvEntry()->EscapeList().add(theSymbol)
+                    if(level->parent==theSymbol->Level){
+                        //direct parent
+                        // not need propagate
+                    }else{
+                        level->parent->EscapeList().add(theSymbol)
+                    }
+                    */
                     if(tmp==0){
                         tmp = new ExpBaseMem(
                             new ExpBaseBinop( BinaryOp::kBinaryOp_Add, new ExpBaseTemp( FP() ), new ExpBaseConst(0/* static link's offset*/)
@@ -299,6 +321,11 @@ TreeGenResult* TreeGenerator::TreeGenExpCall(SymTab* venv,SymTab*tenv,Level* lev
     
     EnvEntryFun* f = dynamic_cast<EnvEntryFun*>(venv->Lookup(venv->MakeSymbol(dynamic_cast<CallExp*>(exp)->Name())));
     TIGER_ASSERT(f!=0,"function name not found",dynamic_cast<CallExp*>(exp)->Name());
+    /*
+    EscapeList a->b->c
+    for(a in escapelist)
+        args.Pointer(venv->lookup(a)->Type)
+    */
     
     // tree code
     StatementBase* st=0;
@@ -939,12 +966,14 @@ TreeGenResult* TreeGenerator::TreeGenDec(SymTab* venv,SymTab* tenv,Level* level,
             
             if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Array){
                 //array
+                // var a=intarry [12] of [1]
                 t = TreeGenExpArray(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }else if(dynamic_cast<VarDec*>(dec)->GetExp()->Kind()==Exp::kExp_Record){
                 //record
                 t = TreeGenExpRecord(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }else{
                 // simple var declaration
+                // var a:=1
                 t = TreeGenExp(venv,tenv,level,dynamic_cast<VarDec*>(dec)->GetExp(),done_label);
             }
 
@@ -1012,6 +1041,10 @@ TypeBase* TreeGenerator::TreeGenTy(SymTab* tenv,Level* level,Ty* ty)
 {
     switch(ty->Kind())
     {
+        /*
+        type a = x
+        NameTyPair("a",NameTy("x"))
+        */
         case Ty::kTy_Name:
         {
             EnvEntryVar* t;
@@ -1021,6 +1054,10 @@ TypeBase* TreeGenerator::TreeGenTy(SymTab* tenv,Level* level,Ty* ty)
         }
         case Ty::kTy_Record:
         {
+            /*
+            type a = {a:int,b:string}
+            (Field("a","int"),Field("b","string"))
+            */
             FieldNode* head;
             TypeFieldNode* n=0,*ret=0,*cur=0;
             EnvEntryVar* p;
@@ -1051,6 +1088,10 @@ TypeBase* TreeGenerator::TreeGenTy(SymTab* tenv,Level* level,Ty* ty)
         }
         case Ty::kTy_Array:
         {
+            /*
+            type a=array of b
+            ArrayTy("b")
+            */
             EnvEntryVar* p;
             p = dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(dynamic_cast<ArrayTy*>(ty)->Name())));
             return new TypeArray(p->Type());
@@ -1272,6 +1313,11 @@ void TreeGenerator::TreeGenFunctionDec(SymTab* venv,SymTab* tenv,Level* level,De
             }
         }
         
+        /*
+        ok
+        the function can be declared using llvm
+        */
+        
         // after process end of the function body 
         // restore fp to it's parent 
         // fp =  mem[fp+static link's address
@@ -1303,7 +1349,7 @@ void TreeGenerator::TreeGenTypeDec(SymTab* venv,SymTab* tenv,Level* level,Dec* d
         tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),
                      new EnvEntryVar( 
                                       new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),
-                                      EnvEntryVar::kEnvEntryVar_For_Type, 0
+                                      EnvEntryVar::kEnvEntryVar_For_Type, (VarAccess*)0
                                     ) 
                    );
         head = head->next;

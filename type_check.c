@@ -318,7 +318,7 @@ TypeCheckResult* TypeChecker::TypeCheckExp(SymTab* venv,SymTab* tenv,Exp* exp){
             venv->BeginScope(ScopeMaker::kScope_For);
             //tenv->BeginScope();
             m_logger.D("in for scope begin");
-            venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0));
+            venv->Enter(venv->MakeSymbol(var),new EnvEntryVar(b->Type(), EnvEntryVar::kEnvEntryVar_For_Value, (VarAccess*)0));
             
             d = TypeCheckExp(venv,tenv,body_exp);
 
@@ -501,10 +501,10 @@ void  TypeChecker::TypeCheckDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 {
                     std::cout<<"type not match"<<std::endl;
                 }else{
-                    venv->Enter( venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()), new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0) );
+                    venv->Enter( venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()), new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, (VarAccess*)0) );
                 }
             }else{
-                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, 0));
+                venv->Enter(venv->MakeSymbol(dynamic_cast<VarDec*>(dec)->GetSymbol()),new EnvEntryVar(t->Type(), EnvEntryVar::kEnvEntryVar_For_Value, (VarAccess*)0));
             }
 
             delete t;
@@ -621,7 +621,7 @@ void TypeChecker::TypeCheckFunctionDec(SymTab* venv,SymTab* tenv,Dec* dec)
                 venv->Enter( venv->MakeSymbol(head->m_field->Name()),
                              new EnvEntryVar( 
                                               dynamic_cast<EnvEntryVar*>(tenv->Lookup(tenv->MakeSymbol(head->m_field->Type())))->Type(), 
-                                              EnvEntryVar::kEnvEntryVar_For_Value, 0 
+                                              EnvEntryVar::kEnvEntryVar_For_Value, (VarAccess*)0 
                                             ) 
                            );
                 head = head->next;
@@ -666,7 +666,7 @@ void TypeChecker::TypeCheckTypeDec(SymTab* venv,SymTab* tenv,Dec* dec)
         tenv->Enter( tenv->MakeSymbol(head->m_nametypair->Name()),
                      new EnvEntryVar( 
                                       new TypeName(tenv->MakeSymbol(head->m_nametypair->Name()),0),
-                                      EnvEntryVar::kEnvEntryVar_For_Type, 0
+                                      EnvEntryVar::kEnvEntryVar_For_Type, (VarAccess*)0
                                     ) 
                    );
         head = head->next;

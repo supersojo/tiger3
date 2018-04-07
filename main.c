@@ -15,6 +15,8 @@
 #include "graph.h"
 #include "regalloc.h"
 #include "tree_gen.h"
+#include "tiger_llvm.h"
+#include <llvm/IR/ValueSymbolTable.h>
 
 void test_StringSourceCodeStream()
 {
@@ -78,7 +80,6 @@ void test_sbsyn()
     a = new tiger::Symbol((char*)"a");
     b = new tiger::Symbol((char*)"b");
     tiger::SimpleVar* var = new tiger::SimpleVar(a);
-    
 }
 void test_parser()
 {
@@ -138,10 +139,10 @@ void test_typecheck(){
 
     tiger::SymTab venv,tenv;
     /* init types */
-    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
     
     /* for each external function, it's impossible to access outer level's variable 
     the outer most level do not need frame and actual list 
@@ -209,10 +210,10 @@ void test_tree_gen(){
 
     tiger::SymTab venv,tenv;
     /* init types */
-    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
-    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, 0));
+    tenv.Enter(tenv.MakeSymbolFromString("nil"),new tiger::EnvEntryVar(new tiger::TypeNil(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("void"),new tiger::EnvEntryVar(new tiger::TypeVoid(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVar(new tiger::TypeInt(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
+    tenv.Enter(tenv.MakeSymbolFromString("string"),new tiger::EnvEntryVar(new tiger::TypeString(),tiger::EnvEntryVar::kEnvEntryVar_For_Type, (tiger::VarAccess*)0));
     
     
     
@@ -684,6 +685,29 @@ void test_liveness()
     
     tiger::TempLabel::Exit();
 }
+void test_llvm()
+{
+    tiger::Exp* exp;
+    tiger::SymTab venv,tenv;
+    
+
+        
+    //tiger::scanner::FileSourceCodeStream stream((char*)"a.txt");
+    //tiger::scanner::FileSourceCodeStream stream((char*)"b.txt");
+    tiger::scanner::StringSourceCodeStream stream((char*)"let var a:=1 in let var b:=1 in while b<10 do a:=a+b  end end");
+    
+    /* generate sbstract syntax tree*/
+    tiger::parser::Parser parser(&stream);
+    parser.Parse(&exp);
+    tiger::IRGen* ir_gen;
+    ir_gen = new tiger::IRGen;
+    tenv.Enter(tenv.MakeSymbolFromString("int"),new tiger::EnvEntryVarLLVM(new tiger::TypeInt(),tiger::EnvEntryVarLLVM::kEnvEntryVarLLVM_For_Type, llvm::Type::getInt32Ty( *(ir_gen->GetContext()->C()) ), 0));
+
+        
+    ir_gen->Gen(&venv,&tenv,exp);
+    ir_gen->Dump();
+    
+}
 int main()
 {
     //test_Next_With_StringSourceCodeStream();
@@ -697,8 +721,9 @@ int main()
     //test_tree();
     //test_litstringlist();
     //test_typecheck();
-    test_tree_gen();
+    //test_tree_gen();
     //test_canon();
     //test_liveness();
+    test_llvm();
     return 0;
 }

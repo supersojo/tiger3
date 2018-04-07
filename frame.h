@@ -5,8 +5,14 @@
 #include "temp.h"
 #include "tree.h"
 
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/BasicBlock.h>
+//#include "types.h" // for EnvEntryBase
 namespace tiger{
 
+class EnvEntryBase;
 
 
 class AccessBase{
@@ -325,7 +331,7 @@ public:
         ExpBaseNode* p;
         p = m_refill_list->GetHead();
         while(p){
-            TIGER_ASSERT(p->m_exp->Kind()==ExpBase::kExpBase_Const, "refill item should be ExpBaseConst");
+            TIGER_ASSERT(p->m_exp->Kind()==ExpBase::kExpBase_Const, (char*)"refill item should be ExpBaseConst");
             dynamic_cast<ExpBaseConst*>(p->m_exp)->SetValue(Size());
             p = p->next;
         }
@@ -349,6 +355,19 @@ public:
     }
     FrameBase* Frame(){return m_frame;}
     Level* Parent(){return m_parent;}
+    void SetEnvEntry(EnvEntryBase* env_entry)
+    {
+        m_env_entry = env_entry;
+    }
+    EnvEntryBase* GetEnvEntry(){// for access escape list
+        return m_env_entry;
+    }
+    void SetFunc(llvm::Function* f){
+        m_func = f;
+    }
+    llvm::Function* GetFunc(){
+        return m_func;
+    }
     ~Level(){
         if(m_frame)
             delete m_frame;
@@ -356,6 +375,8 @@ public:
 private:
     FrameBase* m_frame;//
     Level* m_parent;
+    EnvEntryBase* m_env_entry;//only EnvEntryFun used !!
+    llvm::Function* m_func;
 };
 
 struct LevelNode{

@@ -6,7 +6,7 @@
 #include "tiger_log.h"
 #include "tiger_assert.h"
 #include "absyn.h" //Symbol
-#include "frame.h"
+#include "frame.h" //?
 
 namespace tiger{
 
@@ -97,39 +97,54 @@ public:
                 return "invalid";
         }
     }
+    //llvm::Type* GetLLVMType(){return m_llvm_type;}
+    //void SetLLVMType(llvm::Type* ty){m_llvm_type = ty;}
     virtual s32 Size(){return 0;}
     virtual ~TypeBase(){}
 private:
     s32 m_kind;
+    //llvm::Type* m_llvm_type;
 };
 
 class TypeInt:public TypeBase{
 public:
-    TypeInt():TypeBase(kType_Int){}
+    TypeInt():TypeBase(kType_Int){
+        //SetLLVMType( (llvm::Type*)llvm::Type::getInt32Ty(*g_llvm_context) );
+    }
     virtual s32 Size(){return 4;/*ugly code*/}
 };
 class TypeString:public TypeBase{
 public:
-    TypeString():TypeBase(kType_String){}
+    TypeString():TypeBase(kType_String){
+        //SetLLVMType( llvm::PointerType::get(llvm::Type::getInt8Ty(*g_llvm_context)) );
+    }
     virtual s32 Size(){return 4;/*ugly code*/}
 };
 
 class TypeNil:public TypeBase{
 public:
-    TypeNil():TypeBase(kType_Nil){}
+    TypeNil():TypeBase(kType_Nil){
+        //SetLLVMType( (llvm::Type*)llvm::Type::getInt32Ty(*g_llvm_context) );
+    }
     virtual s32 Size(){return 0;/*ugly code*/}
 };
 
 class TypeVoid:public TypeBase{
 public:
-    TypeVoid():TypeBase(kType_Void){}
+    TypeVoid():TypeBase(kType_Void){
+        //SetLLVMType( (llvm::Type*)llvm::Type::getInt32Ty(*g_llvm_context) );
+    }
     virtual s32 Size(){return 0;/*ugly code*/}
 };
 
 class TypeArray:public TypeBase{
 public:
-    TypeArray():TypeBase(kType_Array){m_array=0;}
-    TypeArray(TypeBase* array):TypeBase(kType_Array){m_array = array;}
+    TypeArray():TypeBase(kType_Array){
+        m_array=0;
+    }
+    TypeArray(TypeBase* array):TypeBase(kType_Array){
+        m_array = array;
+    }
     TypeBase* Type(){return m_array;}
     virtual s32 Size(){
         /*
@@ -315,7 +330,7 @@ public:
 private:
     TypeBase* m_type;
     s32 m_intent;
-    /* access infor */
+    /* access info */
     VarAccess* m_access;
 };
 
@@ -326,8 +341,15 @@ public:
         kFunction_External,
         kFunction_Invalid
     };
-    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;m_kind = kFunction_Internal;}
-    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label,s32 kind):EnvEntryBase(kEnvEntry_Fun){m_formals=formals;m_result=result;m_level=level;m_label=label;m_kind = kind;}
+    EnvEntryFun():EnvEntryBase(kEnvEntry_Fun){m_formals=0;m_result=0;m_level=0;m_label=0;m_fun_kind = kFunction_Internal;}
+    EnvEntryFun(TypeFieldList *formals,TypeBase* result,Level* level,Label* label,s32 kind):EnvEntryBase(kEnvEntry_Fun){
+        m_formals=formals;
+        m_result=result;
+        m_level=level;
+        m_label=label;
+        m_fun_kind = kind;
+        m_level->SetEnvEntry(dynamic_cast<EnvEntryBase*>(this));//associate
+    }
     TypeBase* Type(){return m_result;}
     void SetType(TypeBase* ty){m_result = ty;}
     TypeFieldList* GetList(){return m_formals;}
@@ -335,7 +357,7 @@ public:
     void   SetLevel(Level* lev){
         m_level = lev;
     }
-    s32 Kind(){return m_kind;}
+    s32 FunKind(){return m_fun_kind;}
     Label* GetLabel(){return m_label;}
     ~EnvEntryFun(){
         if(m_formals)
@@ -348,7 +370,7 @@ private:
     
     Level* m_level;// managed by level manager
     Label*     m_label;/*managed by label pool*/
-    s32 m_kind;
+    s32 m_fun_kind;
     
 };
 
